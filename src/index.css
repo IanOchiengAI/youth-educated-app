@@ -1,0 +1,98 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Nunito:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-navy: #1C1C6E;
+  --color-yellow: #FFD700;
+  --color-white: #FFFFFF;
+  --color-off-white: #F5F5F5;
+  --color-near-black: #0F0F3D;
+  --color-grey: #6B7280;
+  --color-pale-yellow: #FFF9DB;
+  --color-green: #2ECC71;
+  --color-red: #E74C3C;
+
+  --font-poppins: "Poppins", sans-serif;
+  --font-nunito: "Nunito", sans-serif;
+
+  --shadow-card: 0 2px 12px rgba(28, 28, 110, 0.08);
+}
+
+@layer base {
+  body {
+    @apply bg-off-white text-near-black font-nunito text-[15px];
+  }
+
+  h1 {
+    @apply font-poppins font-bold text-[26px];
+  }
+
+  h2 {
+    @apply font-poppins font-bold text-[22px];
+  }
+
+  h3 {
+    @apply font-poppins font-bold text-[18px];
+  }
+
+  h4 {
+    @apply font-poppins font-bold text-[15px];
+  }
+
+  .small-text {
+    @apply text-[13px];
+  }
+
+  .caption-text {
+    @apply text-[12px];
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply w-full h-12 bg-navy text-white font-poppins font-semibold rounded-full flex items-center justify-center transition-transform active:scale-[0.97] duration-120;
+  }
+
+  .btn-secondary {
+    @apply w-full h-12 bg-yellow text-navy font-poppins font-semibold rounded-full flex items-center justify-center transition-transform active:scale-[0.97] duration-120;
+  }
+
+  .card {
+    @apply bg-white rounded-[20px] shadow-card p-4;
+  }
+
+  .input-field {
+    @apply w-full h-12 px-4 bg-white border border-gray-200 rounded-[12px] focus:outline-none focus:ring-2 focus:ring-navy/20 transition-all;
+  }
+}
+
+.route-fade-enter {
+  opacity: 0;
+}
+.route-fade-enter-active {
+  opacity: 1;
+  transition: opacity 220ms ease-in;
+}
+.route-fade-exit {
+  opacity: 1;
+}
+.route-fade-exit-active {
+  opacity: 0;
+  transition: opacity 220ms ease-out;
+}
+
+.stagger-item {
+  animation: slideUp 180ms ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
