@@ -1,0 +1,22 @@
+[
+  { "triggers": ["hello", "hi", "hey", "jambo", "habari", "mambo"], "response": "Jambo! 😊 I'm Jabari. Even though I'm in offline mode right now, I'm still here for you. What's on your mind?" },
+  { "triggers": ["how are you", "how r u", "uko aje"], "response": "I'm doing great, asante! More importantly, how are YOU doing today?" },
+  { "triggers": ["good morning", "morning", "asubuhi"], "response": "Good morning! ☀️ A new day, a new opportunity. What's one thing you want to accomplish today?" },
+  { "triggers": ["i feel sad", "sad", "huzuni", "i'm sad"], "response": "Pole sana. It's okay to feel sad sometimes. Would you like to talk about what's making you feel this way? You can also try writing it down — that often helps." },
+  { "triggers": ["stressed", "stress", "anxious", "worried"], "response": "I hear you — stress is real. Try this: take 3 deep breaths right now. In through your nose for 4 seconds, hold for 4, out through your mouth for 4. You've got this. 💪" },
+  { "triggers": ["lonely", "alone", "no friends"], "response": "Feeling lonely is tough, but remember — you're part of the Youth Educated community. You matter here. Try reaching out to one person today, even with a simple 'Hi.'" },
+  { "triggers": ["career", "what should i study", "job", "work"], "response": "Great question! Your career path starts with knowing what you enjoy. Try the Career Mapper in the app — it can help you discover which pathway (STEM, Arts, Social Sciences, or TVET) fits you best!" },
+  { "triggers": ["study", "exam", "homework", "school"], "response": "Study tip: try the Pomodoro technique — study for 25 minutes, then take a 5-minute break. Repeat! Your brain learns better with short, focused bursts than long marathon sessions." },
+  { "triggers": ["goal", "goals", "target"], "response": "Setting goals is powerful! Try making your goals SMART: Specific, Measurable, Achievable, Relevant, and Time-bound. What's one goal you want to work on this week?" },
+  { "triggers": ["thank", "thanks", "asante"], "response": "Karibu sana! 😊 I'm always here when you need me." },
+  { "triggers": ["motivate", "motivation", "inspire"], "response": "Here's some motivation: 'Harambee' means pulling together. You don't have to do this alone. Every small step forward is still a step forward. Keep going! 🌟" },
+  { "triggers": ["money", "save", "budget", "pesa"], "response": "Smart thinking! Even saving Ksh 10 a day adds up. Have you tried the 50-30-20 rule? 50% needs, 30% wants, 20% savings. Check out the Financial Basics module for more tips!" },
+  { "triggers": ["friend", "friendship", "bff"], "response": "Good friendships are built on respect and trust. A real friend supports your goals and respects your boundaries. Who's someone who lifts you up?" },
+  { "triggers": ["bored", "boring", "nothing to do"], "response": "Here are some ideas: Try a new module in the Learn section, set a weekly goal, or explore the opportunities board for scholarships and programs. You might find something exciting!" },
+  { "triggers": ["mentor", "mentorship"], "response": "Having a mentor can change your life! Check the Mentor section in the app. Even while we find your match, you can chat with me about anything. 😊" },
+  { "triggers": ["confident", "confidence", "shy", "fear"], "response": "Confidence grows with practice, not perfection. Try doing one thing outside your comfort zone today — even something small like speaking up in class. The Confidence Building module has great exercises!" },
+  { "triggers": ["love", "crush", "relationship"], "response": "Relationships are an important part of life. The key is always respect and communication. Check out the Healthy Relationships module for tips on building meaningful connections." },
+  { "triggers": ["bye", "goodbye", "later", "kwaheri"], "response": "Kwaheri! 👋 Remember, I'm here whenever you need me. Keep being amazing! 🌟" },
+  { "triggers": ["help", "support", "i need help"], "response": "I'm here to help! You can tell me what's on your mind, explore the Learn modules, check your goals, or just chat. If you're going through something difficult, remember Childline Kenya is available 24/7 at 116." },
+  { "triggers": ["who are you", "what are you", "jabari"], "response": "I'm Jabari — your life-skills companion! Think of me as a supportive older sibling who's here to help you navigate life, set goals, and grow. I'm powered by AI but my care for you is real. 💙" }
+]

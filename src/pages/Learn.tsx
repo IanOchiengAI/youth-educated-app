@@ -1,207 +1,181 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  Search, 
+  Filter, 
+  BookOpen, 
+  Lock, 
+  CheckCircle2, 
+  ChevronRight,
+  Clock,
+  ArrowRight
+} from 'lucide-react';
 import { useAppContext } from '../AppContext';
-import { MODULES } from '../constants';
-import { motion } from 'motion/react';
-import { Download, CheckCircle, Clock, BookOpen, Search, Wifi, WifiOff } from 'lucide-react';
+import { Module } from '../data/modules';
+import { useModules } from '../hooks/useContent';
 
 const Learn: React.FC = () => {
-  const { state, dispatch } = useAppContext();
+  const { state } = useAppContext();
   const navigate = useNavigate();
-  const [filter, setFilter] = useState('All');
+  const [activeCategory, setActiveCategory] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredModules = MODULES.filter((m) => {
-    if (filter === 'All') return true;
-    if (filter === 'Downloaded') return state.modules.downloaded.includes(m.id);
-    if (filter === 'In Progress') return state.modules.inProgress.includes(m.id);
-    if (filter === 'Completed') return state.modules.completed.includes(m.id);
-    return true;
+  const { data: MODULES, loading } = useModules();
+
+  const CATEGORIES = ['All', 'Basics', 'Life Skills', 'Health', 'Career'];
+
+  const filteredModules = MODULES.filter(m => {
+    const matchesSearch = m.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         m.description.toLowerCase().includes(searchQuery.toLowerCase());
+    if (activeCategory === 'All') return matchesSearch;
+    if (activeCategory === 'Basics') return matchesSearch && ['confidence', 'resilience', 'finance'].includes(m.id);
+    if (activeCategory === 'Life Skills') return matchesSearch && ['communication', 'relationships'].includes(m.id);
+    if (activeCategory === 'Health') return matchesSearch && ['srh', 'healthy-choices'].includes(m.id);
+    if (activeCategory === 'Career') return matchesSearch && ['career'].includes(m.id);
+    return matchesSearch;
   });
 
-  const handleDownload = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    dispatch({ type: 'DOWNLOAD_MODULE', payload: id });
+  const isLocked = (module: Module) => {
+    if (module.id === 'srh' && !state.canAccessSRH) return true;
+    if (module.id === 'healthy-choices' && !state.canAccessDrugModule) return true;
+    return false;
+  };
+
+  const getLockReason = (module: Module) => {
+    if (module.id === 'srh' && !state.canAccessSRH) return `Unlocks at age 16`;
+    if (module.id === 'healthy-choices' && !state.canAccessDrugModule) return `Unlocks at age 13`;
+    return null;
   };
 
   return (
-    <div className="space-y-6">
-      <header className="bg-navy px-6 py-5 flex items-center justify-between sticky top-0 z-50 shadow-md">
-        <div className="flex items-center gap-3">
-          <h1 className="text-white">Learn</h1>
-          <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-            state.isOffline ? 'bg-red/20 text-red' : 'bg-green/20 text-green'
-          }`}>
-            {state.isOffline ? (
-              <>
-                <WifiOff size={10} />
-                Offline
-              </>
-            ) : (
-              <>
-                <Wifi size={10} />
-                Online
-              </>
-            )}
-          </div>
+    <div className="min-h-screen bg-off-white pb-24">
+      <header className="bg-navy text-white px-6 pt-12 pb-8 rounded-b-[40px]">
+        <h1 className="text-3xl font-bold mb-6">Learning Path</h1>
+        
+        <div className="relative mb-6">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={20} />
+          <input 
+            type="text"
+            placeholder="Search modules..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-white/10 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-white focus:border-yellow transition-all outline-none"
+          />
         </div>
-        <button className="text-white">
-          <Search size={24} />
-        </button>
-      </header>
 
-      <div className="px-4 space-y-6">
-        {/* Filter Pills */}
-        <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
-          {['All', 'Downloaded', 'In Progress', 'Completed'].map((f) => (
+        <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-6 px-6">
+          {CATEGORIES.map(cat => (
             <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-6 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all ${
-                filter === f ? 'bg-navy text-white shadow-sm' : 'bg-white text-grey border border-gray-200'
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`px-6 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${
+                activeCategory === cat 
+                  ? 'bg-yellow text-navy' 
+                  : 'bg-white/10 text-white/60 border border-white/5'
               }`}
             >
-              {f}
+              {cat}
             </button>
           ))}
         </div>
+      </header>
 
+      <main className="px-6 py-8 space-y-6">
         {/* Featured Module */}
-        <section className="bg-navy rounded-[20px] p-6 shadow-xl relative overflow-hidden group">
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-xl">
-                🌍
-              </div>
-              <span className="bg-yellow text-navy text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded">
-                Featured
-              </span>
+        <section className="space-y-4">
+          <h2 className="text-xl font-bold text-navy">Recommended for You</h2>
+          <motion.div 
+            onClick={() => navigate('/learn/confidence')}
+            className="group bg-gradient-to-br from-blue-600 to-navy p-8 rounded-[40px] text-white relative overflow-hidden cursor-pointer shadow-xl shadow-blue-900/20"
+            whileTap={{ scale: 0.98 }}
+          >
+            <div className="absolute top-0 right-0 p-8 opacity-20 pointer-events-none">
+              <BookOpen size={120} />
             </div>
-            <h2 className="text-white text-2xl mb-1">Sustainable Leadership</h2>
-            <div className="mb-4">
-              <span className="bg-white/10 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border border-white/20">
-                Advanced
-              </span>
-            </div>
-            <p className="text-white/80 text-sm mb-6 leading-relaxed max-w-[80%]">
-              Master the core principles of community building and sustainable global impact.
-            </p>
-            <div className="space-y-4">
-              <div className="w-full bg-white/20 h-1.5 rounded-full overflow-hidden">
-                <div className="bg-yellow h-full w-[65%]" />
+            <div className="relative z-10 space-y-4">
+              <div className="inline-block px-4 py-1 bg-yellow text-navy text-[10px] font-black uppercase tracking-widest rounded-full">
+                Popular
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-white/70 text-xs font-medium">65% Completed</span>
-                <button 
-                  onClick={(e) => handleDownload(e, 'sustainable-leadership')}
-                  className="bg-yellow text-navy px-5 py-2 rounded-full text-xs font-bold flex items-center gap-2 active:scale-95 transition-transform"
-                >
-                  {state.modules.downloaded.includes('sustainable-leadership') ? (
-                    <>
-                      <CheckCircle size={14} />
-                      Downloaded
-                    </>
-                  ) : (
-                    <>
-                      <Download size={14} />
-                      Download
-                    </>
-                  )}
-                </button>
+              <div className="space-y-2">
+                <h3 className="text-3xl font-bold leading-tight">Confidence Building</h3>
+                <p className="text-white/70 max-w-[200px]">Unlock your potential and believe in yourself.</p>
+              </div>
+              <div className="flex items-center gap-4 text-sm font-bold pt-4 border-t border-white/10">
+                <span className="flex items-center gap-1"><Clock size={16} /> 42 min</span>
+                <span className="flex items-center gap-1"><BookOpen size={16} /> 7 Lessons</span>
               </div>
             </div>
-          </div>
-          <div className="absolute -right-10 -top-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
+            <div className="absolute bottom-8 right-8 w-12 h-12 rounded-full bg-white text-navy flex items-center justify-center group-hover:bg-yellow transition-colors">
+              <ArrowRight size={24} />
+            </div>
+          </motion.div>
         </section>
 
         {/* Module Grid */}
-        <div className="grid grid-cols-1 gap-4">
-          {filteredModules.map((module, i) => {
-            const isDownloaded = state.modules.downloaded.includes(module.id);
-            const isCompleted = state.modules.completed.includes(module.id);
-            const isInProgress = state.modules.inProgress.includes(module.id);
-            const progress = state.modules.moduleProgress[module.id];
-            const completedCount = progress?.completedLessons?.length || 0;
-            const percent = isCompleted ? 100 : Math.round((completedCount / module.lessons) * 100);
+        <section className="space-y-4">
+          <h2 className="text-xl font-bold text-navy">All Modules</h2>
+          <div className="grid grid-cols-1 gap-4">
+            {loading ? (
+              <div className="p-8 text-center">
+                <div className="w-8 h-8 border-4 border-yellow border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-xs font-bold text-navy/40 uppercase tracking-widest">Loading Modules...</p>
+              </div>
+            ) : filteredModules.map((module) => {
+              const locked = isLocked(module);
+              const lockReason = getLockReason(module);
+              const completed = state.modules.completed.includes(module.id);
+              const inProgress = state.modules.inProgress.includes(module.id);
 
-            return (
-              <motion.div
-                key={module.id}
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: i * 0.06 }}
-                onClick={() => navigate(`/learn/${module.id}`)}
-                className={`card flex flex-col gap-4 border border-transparent transition-all active:scale-[0.98] ${
-                  isDownloaded ? 'bg-pale-yellow/50 border-yellow/30' : ''
-                }`}
-              >
-                <div className="flex justify-between items-start">
-                  <div className="w-12 h-12 rounded-xl bg-navy/5 flex items-center justify-center text-2xl">
+              return (
+                <motion.div
+                  key={module.id}
+                  onClick={() => !locked && navigate(`/learn/${module.id}`)}
+                  className={`bg-white p-5 rounded-[32px] border shadow-sm flex items-center gap-5 transition-all ${
+                    locked 
+                      ? 'border-navy/5 saturate-0 opacity-70 cursor-not-allowed' 
+                      : 'border-navy/5 cursor-pointer active:scale-[0.98]'
+                  }`}
+                  whileHover={!locked ? { y: -2 } : {}}
+                >
+                  <div className={`w-16 h-16 rounded-3xl flex items-center justify-center text-3xl shadow-inner ${
+                    locked ? 'bg-grey/10' : 'bg-off-white'
+                  }`}>
                     {module.icon}
                   </div>
-                  <div className="flex gap-2">
-                    {isDownloaded && (
-                      <span className="bg-yellow text-navy text-[10px] font-bold px-2 py-1 rounded-full flex items-center gap-1">
-                        <CheckCircle size={10} />
-                        Ready offline
-                      </span>
-                    )}
-                    {isCompleted && (
-                      <span className="bg-green text-white text-[10px] font-bold px-2 py-1 rounded-full">
-                        Completed
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <h4 className="text-lg mb-0.5">{module.title}</h4>
-                  <div className="mb-2">
-                    <span className="bg-navy/5 text-navy/60 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded">
-                      {(module as any).difficulty}
-                    </span>
-                  </div>
                   
-                  {/* Progress Bar */}
-                  {(isInProgress || isCompleted) && (
-                    <div className="mb-3">
-                      <div className="w-full bg-navy/5 h-1 rounded-full overflow-hidden mb-1">
-                        <div 
-                          className={`h-full transition-all duration-500 ${isCompleted ? 'bg-green' : 'bg-yellow'}`}
-                          style={{ width: `${percent}%` }}
-                        />
-                      </div>
-                      <span className="text-[10px] text-grey font-medium">{percent}% Completed</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1">
+                      <h4 className="font-bold text-navy truncate">{module.title}</h4>
+                      {completed && <CheckCircle2 size={16} className="text-green-500 flex-shrink-0" />}
+                      {locked && <Lock size={14} className="text-navy/40 flex-shrink-0" />}
                     </div>
-                  )}
-
-                  <div className="flex items-center gap-4 text-grey text-xs">
-                    <div className="flex items-center gap-1">
-                      <BookOpen size={12} />
+                    
+                    <div className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-wider text-navy/40">
+                      <span className="flex items-center gap-1"><Clock size={12} /> {module.duration}</span>
+                      <span>•</span>
                       <span>{module.lessons} Lessons</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Clock size={12} />
-                      <span>{module.duration}</span>
-                    </div>
+
+                    {locked && (
+                      <p className="text-[10px] text-red-500 font-bold mt-1 uppercase tracking-tighter">
+                        {lockReason}
+                      </p>
+                    )}
                   </div>
-                </div>
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-[10px] font-bold text-navy/60 uppercase tracking-widest">
-                    {module.competency}
-                  </span>
-                  {!isDownloaded && (
-                    <button
-                      onClick={(e) => handleDownload(e, module.id)}
-                      className="text-navy p-2 hover:bg-navy/5 rounded-full"
-                    >
-                      <Download size={18} />
-                    </button>
-                  )}
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-      </div>
+
+                  <div className="w-8 h-8 rounded-full bg-off-white flex items-center justify-center text-navy/20">
+                    <ChevronRight size={18} />
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </section>
+      </main>
+
+      {/* Locked Bottom Sheet Logic would go here in an actual app, 
+          for now we just prevent click on locked cards */}
     </div>
   );
 };

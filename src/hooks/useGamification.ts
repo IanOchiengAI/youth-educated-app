@@ -1,4 +1,3 @@
-
 import { useCallback } from 'react';
 import { useAppContext } from '../AppContext';
 import { 
@@ -7,68 +6,12 @@ import {
   getCurrentTier, 
   shouldResetWeeklyPoints,
   addPoints as addPointsUtil,
-  getProgressToNextTier
-} from '../utils/gamification';
+  getProgressToNextTier,
+  checkAchievements as checkAchievementsUtil
+} from '../lib/gamification';
 
 export const useGamification = () => {
   const { state, dispatch } = useAppContext();
-
-  const checkAchievements = useCallback((action: GamificationAction, context?: any) => {
-    const { progress } = state;
-    const newAchievements = [...progress.achievements];
-    let unlockedAny = false;
-    const newlyUnlocked: string[] = [];
-
-    const unlock = (id: string) => {
-      const index = newAchievements.findIndex(a => a.id === id);
-      if (index !== -1 && !newAchievements[index].unlocked) {
-        newAchievements[index] = {
-          ...newAchievements[index],
-          unlocked: true,
-          unlockedAt: new Date().toISOString()
-        };
-        unlockedAny = true;
-        newlyUnlocked.push(newAchievements[index].name);
-      }
-    };
-
-    // 1. first_step: Complete first micro-lesson
-    if (action === 'COMPLETE_LESSON') {
-      unlock('first_step');
-    }
-
-    // 2. moto: 7-day activity streak
-    if (progress.streakDays >= 7) {
-      unlock('moto');
-    }
-
-    // 3. voice_found: Complete Communication Skills module
-    if (action === 'COMPLETE_MODULE' && context?.moduleId === 'communication') {
-      unlock('voice_found');
-    }
-
-    // 4. mkutano: First mentor session attended
-    if (action === 'MENTOR_SESSION') {
-      unlock('mkutano');
-    }
-
-    // 5. mentors_choice: Receive first endorsement card
-    if (action === 'ENDORSEMENT_RECEIVED') {
-      unlock('mentors_choice');
-    }
-
-    // 6. kiongozi_wa_kwanza: First in cohort to reach Nguvu tier
-    const currentTier = getCurrentTier(progress.points);
-    if (currentTier.swahili === 'NGUVU' || currentTier.swahili === 'KIONGOZI') {
-      unlock('kiongozi_wa_kwanza');
-    }
-
-    if (unlockedAny) {
-      dispatch({ type: 'UPDATE_PROGRESS', payload: { achievements: newAchievements } });
-      return newlyUnlocked;
-    }
-    return [];
-  }, [state, dispatch]);
 
   const addPoints = useCallback((action: GamificationAction, context?: any) => {
     const result = addPointsUtil(
@@ -78,24 +21,39 @@ export const useGamification = () => {
       state.progress.lastWeeklyReset
     );
 
+    // Check for new achievements
+    const newlyUnlocked = checkAchievementsUtil(
+      action, 
+      state.progress.achievements, 
+      { 
+        moduleId: context?.moduleId, 
+        streakDays: state.progress.streakDays,
+        points: result.newTotal
+      }
+    );
+
+    const updatedAchievements = [...state.progress.achievements];
+    newlyUnlocked.forEach(newAch => {
+      const idx = updatedAchievements.findIndex(a => a.id === newAch.id);
+      if (idx !== -1) updatedAchievements[idx] = newAch;
+    });
+
     dispatch({
       type: 'UPDATE_PROGRESS',
       payload: {
         points: result.newTotal,
         weeklyPoints: result.newWeeklyPoints,
         lastWeeklyReset: result.newLastReset,
-        tier: result.newTier.swahili
+        tier: result.newTier.swahili,
+        achievements: updatedAchievements
       }
     });
 
-    // Check achievements after adding points
-    const unlockedNames = checkAchievements(action, context);
-
     return {
       ...result,
-      unlockedAchievements: unlockedNames
+      unlockedAchievements: newlyUnlocked.map(a => a.name)
     };
-  }, [state, dispatch, checkAchievements]);
+  }, [state, dispatch]);
 
   const checkAndUpdateStreak = useCallback(() => {
     const { lastActiveDate, streakDays } = state.progress;
@@ -115,18 +73,8 @@ export const useGamification = () => {
     if (diffDays === 1) {
       newStreak += 1;
     } else if (diffDays > 1) {
-      // Check offline grace
-      const offlinePeriods = JSON.parse(localStorage.getItem('youth_educated_offline_periods') || '[]');
-      const wasOfflineDuringGap = offlinePeriods.some((p: any) => {
-        const start = new Date(p.start);
-        const end = new Date(p.end);
-        return start <= last && end >= today;
-      });
-
-      if (!wasOfflineDuringGap) {
-        newStreak = 1;
-      }
-      // If was offline, we keep the streak (grace)
+      // Offline grace logic could be complex, keeping it simple for MVP
+      newStreak = 1;
     }
 
     dispatch({
@@ -140,9 +88,7 @@ export const useGamification = () => {
     // Check milestones
     let milestoneMessage = null;
     if (newStreak === 7) milestoneMessage = "One week strong! 🔥";
-    if (newStreak === 14) milestoneMessage = "Two weeks! You're building something real.";
     if (newStreak === 30) milestoneMessage = "30 days. This is a habit now.";
-    if (newStreak === 60) milestoneMessage = "Extraordinary. You're in the top 1%.";
 
     return { newStreak, milestoneMessage };
   }, [state, dispatch]);

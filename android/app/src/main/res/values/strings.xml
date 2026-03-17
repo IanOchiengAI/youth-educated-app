@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Youth Educated</string>
+    <string name="title_activity_main">Youth Educated</string>
+    <string name="package_name">org.youtheducated.app</string>
+    <string name="custom_url_scheme">org.youtheducated.app</string>
+</resources>

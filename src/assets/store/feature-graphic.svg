@@ -1,0 +1,10 @@
+<svg width="1024" height="500" viewBox="0 0 1024 500" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1024" height="500" fill="#1C1C6E" />
+  <text x="50" y="200" font-family="Poppins, sans-serif" font-weight="bold" font-size="80" fill="#FFD700">Youth Educated</text>
+  <text x="50" y="280" font-family="Nunito, sans-serif" font-size="32" fill="#FFFFFF">Conversation. Choice. Change.</text>
+  
+  <!-- Right side device previews placeholders -->
+  <rect x="700" y="50" width="120" height="240" rx="10" fill="#00000033" stroke="#FFFFFF" stroke-width="2" />
+  <rect x="750" y="100" width="120" height="240" rx="10" fill="#00000033" stroke="#FFFFFF" stroke-width="2" />
+  <rect x="800" y="150" width="120" height="240" rx="10" fill="#00000033" stroke="#FFFFFF" stroke-width="2" />
+</svg>

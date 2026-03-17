@@ -1,0 +1,11 @@
+<svg width="1080" height="1920" viewBox="0 0 1080 1920" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1080" height="1920" fill="#1C1C6E" />
+  <g transform="translate(540, 960)">
+    <!-- Placeholder for logo animation / center -->
+    <circle r="64" fill="#FFD700" opacity="0.8">
+      <animate attributeName="opacity" values="0;0.8" dur="500ms" fill="freeze" />
+    </circle>
+    <text y="120" dominant-baseline="middle" text-anchor="middle" font-family="Poppins, sans-serif" font-weight="bold" font-size="64" fill="#FFFFFF">Youth Educated</text>
+    <text y="180" dominant-baseline="middle" text-anchor="middle" font-family="Nunito, sans-serif" font-size="32" fill="#FFD700">Conversation. Choice. Change.</text>
+  </g>
+</svg>
