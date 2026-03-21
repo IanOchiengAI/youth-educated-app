@@ -16,7 +16,7 @@ import confetti from 'canvas-confetti';
 import { useAppContext } from '../AppContext';
 import { LessonSection } from '../data/modules';
 import { useModules } from '../hooks/useContent';
-import { addPoints, checkAchievements } from '../lib/gamification';
+import { addPoints, checkAchievements, getCurrentTier } from '../lib/gamification';
 import TierUpgradeModal from '../components/TierUpgradeModal';
 
 const ModuleView: React.FC = () => {
@@ -269,7 +269,7 @@ const ModuleView: React.FC = () => {
 
       {showTierUpgrade && (
         <TierUpgradeModal 
-          tier={{ name: 'Mwanzo', swahili: 'MWANZO', icon: '🌱' } /* Dummy fallback since we don't have the current tier deeply tracked here, though we should get it from gamification hooks */}
+          tier={getCurrentTier(state.progress.points)}
           userName={state.user?.name || 'Student'}
           points={state.progress.points} 
           onClose={() => setShowTierUpgrade(false)} 
