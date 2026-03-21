@@ -26,41 +26,75 @@
 
 For developers taking over the project or mentors looking for guides, please see the `docs/` folder:
 
-*   [**Developer Handover Notes**](docs/handover_notes.md): Comprehensive technical details on the AI logic, Supabase schema, and Mentor Dashboard.
-*   [**Final Project Walkthrough**](docs/walkthrough.md): A summary of recent milestones and verification results.
+- [**Developer Handover Notes**](docs/handover_notes.md): Comprehensive technical details on the AI logic, Supabase schema, and Mentor Dashboard.
+- [**Final Project Walkthrough**](docs/walkthrough.md): A summary of recent milestones and verification results.
 
 ## 🚀 Getting Started
 
 ### Prerequisites
+
 - Node.js (v18+)
 - A Supabase Project
 - A Google Gemini API Key
 
 ### Installation
 
-1.  **Clone the Repository:**
-    ```bash
-    git clone https://github.com/IanOchiengAI/youth-educated-app.git
-    cd youth-educated-app
-    ```
+1. **Clone the Repository:**
+   ```bash
+   git clone https://github.com/IanOchiengAI/youth-educated-app.git
+   cd youth-educated-app
+   ```
 
-2.  **Install Dependencies:**
-    ```bash
-    npm install
-    ```
+2. **Install Dependencies:**
+   ```bash
+   npm install
+   ```
 
-3.  **Configure Environment:**
-    Create a `.env` file in the root directory:
-    ```env
-    VITE_GEMINI_API_KEY=your_key_here
-    VITE_SUPABASE_URL=your_url_here
-    VITE_SUPABASE_ANON_KEY=your_anon_key_here
-    ```
+3. **Configure Environment:**
+   Copy the example environment file (it comes pre-filled with the shared keys):
+   ```bash
+   cp .env.example .env
+   ```
+   > On Windows PowerShell, use: `Copy-Item .env.example .env`
 
-4.  **Run Development Server:**
-    ```bash
-    npm run dev
-    ```
+4. **Run Development Server:**
+   ```bash
+   npm run dev
+   ```
+   The server will start on [http://localhost:3000](http://localhost:3000).
+
+---
+
+## 🛠️ Troubleshooting & Common Issues
+
+If you're having trouble running the app, check the following:
+
+### 1. Missing `.env` File
+The app requires a `.env` file in the root directory. Ensure it contains the following (copy from `.env.example`):
+```env
+VITE_GEMINI_API_KEY=your_key_here
+VITE_SUPABASE_URL=your_url_here
+VITE_SUPABASE_ANON_KEY=your_anon_key_here
+```
+Note: To use the AI features, you **must** provide a valid Gemini API key. Without it, the app will fallback to offline/limited mode.
+
+### 2. Node.js Version
+The project uses Vite 6 and React 19, which require **Node.js v18 or newer**. Check your version with:
+```bash
+node -v
+```
+
+### 3. Port 3000 in Use
+If the dev server fails to start, another process might be using port 3000. You can change the port in `vite.config.ts` or stop the other process.
+
+### 4. Dependency Errors
+If `npm install` fails, try clearing your npm cache:
+```bash
+npm cache clean --force
+rm -rf node_modules package-lock.json
+npm install
+```
+(We recently removed some unused native dependencies like `better-sqlite3` to fix installation issues on Windows/Linux environments without build tools.)
 
 ## 🏗️ Deployment
 
