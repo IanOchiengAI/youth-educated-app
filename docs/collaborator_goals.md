@@ -1,6 +1,6 @@
 # 🦁 Youth Educated — Collaborator Goals & Review Notes
 
-Welcome to the project! Here's everything you need to get started and what to focus on.
+Welcome Dylan! Here's everything you need to get started and what to focus on.
 
 ---
 
@@ -115,4 +115,4 @@ Walk through every screen and note:
 
 ## 📞 Questions?
 
-Reach out to Ian if anything is unclear. The `docs/handover_notes.md` file has more technical details about the AI system and database.
+Reach out to Ian if anything is unclear, or drop a message in our chat. The `docs/handover_notes.md` file has more technical details about the AI system and database.
