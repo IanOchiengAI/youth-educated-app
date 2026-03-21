@@ -36,7 +36,7 @@ Youth Educated is a life-skills PWA for Kenyan youth aged 10–22. It has:
 | Onboarding (name, age, county, goals) | ✅ Working | Phone OTP auth via Supabase |
 | Dashboard (points, streaks, achievements) | ✅ Working | Gamification tier system |
 | Jabari AI Mentor (chat + voice) | ✅ Working | Gemini 2.0 Flash, Socratic method |
-| Learning Modules (8 modules) | ⚠️ Partial | Only **2 lessons per module** (Marie is writing the rest) |
+| Learning Modules (8 modules) | ✅ Complete | Fully populated with 33 new Kenyan-context lessons |
 | Career Mapper (quiz) | ✅ Working | Maps to CBC pathways |
 | Circles (peer groups) | ✅ Working | Weekly prompts |
 | Mentor Dashboard | ✅ Working | AI briefings for mentors |
