@@ -18,6 +18,11 @@ Greetings! This document summarizes the recent major upgrades to the Jabari AI c
 - **`MentorDashboard.tsx` (NEW):** A dedicated dashboard for mentors to oversee their assigned students and generate AI session briefings.
 - **`SignIn.tsx`:** Updated "Dev Bypass" buttons for both Student and Mentor roles to facilitate local testing.
 
+## 📚 Lesson Content (`src/data/modules.ts`)
+- **Modules Expanded:** All 8 learning modules have been fully populated with 33 new lessons (totaling the intended capacity for each module).
+- **Kenyan Context:** Lessons now include authentic local context (Sheng, CBC system, local heroes like Wangari Maathai) and accurate, recent statistics (e.g., NSDCC HIV data).
+- **Structure:** Every lesson strictly adheres to the TypeScript interfaces, equipped with text, pullquotes, insight prompts, and a 3-option quiz.
+
 ## 🛠️ Dev Handover Checklist
 1. **API Keys:** Ensure `VITE_GEMINI_API_KEY` is set in the `.env` file (and in the PWA's build environment).
 2. **Supabase Migration:** Run the `ai_conversations` table create script from `supabase_schema.sql` if it's not already in production.
