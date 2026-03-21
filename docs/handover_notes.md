@@ -24,7 +24,7 @@ Greetings! This document summarizes the recent major upgrades to the Jabari AI c
 - **Structure:** Every lesson strictly adheres to the TypeScript interfaces, equipped with text, pullquotes, insight prompts, and a 3-option quiz.
 
 ## 🛠️ Dev Handover Checklist
-1. **API Keys:** Ensure `VITE_GEMINI_API_KEY` is set in the `.env` file (and in the PWA's build environment).
+1. **API Keys:** See the new `docs/api_keys_guide.md` for full instructions on how to generate your own free Supabase and Gemini keys for development.
 2. **Supabase Migration:** Run the `ai_conversations` table create script from `supabase_schema.sql` if it's not already in production.
 3. **Role Management:** To test the Mentor Dashboard, ensure your test user has the `role` enum set to `'mentor'` in the `profiles` table.
 4. **Vite Build:** The build is verified. Run `npm run build` to generate the production `dist` folder.

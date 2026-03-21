@@ -1,0 +1,17 @@
+{
+  "COMMENT": "Dylan: Replace this placeholder file with the actual google-services.json from your Firebase Console. It is required for Android push notifications to compile correctly. Do not commit the real file to Git.",
+  "project_info": {
+    "project_number": "1234567890",
+    "project_id": "youth-educated-app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1234567890:android:abcdef",
+        "android_client_info": {
+          "package_name": "org.youtheducated.app"
+        }
+      }
+    }
+  ]
+}
