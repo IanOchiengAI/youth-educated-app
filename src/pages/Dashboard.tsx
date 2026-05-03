@@ -1,22 +1,18 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Plus, 
   MessageCircle, 
   BookOpen, 
-  Trophy, 
   ChevronRight, 
   Sparkles, 
   Target, 
   Heart,
-  TrendingUp,
-  Award,
   Users,
   Briefcase,
   Compass,
   X
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
 import Leaderboard from '../components/Leaderboard';
 import MoodTracker from '../components/MoodTracker';
@@ -31,7 +27,7 @@ const Dashboard: React.FC = () => {
   const progressToNext = getProgressToNextTier(state.progress.points);
 
   const QUICK_ACTIONS = [
-    { id: 'chat', label: 'Ask Jabari', icon: <MessageCircle size={24} />, color: 'bg-blue-500', path: '/chat' },
+    { id: 'chat', label: 'Ask Amara', icon: <MessageCircle size={24} />, color: 'bg-blue-500', path: '/chat' },
     { id: 'career', label: 'Career Map', icon: <Compass size={24} />, color: 'bg-purple-500', path: '/career-mapper' },
     { id: 'opps', label: 'Opps Board', icon: <Briefcase size={24} />, color: 'bg-orange-500', path: '/opportunities' },
     { id: 'goals', label: 'My Goals', icon: <Target size={24} />, color: 'bg-green-500', path: '/goals' },
@@ -45,14 +41,22 @@ const Dashboard: React.FC = () => {
           <Sparkles size={120} />
         </div>
         
-        <div className="flex justify-between items-start mb-8 relative z-10">
-          <div>
-            <h1 className="text-3xl font-bold">Jambo, {state.user?.name}!</h1>
-            <p className="text-white/60 font-medium">Ready for your next step?</p>
+        <div className="flex justify-between items-start mb-6 relative z-10">
+          <div className="flex items-center gap-3">
+            <img 
+              src="/logo-mark.png" 
+              alt="Youth Educated" 
+              className="w-14 h-14 rounded-2xl object-contain shadow-lg shadow-yellow/20"
+            />
+            <div>
+              <h2 className="text-sm font-bold text-yellow tracking-wide">Youth Educated App</h2>
+              <p className="text-white/40 italic font-nunito text-[11px]">A mentor in every pocket</p>
+            </div>
           </div>
-          <div className="w-12 h-12 bg-yellow rounded-2xl flex items-center justify-center text-navy shadow-lg shadow-yellow/20">
-            <Trophy size={28} />
-          </div>
+        </div>
+        <div className="mb-8 relative z-10">
+          <h1 className="text-3xl font-bold">Jambo, {state.user?.name}!</h1>
+          <p className="text-white/60 font-medium">Ready for your next step?</p>
         </div>
 
         <div className="bg-white/10 rounded-[32px] p-6 border border-white/10 backdrop-blur-md relative z-10">
@@ -171,6 +175,64 @@ const Dashboard: React.FC = () => {
             <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-yellow group-hover:text-navy transition-all">
               <ChevronRight size={24} />
             </div>
+          </div>
+        </section>
+
+        {/* From the Life Kit */}
+        <section className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-xl font-bold text-navy">From the Life Kit</h2>
+            <Link to="/learn" className="text-xs font-bold text-blue-600 flex items-center">
+              See all <ChevronRight size={16} />
+            </Link>
+          </div>
+          <div className="space-y-3">
+            {[
+              {
+                emoji: '💙',
+                title: 'Feeling overwhelmed? Try this 5-minute reset',
+                tags: ['Stress', 'MentalHealth'],
+                readTime: '2 min',
+              },
+              {
+                emoji: '🚀',
+                title: 'Do not know what you want to be? Start here',
+                tags: ['Career', 'Future'],
+                readTime: '4 min',
+              },
+              {
+                emoji: '💰',
+                title: 'Got pocket money? Here is how to manage it',
+                tags: ['Money'],
+                readTime: '2 min',
+              },
+            ].map((article, idx) => (
+              <div
+                key={idx}
+                className="flex items-center gap-4 bg-white rounded-2xl p-4 shadow-sm border border-navy/5 active:scale-[0.98] transition-transform duration-120"
+              >
+                <span className="text-2xl flex-shrink-0 leading-none">{article.emoji}</span>
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-nunito font-semibold text-navy text-sm leading-snug mb-1.5">
+                    {article.title}
+                  </h4>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {article.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="bg-pale-yellow text-navy/70 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                    <span className="text-grey text-[11px] ml-auto flex-shrink-0">
+                      {article.readTime}
+                    </span>
+                  </div>
+                </div>
+                <ChevronRight size={18} className="text-navy/30 flex-shrink-0" />
+              </div>
+            ))}
           </div>
         </section>
 

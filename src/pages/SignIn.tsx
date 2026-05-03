@@ -109,6 +109,14 @@ const SignIn: React.FC = () => {
 
       <main className="flex-1 px-6 pt-4 pb-12 flex flex-col max-w-md mx-auto w-full">
         <div className="mb-12">
+          <motion.img 
+            src="/logo-full.png" 
+            alt="Youth Educated" 
+            className="w-28 h-auto mb-6"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          />
           <h1 className="text-3xl font-poppins font-bold text-navy mb-2">
             {step === 'phone' ? 'Welcome Back' : 'Verify Code'}
           </h1>
@@ -186,7 +194,9 @@ const SignIn: React.FC = () => {
                             guardianConsent: true,
                             onboardingCompleted: true,
                             joinedAt: new Date().toISOString(),
-                            role: 'student'
+                            role: 'student',
+                            jabariVoice: 'default_male',
+                            mentorPairId: null
                           }
                         });
                         navigate('/dashboard');
@@ -211,7 +221,9 @@ const SignIn: React.FC = () => {
                             guardianConsent: true,
                             onboardingCompleted: true,
                             joinedAt: new Date().toISOString(),
-                            role: 'mentor'
+                            role: 'mentor',
+                            jabariVoice: 'default_male',
+                            mentorPairId: null
                           }
                         });
                         navigate('/mentor-dashboard');

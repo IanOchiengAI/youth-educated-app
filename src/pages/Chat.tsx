@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Send, 
@@ -21,12 +21,14 @@ import {
   sendToJabari, 
   fetchAIConversations, 
   updateAIConversations, 
+  generateCheckinSummary,
   InteractionMode, 
   RoleplayScenario,
   ROLEPLAY_SCENARIOS 
 } from '../api/jabari';
 import { checkSafeguarding } from '../lib/safeguarding';
 import { addPoints } from '../lib/gamification';
+import { supabase } from '../lib/supabase';
 
 interface Message {
   id: string;
@@ -49,6 +51,16 @@ const Chat: React.FC = () => {
   const [showActionModeMenu, setShowActionModeMenu] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Refs for check-in logging (need stable references accessible in cleanup)
+  const messagesRef = useRef<Message[]>([]);
+  const safeguardingTriggeredRef = useRef(false);
+  const checkinFiredRef = useRef(false);
+
+  // Keep messagesRef in sync
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -57,6 +69,35 @@ const Chat: React.FC = () => {
     scrollToBottom();
   }, [messages, isTyping]);
 
+  // ── Goal fetching from mentor_matches ──
+  useEffect(() => {
+    const fetchGoals = async () => {
+      if (!state.user?.id || state.isOffline) return;
+
+      try {
+        const { data } = await supabase
+          .from('mentor_matches')
+          .select('id, jabari_goals, jabari_agenda')
+          .eq('student_id', state.user.id)
+          .eq('status', 'active')
+          .maybeSingle();
+
+        if (data && data.jabari_goals?.length > 0) {
+          dispatch({ type: 'SET_JABARI_GOALS', payload: { goals: data.jabari_goals, agenda: data.jabari_agenda || '' } });
+          dispatch({ type: 'SET_MENTOR_PAIR', payload: data.id });
+        } else {
+          // Fallback to onboarding goals
+          dispatch({ type: 'SET_JABARI_GOALS', payload: { goals: state.user.goals || [], agenda: '' } });
+        }
+      } catch (err) {
+        console.error('Failed to fetch mentor goals:', err);
+      }
+    };
+
+    fetchGoals();
+  }, [state.user?.id]);
+
+  // ── Load history or show goal-aware greeting ──
   useEffect(() => {
     const loadHistory = async () => {
       if (!state.user?.id || state.isOffline) return;
@@ -71,10 +112,21 @@ const Chat: React.FC = () => {
         }));
         setMessages(formattedMessages);
       } else {
-        // Initial greeting if no history
-        const greeting = language === 'English' 
-          ? `Jambo ${state.user?.name}! I'm Jabari. I'm here to support you. What's on your mind?`
-          : `Jambo ${state.user?.name}! Mimi ni Jabari. Niko hapa kukusaidia. Unafikiria nini leo?`;
+        // Build goal-aware greeting
+        const goals = state.jabariGoals.length > 0 ? state.jabariGoals : (state.user?.goals || []);
+        const goalsText = goals.join(', ');
+        const hasMentorGoals = state.user?.mentorPairId && state.jabariGoals.length > 0;
+
+        let greeting: string;
+        if (language === 'Kiswahili') {
+          greeting = `Jambo ${state.user?.name}! Mimi ni Amara. Niko hapa kukusaidia. Unafikiria nini leo?`;
+        } else if (hasMentorGoals && goalsText) {
+          greeting = `Habari ${state.user?.name}! I see your mentor wants us to focus on: ${goalsText}. How are things going?`;
+        } else if (goalsText) {
+          greeting = `Jambo ${state.user?.name}! I know you're working on: ${goalsText}. What's on your mind today?`;
+        } else {
+          greeting = `Jambo ${state.user?.name}! I'm Amara. I'm here to support you. What's on your mind?`;
+        }
         
         setMessages([{
           id: '1',
@@ -86,7 +138,56 @@ const Chat: React.FC = () => {
     };
 
     loadHistory();
-  }, [state.user?.id]);
+  }, [state.user?.id, state.jabariGoals, state.user?.mentorPairId]);
+
+  // ── Check-in logging on unmount ──
+  const performCheckin = useCallback(async () => {
+    if (checkinFiredRef.current) return;
+    if (messagesRef.current.length < 3) return;
+    if (!state.user?.id || state.isOffline) return;
+
+    checkinFiredRef.current = true;
+
+    try {
+      const history = messagesRef.current.map(m => ({
+        role: m.role as 'user' | 'model',
+        parts: [{ text: m.text }]
+      }));
+
+      const summaryText = await generateCheckinSummary(history);
+      if (!summaryText) return;
+
+      // Parse: SUMMARY: ... | GOALS: ... | MOOD: ...
+      const summaryMatch = summaryText.match(/SUMMARY:\s*(.+?)\s*\|\s*GOALS:\s*(.+?)\s*\|\s*MOOD:\s*(.+)/i);
+      if (!summaryMatch) return;
+
+      const [, summary, goalsTouched, moodSignal] = summaryMatch;
+
+      await supabase.from('jabari_checkins').insert({
+        mentee_id: state.user.id,
+        pair_id: state.user.mentorPairId || null,
+        summary: summary.trim(),
+        goals_touched: goalsTouched.trim().split(',').map((g: string) => g.trim()),
+        mood_signal: moodSignal.trim().toLowerCase(),
+        safeguarding_flag: safeguardingTriggeredRef.current,
+      });
+    } catch {
+      // Silent fail — never block navigation
+    }
+  }, [state.user?.id, state.user?.mentorPairId, state.isOffline]);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      performCheckin();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      performCheckin();
+    };
+  }, [performCheckin]);
 
   const handleSend = async () => {
     if (!inputText.trim() || isTyping || isLocked) return;
@@ -106,6 +207,7 @@ const Chat: React.FC = () => {
     const safeguard = checkSafeguarding(userMessage.text, state.user?.ageBracket || '16-18', state.user?.id);
     
     if (safeguard.triggered && safeguard.escalationText) {
+      safeguardingTriggeredRef.current = true;
       setTimeout(() => {
         setIsTyping(false);
         setMessages(prev => [...prev, {
@@ -115,18 +217,32 @@ const Chat: React.FC = () => {
           timestamp: new Date().toISOString(),
           isEscalation: true
         }]);
-        if (safeguard.category === 'A' || safeguard.category === 'B') {
+        if (safeguard.category === 'A') {
           setIsLocked(true);
         }
       }, 1000);
       return;
     }
 
-    // 2. AI Response
-    const history = messages.map(m => ({
+    // 2. Build goal context for injection
+    const goals = state.jabariGoals.length > 0 ? state.jabariGoals : (state.user?.goals || []);
+    const goalContext = goals.length > 0
+      ? `[MENTEE GOALS: ${goals.join(' | ')}]` + (state.jabariAgenda ? `\n[MENTOR AGENDA: ${state.jabariAgenda}]` : '')
+      : '';
+
+    // 3. Build history with goal context as silent first turn
+    const baseHistory = messages.map(m => ({
       role: m.role,
       parts: [{ text: m.text }]
     }));
+
+    const history = goalContext
+      ? [
+          { role: 'user' as const, parts: [{ text: goalContext }] },
+          { role: 'model' as const, parts: [{ text: 'Understood. I will keep these goals and agenda in mind throughout our conversation.' }] },
+          ...baseHistory
+        ]
+      : baseHistory;
 
     const responseText = await sendToJabari(
       userMessage.text, 
@@ -147,7 +263,7 @@ const Chat: React.FC = () => {
 
     setMessages(prev => {
       const updated = [...prev, newModelMessage];
-      // Sync to Supabase
+      // Sync to Supabase (without the injected goal context turns)
       if (state.user?.id && !state.isOffline) {
         const geminiHistory = updated.map(m => ({
           role: m.role,
@@ -158,7 +274,7 @@ const Chat: React.FC = () => {
       return updated;
     });
 
-    // 3. Award Points
+    // 4. Award Points
     const result = addPoints(
       'AI_INTERACTION',
       state.progress.points,
@@ -178,10 +294,10 @@ const Chat: React.FC = () => {
           </button>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-yellow rounded-full flex items-center justify-center text-navy text-xl font-bold">
-              🦁
+              🌸
             </div>
             <div>
-              <h2 className="font-bold">Jabari</h2>
+              <h2 className="font-bold">Amara</h2>
               <div className="flex items-center gap-1.5">
                 <div className={`w-2 h-2 rounded-full ${state.isOffline ? 'bg-grey' : 'bg-green-400'}`} />
                 <span className="text-[10px] text-white/60 font-medium uppercase tracking-widest">
@@ -310,7 +426,7 @@ const Chat: React.FC = () => {
                   </div>
                   <div>
                     <h4 className="text-sm font-bold text-navy">Socratic Quiz</h4>
-                    <p className="text-[10px] text-navy/40 font-medium">Test your knowledge with Jabari.</p>
+                    <p className="text-[10px] text-navy/40 font-medium">Test your knowledge with Amara.</p>
                   </div>
                 </button>
 
@@ -357,7 +473,7 @@ const Chat: React.FC = () => {
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-            placeholder={isLocked ? "Chat disabled for your safety. Please seek help." : "Talk to Jabari..."}
+            placeholder={isLocked ? "Chat disabled for your safety. Please seek help." : "Talk to Amara..."}
             disabled={isLocked}
             className="flex-1 bg-transparent outline-none text-navy placeholder:text-navy/30 py-2 disabled:cursor-not-allowed"
           />

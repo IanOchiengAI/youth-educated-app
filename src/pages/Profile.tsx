@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Settings, 
@@ -12,7 +12,9 @@ import {
   Smartphone,
   Target,
   Sparkles,
-  Shield
+  Shield,
+  Volume2,
+  ChevronDown
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -29,11 +31,36 @@ import { getCurrentTier } from '../utils/gamification';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../lib/db';
 import { signOut } from '../lib/auth';
+import { JABARI_VOICE_OPTIONS, getSelectedVoiceId, setSelectedVoiceId } from '../data/voices';
+import { tts } from '../lib/tts';
 
 const Profile: React.FC = () => {
-  const { state } = useAppContext();
+  const { state, dispatch } = useAppContext();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'overview' | 'wellness' | 'achievements' | 'settings'>('overview');
+  const [selectedVoice, setSelectedVoice] = useState(getSelectedVoiceId());
+  const [systemVoices, setSystemVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [showSystemVoices, setShowSystemVoices] = useState(false);
+
+  // Load system voices (they can load async on some browsers)
+  useEffect(() => {
+    const loadVoices = () => {
+      const voices = (tts as any).getAvailableVoices?.() ?? [];
+      setSystemVoices(voices);
+    };
+    loadVoices();
+    // Some browsers fire voiceschanged event when voices become available
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.addEventListener('voiceschanged', loadVoices);
+      return () => window.speechSynthesis.removeEventListener('voiceschanged', loadVoices);
+    }
+  }, []);
+
+  const handleVoiceSelect = (voiceId: string) => {
+    setSelectedVoice(voiceId);
+    setSelectedVoiceId(voiceId);
+    dispatch({ type: 'SET_JABARI_VOICE', payload: voiceId });
+  };
 
   const currentTier = getCurrentTier(state.progress.points);
 
@@ -172,26 +199,26 @@ const Profile: React.FC = () => {
                         <AreaChart data={moodData}>
                           <defs>
                             <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#1E3A8B" stopOpacity={0.1}/>
-                              <stop offset="95%" stopColor="#1E3A8B" stopOpacity={0}/>
+                              <stop offset="5%" stopColor="#1C1C6E" stopOpacity={0.1}/>
+                              <stop offset="95%" stopColor="#1C1C6E" stopOpacity={0}/>
                             </linearGradient>
                           </defs>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F5F5F5" />
                           <XAxis 
                             dataKey="day" 
                             axisLine={false} 
                             tickLine={false} 
-                            tick={{ fontSize: 10, fill: '#64748B', fontWeight: 'bold' }} 
+                            tick={{ fontSize: 10, fill: '#6B7280', fontWeight: 'bold' }} 
                           />
                           <YAxis hide domain={[0, 5]} />
                           <Tooltip 
                             contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                            labelStyle={{ fontWeight: 'bold', color: '#1E3A8B' }}
+                            labelStyle={{ fontWeight: 'bold', color: '#1C1C6E' }}
                           />
                           <Area 
                             type="monotone" 
                             dataKey="score" 
-                            stroke="#1E3A8B" 
+                            stroke="#1C1C6E" 
                             strokeWidth={3}
                             fillOpacity={1} 
                             fill="url(#colorScore)" 
@@ -209,7 +236,7 @@ const Profile: React.FC = () => {
                 <div className="bg-blue-600 p-8 rounded-[40px] text-white space-y-4 shadow-xl shadow-blue-900/20">
                   <div className="flex items-center gap-2 text-blue-200">
                     <Sparkles size={16} />
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Jabari's Wisdom</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Amara's Wisdom</span>
                   </div>
                   <p className="text-lg font-bold leading-tight italic">
                     "Self-care is the best kind of fuel. Keep monitoring your progress and believe in your light."
@@ -247,56 +274,167 @@ const Profile: React.FC = () => {
             )}
 
             {activeTab === 'settings' && (
-              <div className="bg-white rounded-[40px] overflow-hidden border border-navy/5 shadow-sm mb-12">
-                <div className="p-6 border-b border-navy/5">
-                  <h3 className="font-bold text-navy">Account Sync</h3>
+              <div className="space-y-6 mb-12">
+                {/* ── Jabari's Voice ── */}
+                <div className="bg-white rounded-[40px] overflow-hidden border border-navy/5 shadow-sm">
+                  <div className="p-6 border-b border-navy/5 flex items-center gap-3">
+                    <div className="p-2.5 bg-yellow/10 text-yellow rounded-xl">
+                      <Volume2 size={18} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-navy">Amara's Voice</h3>
+                      <p className="text-[10px] text-navy/40 font-bold uppercase tracking-widest">Choose how Amara sounds</p>
+                    </div>
+                  </div>
+                  <div className="p-4 space-y-3">
+                    {JABARI_VOICE_OPTIONS.map((voice) => (
+                      <motion.button
+                        key={voice.id}
+                        whileTap={{ scale: 0.97 }}
+                        onClick={() => handleVoiceSelect(voice.id)}
+                        className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left ${
+                          selectedVoice === voice.id
+                            ? 'border-yellow bg-yellow/10 shadow-sm'
+                            : 'border-navy/5 bg-white hover:bg-off-white'
+                        }`}
+                      >
+                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl ${
+                          selectedVoice === voice.id ? 'bg-yellow/20' : 'bg-off-white'
+                        }`}>
+                          {voice.gender === 'male' ? '👨' : '👩'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-bold text-sm ${
+                            selectedVoice === voice.id ? 'text-navy' : 'text-navy/70'
+                          }`}>
+                            {voice.label}
+                          </p>
+                          <p className="text-[10px] text-navy/40 font-bold uppercase tracking-widest">
+                            {voice.description}
+                          </p>
+                        </div>
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                          selectedVoice === voice.id
+                            ? 'border-yellow bg-yellow'
+                            : 'border-navy/15 bg-white'
+                        }`}>
+                          {selectedVoice === voice.id && (
+                            <motion.div
+                              initial={{ scale: 0 }}
+                              animate={{ scale: 1 }}
+                              className="w-2 h-2 bg-white rounded-full"
+                            />
+                          )}
+                        </div>
+                      </motion.button>
+                    ))}
+                  </div>
+
+                  {/* Collapsible System Voices */}
+                  <div className="border-t border-navy/5">
+                    <button
+                      onClick={() => setShowSystemVoices(!showSystemVoices)}
+                      className="w-full flex items-center justify-between p-5 hover:bg-off-white transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Smartphone size={16} className="text-navy/30" />
+                        <span className="text-xs font-bold text-navy/50">System Voices ({systemVoices.length})</span>
+                      </div>
+                      <motion.div
+                        animate={{ rotate: showSystemVoices ? 180 : 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <ChevronDown size={16} className="text-navy/20" />
+                      </motion.div>
+                    </button>
+                    <AnimatePresence>
+                      {showSystemVoices && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="px-5 pb-5 space-y-2 max-h-60 overflow-y-auto">
+                            {systemVoices.length === 0 ? (
+                              <p className="text-xs text-navy/30 italic py-3">No system voices detected</p>
+                            ) : (
+                              systemVoices.map((v, i) => (
+                                <div
+                                  key={`${v.name}-${i}`}
+                                  className="flex items-center justify-between py-2.5 px-3 bg-off-white rounded-xl"
+                                >
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-xs font-bold text-navy/60 truncate">{v.name}</p>
+                                    <p className="text-[9px] text-navy/30 font-medium">{v.lang}</p>
+                                  </div>
+                                  {v.default && (
+                                    <span className="text-[8px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full ml-2 shrink-0">
+                                      Default
+                                    </span>
+                                  )}
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
-                <div className="divide-y divide-navy/5">
-                  <button className="w-full flex items-center justify-between p-6 hover:bg-off-white transition-colors text-left">
-                    <div className="flex items-center gap-4">
-                      <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl"><Languages size={18} /></div>
-                      <div>
-                        <p className="font-bold text-sm text-navy">App Language</p>
-                        <p className="text-[10px] text-navy/40 font-bold uppercase">{state.user?.language}</p>
+
+                {/* ── Account & Settings ── */}
+                <div className="bg-white rounded-[40px] overflow-hidden border border-navy/5 shadow-sm">
+                  <div className="p-6 border-b border-navy/5">
+                    <h3 className="font-bold text-navy">Account Sync</h3>
+                  </div>
+                  <div className="divide-y divide-navy/5">
+                    <button className="w-full flex items-center justify-between p-6 hover:bg-off-white transition-colors text-left">
+                      <div className="flex items-center gap-4">
+                        <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl"><Languages size={18} /></div>
+                        <div>
+                          <p className="font-bold text-sm text-navy">App Language</p>
+                          <p className="text-[10px] text-navy/40 font-bold uppercase">{state.user?.language}</p>
+                        </div>
                       </div>
-                    </div>
-                    <ChevronRight size={18} className="text-navy/20" />
-                  </button>
-                  <button className="w-full flex items-center justify-between p-6 hover:bg-off-white transition-colors text-left">
-                    <div className="flex items-center gap-4">
-                      <div className="p-2.5 bg-green-50 text-green-600 rounded-xl"><Smartphone size={18} /></div>
-                      <div>
-                        <p className="font-bold text-sm text-navy">Security</p>
-                        <p className="text-[10px] text-navy/40 font-bold uppercase">Phone Auth Active</p>
+                      <ChevronRight size={18} className="text-navy/20" />
+                    </button>
+                    <button className="w-full flex items-center justify-between p-6 hover:bg-off-white transition-colors text-left">
+                      <div className="flex items-center gap-4">
+                        <div className="p-2.5 bg-green-50 text-green-600 rounded-xl"><Smartphone size={18} /></div>
+                        <div>
+                          <p className="font-bold text-sm text-navy">Security</p>
+                          <p className="text-[10px] text-navy/40 font-bold uppercase">Phone Auth Active</p>
+                        </div>
                       </div>
-                    </div>
-                    <ChevronRight size={18} className="text-navy/20" />
-                  </button>
-                  <button 
-                    onClick={handleSignOut}
-                    className="w-full flex items-center justify-between p-6 hover:bg-red-50 group transition-colors text-left"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="p-2.5 bg-red-50 text-red-600 rounded-xl group-hover:bg-red-100"><LogOut size={18} /></div>
-                      <div>
-                        <p className="font-bold text-sm text-navy group-hover:text-red-600">Sign Out</p>
-                        <p className="text-[10px] text-navy/40 font-bold uppercase">Goodbye for now</p>
+                      <ChevronRight size={18} className="text-navy/20" />
+                    </button>
+                    <button 
+                      onClick={handleSignOut}
+                      className="w-full flex items-center justify-between p-6 hover:bg-red-50 group transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="p-2.5 bg-red-50 text-red-600 rounded-xl group-hover:bg-red-100"><LogOut size={18} /></div>
+                        <div>
+                          <p className="font-bold text-sm text-navy group-hover:text-red-600">Sign Out</p>
+                          <p className="text-[10px] text-navy/40 font-bold uppercase">Goodbye for now</p>
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => navigate('/privacy')}
-                    className="w-full flex items-center justify-between p-6 hover:bg-off-white transition-colors text-left"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="p-2.5 bg-navy/5 text-navy/60 rounded-xl"><Shield size={18} /></div>
-                      <div>
-                        <p className="font-bold text-sm text-navy">Privacy Policy</p>
-                        <p className="text-[10px] text-navy/40 font-bold uppercase">How we protect your data</p>
+                    </button>
+                    <button
+                      onClick={() => navigate('/privacy')}
+                      className="w-full flex items-center justify-between p-6 hover:bg-off-white transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="p-2.5 bg-navy/5 text-navy/60 rounded-xl"><Shield size={18} /></div>
+                        <div>
+                          <p className="font-bold text-sm text-navy">Privacy Policy</p>
+                          <p className="text-[10px] text-navy/40 font-bold uppercase">How we protect your data</p>
+                        </div>
                       </div>
-                    </div>
-                    <ChevronRight size={18} className="text-navy/20" />
-                  </button>
+                      <ChevronRight size={18} className="text-navy/20" />
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

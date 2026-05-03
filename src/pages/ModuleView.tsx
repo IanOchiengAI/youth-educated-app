@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Navigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   ChevronLeft, 
@@ -44,6 +44,12 @@ const ModuleView: React.FC = () => {
   }
 
   if (!module) return <div className="p-20 text-center font-bold text-navy">Module Not Found</div>;
+
+  // Age-gate: prevent underage access to sensitive modules
+  const userMinAge = parseInt(state.user?.ageBracket?.split('-')[0] || '10');
+  if (module.min_age > userMinAge) {
+    return <Navigate to="/learn" replace />;
+  }
 
   const currentLesson = module.content[currentLessonIndex] || module.content[0];
   const isLastLesson = currentLessonIndex === module.content.length - 1;
@@ -102,7 +108,7 @@ const ModuleView: React.FC = () => {
       particleCount: 150,
       spread: 70,
       origin: { y: 0.6 },
-      colors: ['#1E3A8A', '#FACC15']
+      colors: ['#1C1C6E', '#FFD700']
     });
 
     setShowComplete(true);
@@ -134,7 +140,7 @@ const ModuleView: React.FC = () => {
           <div key={i} className="bg-yellow/10 p-8 rounded-[32px] border-2 border-yellow/20 space-y-4 my-8">
             <div className="flex items-center gap-2 text-yellow-700 font-bold uppercase tracking-widest text-xs">
               <Lightbulb size={16} />
-              Jabari's Insight
+              Amara's Insight
             </div>
             <p className="text-lg font-bold text-navy">{section.prompt}</p>
             <textarea 

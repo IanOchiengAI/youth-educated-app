@@ -420,3 +420,115 @@ INSERT INTO modules (id, title, description, is_published) VALUES
 ('digital_literacy', 'Digital Literacy', 'The connected world.', true),
 ('career_pathways', 'Career Pathways', 'Finding your lane.', true),
 ('leadership', 'Leadership', 'Stepping up.', true);
+
+-- ============================================================
+-- JABARI MENTOR GOAL INJECTION & CHECK-IN LOGGING
+-- ============================================================
+
+-- Add goal injection columns to existing mentor_matches table
+ALTER TABLE mentor_matches
+  ADD COLUMN jabari_goals TEXT[] DEFAULT '{}',
+  ADD COLUMN jabari_agenda TEXT DEFAULT '';
+
+-- Check-in log: one row per mentee per session
+CREATE TABLE jabari_checkins (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mentee_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+  pair_id UUID NOT NULL REFERENCES mentor_matches(id) ON DELETE CASCADE,
+  checkin_date DATE DEFAULT CURRENT_DATE,
+  summary TEXT,
+  goals_touched TEXT[] DEFAULT '{}',
+  mood_signal TEXT NOT NULL CHECK (mood_signal IN ('positive', 'neutral', 'concerning')),
+  safeguarding_flag TEXT CHECK (safeguarding_flag IS NULL OR safeguarding_flag IN ('A', 'B', 'C')),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- RLS — every table ships with it or it doesn't ship
+ALTER TABLE jabari_checkins ENABLE ROW LEVEL SECURITY;
+
+-- Mentors can view checkins for their active students
+CREATE POLICY "Mentors can view checkins for their students"
+  ON jabari_checkins FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM mentor_matches mm
+      WHERE mm.id = jabari_checkins.pair_id
+        AND mm.mentor_id = auth.uid()
+        AND mm.status = 'active'
+    )
+  );
+
+-- DSLs can view any checkin that carries a safeguarding flag
+CREATE POLICY "DSLs can view flagged checkins"
+  ON jabari_checkins FOR SELECT
+  USING (
+    safeguarding_flag IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM profiles p
+      WHERE p.id = auth.uid()
+        AND p.role = 'dsl'
+    )
+  );
+
+-- Users can insert their own checkins
+CREATE POLICY "Users can insert own checkins"
+  ON jabari_checkins FOR INSERT
+  WITH CHECK (auth.uid() = mentee_id);
+
+-- ============================================================
+-- MENTOR TABLES — PRODUCTION FINALIZATION
+-- KOFI: every table ships with RLS or it doesn't ship.
+-- ============================================================
+
+-- 1. Extend match_status enum to support pending match requests
+ALTER TYPE match_status ADD VALUE IF NOT EXISTS 'pending';
+
+-- 2. Add missing columns to mentor_profiles
+ALTER TABLE mentor_profiles
+  ADD COLUMN IF NOT EXISTS expertise TEXT[] DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS county TEXT,
+  ADD COLUMN IF NOT EXISTS avatar_url TEXT,
+  ADD COLUMN IF NOT EXISTS is_available BOOLEAN DEFAULT TRUE;
+
+-- 3. Add activated_at to mentor_matches
+ALTER TABLE mentor_matches
+  ADD COLUMN IF NOT EXISTS activated_at TIMESTAMPTZ;
+
+-- 4. RLS POLICIES for mentor_matches
+--
+-- ⚠ DUPLICATE NOTE:
+-- Line 345 already defines:
+--   "Users can view their mentor matches" ON mentor_matches FOR SELECT
+--     USING (auth.uid() IN (student_id, mentor_id))
+-- This already covers both student and mentor SELECT.
+-- Adding a second student-only SELECT policy would be redundant (Postgres
+-- ORs all matching policies). We skip the duplicate and note it here.
+
+-- 4a. Mentors can update jabari_goals and jabari_agenda for their active matches
+-- (RLS can't restrict to specific columns — the app layer enforces that)
+CREATE POLICY "Mentors can update goals for their active matches"
+  ON mentor_matches FOR UPDATE
+  USING (
+    auth.uid() = mentor_id
+    AND status = 'active'
+  )
+  WITH CHECK (
+    auth.uid() = mentor_id
+    AND status = 'active'
+  );
+
+-- 4b. Students can insert match requests with their own student_id
+CREATE POLICY "Students can insert match requests"
+  ON mentor_matches FOR INSERT
+  WITH CHECK (auth.uid() = student_id);
+
+-- 5. mentor_profiles: anyone can view available mentors (public directory)
+CREATE POLICY "Anyone can view available mentor profiles"
+  ON mentor_profiles FOR SELECT
+  USING (is_available = true);
+
+-- 6. Mentors can update their own profile
+CREATE POLICY "Mentors can update own profile"
+  ON mentor_profiles FOR UPDATE
+  USING (auth.uid() = id)
+  WITH CHECK (auth.uid() = id);

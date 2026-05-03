@@ -18,6 +18,8 @@ export interface User {
   onboardingCompleted: boolean;
   joinedAt: string;
   role: 'student' | 'mentor' | 'admin' | 'dsl';
+  jabariVoice: string;
+  mentorPairId: string | null;
 }
 
 export interface Achievement {
@@ -74,6 +76,8 @@ export interface AppState {
   canAccessDrugModule: boolean;
   careerResults: CareerResults | null;
   circleType: 'mixed' | 'brothers_keepers';
+  jabariGoals: string[];
+  jabariAgenda: string;
 }
 
 function deriveAccess(ageBracket: string) {
@@ -95,6 +99,9 @@ type Action =
   | { type: 'SET_NOTIFICATIONS'; payload: Partial<AppState['notifications']> }
   | { type: 'SET_CAREER_RESULTS'; payload: CareerResults }
   | { type: 'SET_CIRCLE_TYPE'; payload: 'mixed' | 'brothers_keepers' }
+  | { type: 'SET_JABARI_GOALS'; payload: { goals: string[]; agenda: string } }
+  | { type: 'SET_MENTOR_PAIR'; payload: string | null }
+  | { type: 'SET_JABARI_VOICE'; payload: string }
   | { type: 'HYDRATE'; payload: AppState }
   | { type: 'SYNC_FROM_SUPABASE'; payload: Partial<AppState> };
 
@@ -131,6 +138,8 @@ const initialState: AppState = {
   canAccessDrugModule: false,
   careerResults: null,
   circleType: 'mixed',
+  jabariGoals: [],
+  jabariAgenda: '',
 };
 
 const AppContext = createContext<{
@@ -265,6 +274,29 @@ function appReducer(state: AppState, action: Action): AppState {
     case 'SET_CIRCLE_TYPE':
       newState = { ...state, circleType: action.payload };
       break;
+    case 'SET_JABARI_GOALS':
+      newState = {
+        ...state,
+        jabariGoals: action.payload.goals,
+        jabariAgenda: action.payload.agenda,
+      };
+      break;
+    case 'SET_MENTOR_PAIR': {
+      if (!state.user) return state;
+      newState = {
+        ...state,
+        user: { ...state.user, mentorPairId: action.payload },
+      };
+      break;
+    }
+    case 'SET_JABARI_VOICE': {
+      if (!state.user) return state;
+      newState = {
+        ...state,
+        user: { ...state.user, jabariVoice: action.payload },
+      };
+      break;
+    }
     case 'HYDRATE': {
       const hydrated = action.payload;
       if (hydrated.user) {
@@ -330,6 +362,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             onboardingCompleted: profile.onboarding_completed,
             joinedAt: profile.joined_at,
             role: profile.role || 'student',
+            jabariVoice: 'default_female',
+            mentorPairId: null,
           };
           dispatch({ type: 'SET_USER', payload: user });
           

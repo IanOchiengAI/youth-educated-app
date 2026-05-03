@@ -1,19 +1,25 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, 
-  ChevronRight, 
   Sparkles, 
   RefreshCw, 
   Target, 
   Heart,
   MessageCircle,
   Calendar,
-  Clock
+  Clock,
+  ChevronDown,
+  Check,
+  AlertTriangle,
+  Shield,
+  WifiOff
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
 import { generateMentorBriefing } from '../api/jabari';
+import { updateMentorGoals } from '../lib/mentoring';
+import { supabase } from '../lib/supabase';
 
 interface Student {
   id: string;
@@ -21,14 +27,68 @@ interface Student {
   avatar: string;
   lastActive: string;
   progress: string;
-  recentActivity: string; // This data feeds the AI briefing
+  recentActivity: string;
+}
+
+interface JabariCheckin {
+  id: string;
+  checkin_date: string;
+  summary: string;
+  goals_touched: string[];
+  mood_signal: string;
+  safeguarding_flag: boolean | string | null;
+}
+
+interface GoalFormData {
+  goals: [string, string, string];
+  agenda: string;
+}
+
+const DEFAULT_FORM: GoalFormData = { goals: ['', '', ''], agenda: '' };
+
+// ── Safeguarding flag renderer ──
+function SafeguardingBanner({ flag }: { flag: boolean | string | null }) {
+  if (!flag) return null;
+  const cat = typeof flag === 'string' ? flag.toUpperCase() : 'A';
+
+  if (cat === 'B') return (
+    <div className="mt-2 bg-orange-500 text-white rounded-xl px-4 py-2.5 flex items-center gap-2 font-bold text-xs">
+      <AlertTriangle size={14} /> Serious Concern
+    </div>
+  );
+  if (cat === 'C') return (
+    <p className="mt-1.5 text-[10px] font-bold text-yellow-600 uppercase tracking-widest flex items-center gap-1">
+      <AlertTriangle size={10} /> Monitoring
+    </p>
+  );
+  // Category A or boolean true — highest severity
+  return (
+    <div className="mt-2 bg-red-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-2 font-bold text-xs">
+      <Shield size={14} /> IMMEDIATE — Childline Kenya 116
+    </div>
+  );
 }
 
 const MentorDashboard: React.FC = () => {
   const { state } = useAppContext();
   const navigate = useNavigate();
+
+  // AI briefing state
   const [briefings, setBriefings] = useState<{ [key: string]: string }>({});
   const [loadingIds, setLoadingIds] = useState<string[]>([]);
+
+  // Goal form state
+  const [goalFormsOpen, setGoalFormsOpen] = useState<Record<string, boolean>>({});
+  const [goalForms, setGoalForms] = useState<Record<string, GoalFormData>>({});
+  const [savingGoals, setSavingGoals] = useState<Record<string, boolean>>({});
+  const [goalSuccess, setGoalSuccess] = useState<Record<string, boolean>>({});
+
+  // Pair IDs: studentId → { pairId, goals, agenda }
+  const [studentPairs, setStudentPairs] = useState<Record<string, { pairId: string; goals: string[]; agenda: string }>>({});
+
+  // Check-in state: studentId → checkins[]
+  const [checkins, setCheckins] = useState<Record<string, JabariCheckin[]>>({});
+  const [checkinsOpen, setCheckinsOpen] = useState<Record<string, boolean>>({});
 
   // Mock students for the Mentor
   const STUDENTS: Student[] = [
@@ -58,6 +118,67 @@ const MentorDashboard: React.FC = () => {
     }
   ];
 
+  // ── Fetch pair IDs and existing goals ──
+  useEffect(() => {
+    const fetchPairs = async () => {
+      if (!state.user?.id) return;
+      const { data } = await supabase
+        .from('mentor_matches')
+        .select('id, student_id, jabari_goals, jabari_agenda')
+        .eq('mentor_id', state.user.id)
+        .eq('status', 'active');
+
+      if (!data || data.length === 0) return;
+
+      const pairs: typeof studentPairs = {};
+      const forms: Record<string, GoalFormData> = {};
+
+      data.forEach((m: any) => {
+        pairs[m.student_id] = {
+          pairId: m.id,
+          goals: m.jabari_goals ?? [],
+          agenda: m.jabari_agenda ?? '',
+        };
+        forms[m.student_id] = {
+          goals: [
+            m.jabari_goals?.[0] ?? '',
+            m.jabari_goals?.[1] ?? '',
+            m.jabari_goals?.[2] ?? '',
+          ] as [string, string, string],
+          agenda: m.jabari_agenda ?? '',
+        };
+      });
+
+      setStudentPairs(pairs);
+      setGoalForms(prev => ({ ...prev, ...forms }));
+    };
+    fetchPairs();
+  }, [state.user?.id]);
+
+  // ── Fetch check-ins for paired students ──
+  useEffect(() => {
+    const fetchAllCheckins = async () => {
+      if (state.isOffline) return;
+      const entries = Object.entries(studentPairs);
+      if (entries.length === 0) return;
+
+      const result: Record<string, JabariCheckin[]> = {};
+
+      for (const [studentId, pair] of entries) {
+        const { data } = await supabase
+          .from('jabari_checkins')
+          .select('id, checkin_date, summary, goals_touched, mood_signal, safeguarding_flag')
+          .eq('pair_id', pair.pairId)
+          .order('checkin_date', { ascending: false })
+          .limit(10);
+        if (data) result[studentId] = data;
+      }
+      setCheckins(result);
+    };
+    fetchAllCheckins();
+  }, [studentPairs, state.isOffline]);
+
+  // ── Handlers ──
   const handleGenerateBriefing = async (student: Student) => {
     setLoadingIds(prev => [...prev, student.id]);
     try {
@@ -68,6 +189,56 @@ const MentorDashboard: React.FC = () => {
     } finally {
       setLoadingIds(prev => prev.filter(id => id !== student.id));
     }
+  };
+
+  const handleGoalChange = (sid: string, idx: number, val: string) => {
+    if (val.length > 60) return;
+    setGoalForms(prev => {
+      const cur = prev[sid] ?? { ...DEFAULT_FORM, goals: ['', '', ''] as [string, string, string] };
+      const goals = [...cur.goals] as [string, string, string];
+      goals[idx] = val;
+      return { ...prev, [sid]: { ...cur, goals } };
+    });
+  };
+
+  const handleAgendaChange = (sid: string, val: string) => {
+    if (val.length > 200) return;
+    setGoalForms(prev => {
+      const cur = prev[sid] ?? { ...DEFAULT_FORM, goals: ['', '', ''] as [string, string, string] };
+      return { ...prev, [sid]: { ...cur, agenda: val } };
+    });
+  };
+
+  const handleSaveGoals = async (sid: string) => {
+    const pair = studentPairs[sid];
+    if (!pair) return;
+
+    const form = goalForms[sid] ?? DEFAULT_FORM;
+    setSavingGoals(prev => ({ ...prev, [sid]: true }));
+
+    const filtered = form.goals.filter(g => g.trim().length > 0);
+    const ok = await updateMentorGoals(pair.pairId, filtered, form.agenda);
+
+    setSavingGoals(prev => ({ ...prev, [sid]: false }));
+    if (ok) {
+      setGoalSuccess(prev => ({ ...prev, [sid]: true }));
+      setTimeout(() => setGoalSuccess(prev => ({ ...prev, [sid]: false })), 2500);
+    }
+  };
+
+  const moodColor = (mood: string) => {
+    switch (mood?.toLowerCase()) {
+      case 'positive': return 'bg-green-500';
+      case 'neutral': return 'bg-yellow';
+      case 'concerning': return 'bg-red-500';
+      default: return 'bg-navy/20';
+    }
+  };
+
+  const formatDate = (d: string) => {
+    try {
+      return new Date(d).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' });
+    } catch { return d; }
   };
 
   return (
@@ -114,7 +285,12 @@ const MentorDashboard: React.FC = () => {
           </div>
 
           <div className="space-y-4">
-            {STUDENTS.map((student) => (
+            {STUDENTS.map((student) => {
+              const form = goalForms[student.id] ?? { ...DEFAULT_FORM, goals: ['', '', ''] as [string, string, string] };
+              const hasPair = !!studentPairs[student.id];
+              const studentCheckins = checkins[student.id] ?? [];
+
+              return (
               <div key={student.id} className="bg-white rounded-[40px] border border-navy/5 shadow-xl shadow-navy/5 overflow-hidden">
                 <div className="p-6 flex items-center gap-4">
                   <div className="w-16 h-16 bg-off-white rounded-3xl flex items-center justify-center text-3xl shadow-inner">
@@ -137,13 +313,13 @@ const MentorDashboard: React.FC = () => {
                 </div>
 
                 {/* AI Briefing Area */}
-                <div className="px-6 pb-6 pt-0">
+                <div className="px-6 pb-4 pt-0">
                   <div className={`rounded-[32px] p-6 transition-all ${briefings[student.id] ? 'bg-yellow/10 border border-yellow/20' : 'bg-off-white/50 border border-dashed border-navy/5'}`}>
                     {briefings[student.id] ? (
                       <div className="space-y-4">
                         <div className="flex items-center gap-2 text-yellow-700">
                           <Sparkles size={16} />
-                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Jabari AI Briefing</span>
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em]">Amara AI Briefing</span>
                         </div>
                         <div className="text-sm text-navy/80 font-medium whitespace-pre-line leading-relaxed">
                           {briefings[student.id]}
@@ -182,8 +358,175 @@ const MentorDashboard: React.FC = () => {
                     )}
                   </div>
                 </div>
+
+                {/* ── Goal-Setting Form ── */}
+                <div className="px-6 pb-4">
+                  <button
+                    onClick={() => setGoalFormsOpen(p => ({ ...p, [student.id]: !p[student.id] }))}
+                    className="w-full flex items-center justify-between text-left group"
+                  >
+                    <span className="text-[10px] font-black uppercase tracking-widest text-navy/40 group-hover:text-navy/60 transition-colors flex items-center gap-2">
+                      Set Goals for Amara
+                      {state.isOffline && <WifiOff size={12} className="text-yellow-600" />}
+                    </span>
+                    <motion.div animate={{ rotate: goalFormsOpen[student.id] ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                      <ChevronDown size={16} className="text-navy/20" />
+                    </motion.div>
+                  </button>
+
+                  <AnimatePresence>
+                    {goalFormsOpen[student.id] && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="bg-off-white rounded-[32px] p-6 border border-navy/5 mt-3 space-y-4">
+                          {[0, 1, 2].map(idx => (
+                            <div key={idx}>
+                              <label className="text-[10px] font-black uppercase tracking-widest text-navy/40 block mb-1.5">
+                                Goal {idx + 1}
+                              </label>
+                              <input
+                                type="text"
+                                maxLength={60}
+                                value={form.goals[idx]}
+                                onChange={e => handleGoalChange(student.id, idx, e.target.value)}
+                                placeholder={`e.g. ${['Improve budgeting skills', 'Build interview confidence', 'Practice self-care routine'][idx]}`}
+                                className="w-full bg-white border border-navy/10 rounded-xl px-4 py-3 text-sm font-nunito text-navy placeholder:text-navy/25 outline-none focus:border-yellow/60 transition-colors"
+                              />
+                              <p className="text-[10px] text-navy/30 text-right mt-1">{form.goals[idx].length}/60</p>
+                            </div>
+                          ))}
+
+                          <div>
+                            <label className="text-[10px] font-black uppercase tracking-widest text-navy/40 block mb-1.5">
+                              Session Agenda
+                            </label>
+                            <textarea
+                              maxLength={200}
+                              value={form.agenda}
+                              onChange={e => handleAgendaChange(student.id, e.target.value)}
+                              placeholder="What should Amara focus on in the next session?"
+                              className="w-full bg-white border border-navy/10 rounded-xl px-4 py-3 text-sm font-nunito text-navy placeholder:text-navy/25 outline-none focus:border-yellow/60 transition-colors min-h-[80px] resize-none"
+                            />
+                            <p className="text-[10px] text-navy/30 text-right mt-1">{form.agenda.length}/200</p>
+                          </div>
+
+                          {/* Save button + success confirmation */}
+                          <div className="flex items-center gap-3 pt-2">
+                            <button
+                              onClick={() => handleSaveGoals(student.id)}
+                              disabled={savingGoals[student.id] || !hasPair || state.isOffline}
+                              className={`bg-yellow text-navy rounded-full px-8 py-4 font-bold text-sm transition-all ${
+                                savingGoals[student.id] || state.isOffline ? 'opacity-60 cursor-not-allowed' : 'hover:brightness-105 active:scale-[0.97] shadow-md shadow-yellow/20'
+                              } ${!hasPair ? 'opacity-40 cursor-not-allowed' : ''}`}
+                            >
+                              {savingGoals[student.id] ? 'Saving...' : state.isOffline ? 'Offline' : 'Save Goals'}
+                            </button>
+
+                            <AnimatePresence>
+                              {goalSuccess[student.id] && (
+                                <motion.div
+                                  initial={{ opacity: 0, x: -8 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  exit={{ opacity: 0 }}
+                                  className="flex items-center gap-1.5 text-green-600"
+                                >
+                                  <Check size={16} />
+                                  <span className="text-xs font-bold">Saved!</span>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+
+                          {state.isOffline && (
+                            <p className="text-[10px] text-yellow-600 font-bold flex items-center gap-1.5"><WifiOff size={10} /> You're offline — goals will sync when you reconnect.</p>
+                          )}
+                          {!hasPair && !state.isOffline && (
+                            <p className="text-[10px] text-navy/30 italic">No active pairing found — goals will be saved once matched.</p>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* ── Jabari Check-in Log ── */}
+                <div className="px-6 pb-6">
+                  <button
+                    onClick={() => setCheckinsOpen(p => ({ ...p, [student.id]: !p[student.id] }))}
+                    className="w-full flex items-center justify-between text-left group"
+                  >
+                    <span className="text-[10px] font-black uppercase tracking-widest text-navy/40 group-hover:text-navy/60 transition-colors">
+                      Amara Check-ins {studentCheckins.length > 0 && `(${studentCheckins.length})`}
+                    </span>
+                    <motion.div animate={{ rotate: checkinsOpen[student.id] ? 180 : 0 }} transition={{ duration: 0.2 }}>
+                      <ChevronDown size={16} className="text-navy/20" />
+                    </motion.div>
+                  </button>
+
+                  <AnimatePresence>
+                    {checkinsOpen[student.id] && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.25 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="mt-3 space-y-3">
+                          {studentCheckins.length === 0 ? (
+                            <div className="bg-off-white/50 rounded-2xl p-6 text-center border border-dashed border-navy/5">
+                              {state.isOffline ? (
+                                <p className="text-xs text-yellow-600 font-bold flex items-center justify-center gap-1.5"><WifiOff size={12} /> Offline — check-ins will load when you reconnect.</p>
+                              ) : (
+                                <p className="text-xs text-navy/30 font-medium">No check-ins recorded yet.</p>
+                              )}
+                            </div>
+                          ) : (
+                            studentCheckins.map(ci => (
+                              <div key={ci.id} className="bg-white rounded-2xl p-4 border border-navy/5 shadow-sm space-y-2">
+                                {/* Date + Mood */}
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] font-black uppercase tracking-widest text-navy/30">
+                                    {formatDate(ci.checkin_date)}
+                                  </span>
+                                  <div className="flex items-center gap-1.5">
+                                    <div className={`w-2 h-2 rounded-full ${moodColor(ci.mood_signal)}`} />
+                                    <span className="text-[10px] font-bold text-navy/40 capitalize">{ci.mood_signal}</span>
+                                  </div>
+                                </div>
+
+                                {/* Summary */}
+                                <p className="text-sm text-navy/70 font-nunito leading-relaxed">{ci.summary}</p>
+
+                                {/* Goals touched */}
+                                {ci.goals_touched && ci.goals_touched.length > 0 && (
+                                  <div className="flex flex-wrap gap-1.5">
+                                    {ci.goals_touched.map((g, i) => (
+                                      <span key={i} className="bg-yellow/15 text-navy/60 text-[10px] font-bold px-3 py-1 rounded-full">
+                                        {g}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Safeguarding flag */}
+                                <SafeguardingBanner flag={ci.safeguarding_flag} />
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </section>
       </main>

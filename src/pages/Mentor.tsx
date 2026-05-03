@@ -5,7 +5,6 @@ import {
   MessageCircle, 
   Search, 
   Star, 
-  ChevronRight, 
   ShieldCheck, 
   Calendar, 
   Award,
@@ -14,7 +13,8 @@ import {
   CheckCircle2,
   Lock,
   Sparkles,
-  Target
+  Target,
+  WifiOff
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
@@ -31,7 +31,7 @@ const Mentor: React.FC = () => {
   ];
 
   const ENDORSEMENTS = [
-    { title: 'Critical Thinker', date: 'Oct 2025', from: 'Jabari AI', icon: <Sparkles size={16} /> },
+    { title: 'Critical Thinker', date: 'Oct 2025', from: 'Amara AI', icon: <Sparkles size={16} /> },
     { title: 'Goal Crusher', date: 'Sept 2025', from: 'Dr. Jane G.', icon: <Target size={16} /> },
   ];
 
@@ -41,8 +41,8 @@ const Mentor: React.FC = () => {
         <div className="absolute top-[-40px] left-[-40px] w-60 h-60 bg-blue-500/10 rounded-full blur-3xl" />
         <div className="flex justify-between items-center mb-8 relative z-10">
           <div>
-            <h1 className="text-3xl font-bold">Mentor Space</h1>
-            <p className="text-white/40 text-xs font-bold uppercase tracking-widest mt-1">Guided by Experience</p>
+            <h1 className="text-3xl font-bold">Talk to a Mentor</h1>
+            <p className="text-white/40 text-xs font-bold uppercase tracking-widest mt-1">Your guide. Your pace.</p>
           </div>
           <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/10">
             <Users size={24} className="text-yellow" />
@@ -55,16 +55,23 @@ const Mentor: React.FC = () => {
             onClick={() => setIsMatched(false)}
             className={`flex-1 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${!isMatched ? 'bg-yellow text-navy' : 'text-white/40'}`}
           >
-            Find a Mentor
+            Browse Mentors
           </button>
           <button 
             onClick={() => setIsMatched(true)}
             className={`flex-1 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${isMatched ? 'bg-yellow text-navy' : 'text-white/40'}`}
           >
-            My Connection
+            My Mentor
           </button>
         </div>
       </header>
+
+      {state.isOffline && (
+        <div className="mx-6 -mt-4 mb-2 relative z-30 bg-yellow/90 px-4 py-2.5 rounded-2xl flex items-center justify-center gap-2 text-navy text-[11px] font-bold uppercase tracking-widest shadow-sm">
+          <WifiOff size={14} />
+          Offline — Showing saved mentors
+        </div>
+      )}
 
       <main className="px-6 -mt-8 space-y-8 relative z-20">
         <AnimatePresence mode="wait">
@@ -85,6 +92,10 @@ const Mentor: React.FC = () => {
                   className="w-full bg-white border border-navy/5 rounded-[32px] pl-12 pr-4 py-5 text-navy outline-none focus:border-yellow shadow-xl shadow-navy/5 font-medium placeholder:text-navy/20"
                 />
               </div>
+              <p className="text-center text-navy/40 text-xs font-medium py-2 flex items-center justify-center gap-1.5">
+                <CheckCircle2 size={14} className="text-green-600" />
+                All mentors are vetted and safeguarding-trained
+              </p>
 
               {/* Recommended Mentors */}
               <div className="space-y-4">
@@ -106,9 +117,9 @@ const Mentor: React.FC = () => {
                         <p className="text-[10px] font-black uppercase tracking-widest text-navy/30 mb-1">{m.field}</p>
                         <p className="text-xs text-navy/60 line-clamp-1">{m.bio}</p>
                       </div>
-                      <div className="w-10 h-10 rounded-full bg-off-white flex items-center justify-center text-navy/20 group-hover:bg-yellow group-hover:text-navy transition-colors">
-                        <ChevronRight size={20} />
-                      </div>
+                      <button className="bg-navy text-white rounded-full px-6 py-3 font-bold text-sm active:scale-95 transition">
+                        Connect
+                      </button>
                     </div>
                   ))}
                 </div>

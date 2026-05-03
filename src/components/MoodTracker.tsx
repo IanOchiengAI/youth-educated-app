@@ -126,7 +126,7 @@ const MoodTracker: React.FC<{ onComplete?: () => void }> = ({ onComplete }) => {
     setIsSubmitted(true);
     
     if (selectedMood >= 4) {
-      confetti({ particleCount: 100, spread: 50, origin: { y: 0.8 }, colors: ['#FACC15', '#1E3A8A'] });
+      confetti({ particleCount: 100, spread: 50, origin: { y: 0.8 }, colors: ['#FFD700', '#1C1C6E'] });
     }
   };
 

@@ -121,7 +121,9 @@ const Onboarding: React.FC = () => {
       guardianPhone: profileData.guardian_phone,
       onboardingCompleted: true,
       joinedAt: new Date().toISOString(),
-      role: 'student' as const, // Added this back
+      role: 'student' as const,
+      jabariVoice: 'default_male',
+      mentorPairId: null,
     };
 
     dispatch({ type: 'SET_USER', payload: newUser });
@@ -144,7 +146,7 @@ const Onboarding: React.FC = () => {
       particleCount: 150,
       spread: 70,
       origin: { y: 0.6 },
-      colors: ['#1E3A8A', '#FACC15', '#FFFFFF']
+      colors: ['#1C1C6E', '#FFD700', '#FFFFFF']
     });
 
     setTimeout(() => navigate('/dashboard'), 2000);
@@ -186,10 +188,12 @@ const Onboarding: React.FC = () => {
       </div>
 
       <header className="p-6 flex justify-between items-center">
-        {step > 1 && (
+        {step > 1 ? (
           <button onClick={prevStep} className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
             <ChevronLeft size={20} />
           </button>
+        ) : (
+          <img src="/logo-mark.png" alt="Youth Educated" className="h-10 w-auto" />
         )}
         <div className="ml-auto text-sm font-bold text-white/50 tracking-widest uppercase">
           Step {step} of {ONBOARDING_STEPS}
@@ -390,7 +394,7 @@ const Onboarding: React.FC = () => {
                 ) : (
                   <div className="text-center py-12 space-y-6">
                     <h1 className="text-4xl font-bold">You're all set!</h1>
-                    <p className="text-white/60 text-lg">Ready to start your journey with Jabari?</p>
+                    <p className="text-white/60 text-lg">Ready to start your journey with Amara?</p>
                     <div className="bg-yellow/10 p-8 rounded-full border border-yellow/20 inline-block">
                       <Check size={64} className="text-yellow" />
                     </div>

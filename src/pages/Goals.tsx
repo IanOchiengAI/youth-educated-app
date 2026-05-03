@@ -103,7 +103,7 @@ const Goals: React.FC = () => {
       particleCount: 150,
       spread: 70,
       origin: { y: 0.6 },
-      colors: ['#1E3A8A', '#FACC15']
+      colors: ['#1C1C6E', '#FFD700']
     });
 
     setShowReflection(false);

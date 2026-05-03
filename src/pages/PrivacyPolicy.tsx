@@ -47,7 +47,7 @@ const PrivacyPolicy: React.FC = () => {
           },
           {
             title: '7. AI & Chat',
-            body: 'Our AI companion "Jabari" is powered by Google Gemini. Chat messages are processed through Google\'s API to generate responses. We do not store full conversation histories in a way that can be linked to your identity beyond our own database. Flagged safeguarding messages are reviewed by trained DSLs only.',
+            body: 'Our AI companion "Amara" is powered by Google Gemini. Chat messages are processed through Google\'s API to generate responses. We do not store full conversation histories in a way that can be linked to your identity beyond our own database. Flagged safeguarding messages are reviewed by trained DSLs only.',
           },
           {
             title: '8. Contact Us',

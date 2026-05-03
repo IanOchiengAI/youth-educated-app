@@ -25,8 +25,8 @@ const genAI = new GoogleGenerativeAI(API_KEY);
 const model = genAI.getGenerativeModel({
   model: 'gemini-2.0-flash',
   generationConfig: {
-    maxOutputTokens: 500,
-    temperature: 0.75,
+    maxOutputTokens: 600,
+    temperature: 0.8,
   },
   safetySettings: [
     {
@@ -76,7 +76,7 @@ export const updateAIConversations = async (userId: string, history: any[]) => {
 };
 
 export const buildJabariPrompt = (user: User | null, mode: InteractionMode = 'default', scenario?: RoleplayScenario) => {
-  if (!user) return "You are Jabari, a supportive life-skills companion for Kenyan youth.";
+  if (!user) return "You are Amara, a supportive life-skills companion for Kenyan youth.";
 
   const { name, ageBracket, county, language, goals } = user;
   const isKsw = language === 'Kiswahili';
@@ -85,8 +85,8 @@ export const buildJabariPrompt = (user: User | null, mode: InteractionMode = 'de
 
   if (mode === 'roleplay' && scenario) {
     modeInstructions = `
-ACITON MODE: ROLEPLAY
-You are NO LONGER Jabari. You are playing the character: ${scenario.persona}.
+ACTION MODE: ROLEPLAY
+You are NO LONGER Amara. You are playing the character: ${scenario.persona}.
 Scenario: ${scenario.description}
 Goal: Help the student practice: ${scenario.goal}
 - Stay strictly in character. 
@@ -103,22 +103,34 @@ You are testing the student's knowledge in a fun, supportive way.
 `;
   } else {
     modeInstructions = `
-PERSONALITY & TONE:
-- Supportive older sibling / mentor figure. Empowering, empathetic, and optimistic.
-- Use occasional Sheng/Swahili terms (like 'safi', 'pole sana', 'karibu') even in English mode to feel local.
-- Keep responses concise (2-4 sentences max). Avoid long lectures.
+You are Amara, a wise and warm AI mentor built for African youth.
+Your name means "grace" in many African languages.
+You are female — a trusted older sister, auntie, or community mother figure.
 
-SOCRATIC TUTORING (CRITICAL):
-- DO NOT just give the student the answer to complicated life or career questions.
-- Ask leading, thought-provoking questions to help them discover the answer themselves (the Socratic method).
+Your personality:
+- You speak like a trusted older sister or community elder, not a corporate chatbot.
+- You use warm, direct language. No fluff, no jargon.
+- You occasionally use common African/Kenyan phrases naturally like pole pole, mambo, sawa but never force it.
+- You understand the Kenyan context: county schools, KCSE exams, matatu culture, M-Pesa, village life vs city life.
+- You celebrate wins genuinely. You don't lecture — you guide.
 
-MODULE RECOMMENDATIONS:
-- You are part of the 'Youth Educated' app which has Learning Modules: 'Mental Health & Wellbeing', 'Self Discovery', 'Sexual & Reproductive Health (SRH)', and 'Financial Literacy'.
-- When appropriate, actively recommend they check out a specific module.
+Your role:
+- You are standing in for the user's human mentor between their sessions.
+- You know the goals the mentor has set for this mentee. Always reference them.
+- You check in on progress, celebrate effort, and push back gently when needed.
+- You never replace the human mentor — you extend them.
+
+Safeguarding:
+- If a user expresses immediate danger, self-harm, or abuse, always respond with empathy first, then provide: Childline Kenya: 116 (free, 24/7 — you can call or text).
+- Never diagnose. Never give medical advice. Refer to professionals for health issues.
+
+Goal context will be injected at the start of each conversation as:
+[MENTEE GOALS: goal1 | goal2 | goal3]
+You should acknowledge these goals naturally in your responses.
 `;
   }
 
-  return `You are Jabari, a supportive and wise life-skills companion for a ${ageBracket} year old in ${county}, Kenya. 
+  return `You are Amara, a supportive and wise life-skills companion for a ${ageBracket} year old in ${county}, Kenya. 
 User Name: ${name}
 Primary Language: ${language}
 Top Goals: ${goals.join(', ')}
@@ -144,7 +156,7 @@ export const sendToJabari = async (
     const fallback = offlineResponses.find(r => 
       r.triggers.some(t => lowerMessage.includes(t))
     );
-    return fallback ? fallback.response : "Mambo! I'm in offline mode right now, but I'm still here. What's on your mind? 😊";
+    return fallback ? fallback.response : "Mambo! I'm in offline mode right now, but I'm still here for you. What's on your mind? 😊";
   }
 
   try {
@@ -155,7 +167,7 @@ export const sendToJabari = async (
           role: 'model', 
           parts: [{ 
             text: mode === 'default' 
-              ? "Safi! I am Jabari. How can I support you today?" 
+              ? "Safi! I am Amara. How can I support you today?" 
               : mode === 'quiz' 
                 ? "Safi! Let's test your knowledge. Ready for the first question?" 
                 : `Jambo! I'm now in Roleplay mode for the '${scenario?.name}' scenario. Let's begin.`
@@ -202,5 +214,21 @@ INSTRUCTIONS:
   } catch (error) {
     console.error("Mentor Briefing Error:", error);
     return "Could not generate briefing at this time. Please review recent activity manually.";
+  }
+};
+
+export const generateCheckinSummary = async (
+  history: { role: 'user' | 'model'; parts: { text: string }[] }[]
+): Promise<string | null> => {
+  if (!API_KEY || history.length < 3) return null;
+
+  try {
+    const chat = model.startChat({ history });
+    const result = await chat.sendMessage(
+      "Based on our conversation, give a 1-sentence summary, list which goals came up, and rate the mood as positive, neutral, or concerning. Format exactly as: SUMMARY: ... | GOALS: ... | MOOD: ..."
+    );
+    return result.response.text();
+  } catch {
+    return null;
   }
 };

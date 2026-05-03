@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, BookOpen, MessageCircle, Users, User, WifiOff, Globe, ShieldAlert } from 'lucide-react';
+import { Home, Sparkles, MessageCircle, Users, User, WifiOff, Globe, ShieldAlert } from 'lucide-react';
 import { useAppContext } from '../AppContext';
 import { useGamification } from '../hooks/useGamification';
 import { motion, AnimatePresence } from 'motion/react';
@@ -24,10 +24,10 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   const navItems = [
     { path: '/dashboard', label: 'Home', icon: Home },
-    { path: '/learn', label: 'Learn', icon: BookOpen },
+    { path: '/learn', label: 'Life Kit', icon: Sparkles },
     { path: '/chat', label: 'Chat', icon: MessageCircle, badge: state.notifications.unreadChat ? 'yellow' : null },
     { path: '/circles', label: 'Circles', icon: Globe },
-    { path: '/profile', label: 'Profile', icon: User },
+    { path: '/mentor', label: 'Ask Mentor', icon: User },
   ];
 
   if (state.user?.role === 'admin') {
@@ -54,6 +54,12 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       </AnimatePresence>
 
       <main className="flex-1 pb-20">
+        {!shouldHideNav && (
+          <div className="sticky top-0 z-40 bg-off-white/90 backdrop-blur-md border-b border-navy/5 px-4 py-2 flex items-center gap-2">
+            <img src="/logo-mark.png" alt="YE" className="w-6 h-6 object-contain" />
+            <span className="text-[10px] font-black uppercase tracking-[0.15em] text-navy/50">Youth Educated App</span>
+          </div>
+        )}
         {children}
       </main>
 

@@ -175,11 +175,11 @@ const Opportunities: React.FC = () => {
                     ) : (
                       <>
                         <button 
-                          onClick={() => navigate('/chat', { state: { initialMessage: `Jabari, tell me more about the ${opp.title}. How can I apply?` }})}
+                          onClick={() => navigate('/chat', { state: { initialMessage: `Amara, tell me more about the ${opp.title}. How can I apply?` }})}
                           className="flex-1 py-4 bg-yellow text-navy rounded-2xl font-bold text-sm flex items-center justify-center gap-2"
                         >
                           <MessageCircle size={18} />
-                          Apply with Jabari
+                          Apply with Amara
                         </button>
                         <a 
                           href={opp.link} 
