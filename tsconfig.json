@@ -19,5 +19,10 @@
     "noEmit": true,
     "types": ["vite/client"]
   },
-  "exclude": ["supabase/**/*", "node_modules"]
+  "exclude": [
+    "node_modules",
+    "supabase/**/*",
+    "public/sw.js",
+    "dist/**/*"
+  ]
 }

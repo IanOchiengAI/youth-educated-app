@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react';
 import { supabase } from './lib/supabase';
 import { db } from './lib/db';
 import { queueOfflineAction } from './lib/sync';
@@ -163,18 +163,15 @@ function appReducer(state: AppState, action: Action): AppState {
         ...state,
         progress: { ...state.progress, points: state.progress.points + points },
       };
-      
-      // Sync point transaction
       if (state.user) {
         if (!state.isOffline) {
           supabase.from('point_transactions').insert({
             user_id: state.user.id,
             points,
-            reason
+            reason,
           }).then(({ error }) => {
             if (error) queueOfflineAction(state.user!.id, 'POINT_TRANSACTION', { points, reason });
           });
-          // Also update profile points
           supabase.from('profiles').update({ points: newState.progress.points }).eq('id', state.user.id);
         } else {
           queueOfflineAction(state.user.id, 'POINT_TRANSACTION', { points, reason });
@@ -229,20 +226,17 @@ function appReducer(state: AppState, action: Action): AppState {
           },
         },
       };
-
-      // Sync module progress
       if (state.user) {
         const payload = {
           module_id: moduleId,
           completed_lessons: newState.modules.moduleProgress[moduleId].completedLessons,
-          is_completed: newState.modules.completed.includes(moduleId)
+          is_completed: newState.modules.completed.includes(moduleId),
         };
-        
         if (!state.isOffline) {
           supabase.from('user_module_progress').upsert({
             user_id: state.user.id,
             ...payload,
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
           }, { onConflict: 'user_id,module_id' }).then(({ error }) => {
             if (error) queueOfflineAction(state.user!.id, 'LESSON_COMPLETE', payload);
           });
@@ -283,18 +277,12 @@ function appReducer(state: AppState, action: Action): AppState {
       break;
     case 'SET_MENTOR_PAIR': {
       if (!state.user) return state;
-      newState = {
-        ...state,
-        user: { ...state.user, mentorPairId: action.payload },
-      };
+      newState = { ...state, user: { ...state.user, mentorPairId: action.payload } };
       break;
     }
     case 'SET_JABARI_VOICE': {
       if (!state.user) return state;
-      newState = {
-        ...state,
-        user: { ...state.user, jabariVoice: action.payload },
-      };
+      newState = { ...state, user: { ...state.user, jabariVoice: action.payload } };
       break;
     }
     case 'HYDRATE': {
@@ -323,23 +311,35 @@ function appReducer(state: AppState, action: Action): AppState {
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
-  // 1. Initial hydration from localStorage (fastest)
+  // Stable ref so the auth listener always reads the latest state
+  // without needing to be re-registered on every state update.
+  const stateRef = useRef(state);
+  useEffect(() => {
+    stateRef.current = state;
+  }, [state]);
+
+  // 1. Initial hydration from localStorage (fastest path)
   useEffect(() => {
     const savedState = localStorage.getItem('youth_educated_state');
     if (savedState) {
       try {
-        dispatch({ type: 'HYDRATE', payload: JSON.parse(savedState) });
+        const parsed = JSON.parse(savedState) as AppState;
+        // Guard against stale/malformed persisted state missing required keys
+        if (parsed && parsed.user !== undefined && parsed.progress && parsed.modules) {
+          dispatch({ type: 'HYDRATE', payload: parsed });
+        }
       } catch (e) {
-        console.error('Failed to parse saved state', e);
+        console.error('Failed to parse saved state — clearing cache', e);
+        localStorage.removeItem('youth_educated_state');
       }
     }
   }, []);
 
-  // 2. Auth State Listener
+  // 2. Auth state listener — registered ONCE with [] deps.
+  //    Reads latest state via stateRef.current (no stale closure).
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN' && session) {
-        // Fetch fresh profile data
         const { data: profile } = await supabase
           .from('profiles')
           .select('*')
@@ -362,48 +362,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             onboardingCompleted: profile.onboarding_completed,
             joinedAt: profile.joined_at,
             role: profile.role || 'student',
-            jabariVoice: 'default_female',
+            jabariVoice: profile.jabari_voice || 'default_female',
             mentorPairId: null,
           };
           dispatch({ type: 'SET_USER', payload: user });
-          
-          // Fetch additional progress
-          const { data: progress } = await supabase
+
+          const { data: progressRows } = await supabase
             .from('user_module_progress')
             .select('*')
             .eq('user_id', session.user.id);
 
-          if (progress) {
+          if (progressRows) {
+            // Read latest state via ref — avoids stale closure on modules/progress
+            const latestModules = stateRef.current.modules;
+            const latestProgress = stateRef.current.progress;
+
             const moduleProgress: { [moduleId: string]: ModuleProgress } = {};
             const completed: string[] = [];
             const inProgress: string[] = [];
 
-            progress.forEach((p: any) => {
+            progressRows.forEach((p: any) => {
               moduleProgress[p.module_id] = {
-                currentLesson: 1, // Default fallback
-                completedLessons: p.completed_lessons,
-                insights: {}
+                currentLesson: latestModules.moduleProgress[p.module_id]?.currentLesson ?? 1,
+                completedLessons: p.completed_lessons ?? [],
+                insights: latestModules.moduleProgress[p.module_id]?.insights ?? {},
               };
               if (p.is_completed) completed.push(p.module_id);
               else inProgress.push(p.module_id);
             });
 
-            dispatch({ 
-              type: 'SYNC_FROM_SUPABASE', 
-              payload: { 
-                modules: { 
-                  ...state.modules, 
-                  moduleProgress: { ...state.modules.moduleProgress, ...moduleProgress },
-                  completed: Array.from(new Set([...state.modules.completed, ...completed])),
-                  inProgress: Array.from(new Set([...state.modules.inProgress, ...inProgress]))
+            dispatch({
+              type: 'SYNC_FROM_SUPABASE',
+              payload: {
+                modules: {
+                  ...latestModules,
+                  moduleProgress: { ...latestModules.moduleProgress, ...moduleProgress },
+                  completed: Array.from(new Set([...latestModules.completed, ...completed])),
+                  inProgress: Array.from(new Set([...latestModules.inProgress, ...inProgress])),
                 },
                 progress: {
-                  ...state.progress,
-                  points: profile.points || 0,
-                  streakDays: profile.streak_days || 0,
-                  lastActiveDate: profile.last_active_date || new Date().toISOString()
-                }
-              } 
+                  ...latestProgress,
+                  points: profile.points ?? latestProgress.points,
+                  streakDays: profile.streak_days ?? latestProgress.streakDays,
+                  lastActiveDate: profile.last_active_date ?? latestProgress.lastActiveDate,
+                },
+              },
             });
           }
         }
@@ -414,21 +417,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     return () => subscription.unsubscribe();
-  }, [state.modules, state.progress]);
+  }, []); // intentionally empty — register the Supabase listener exactly once
 
-  // 3. Persist to localStorage
+  // 3. Persist to localStorage — debounced to avoid write-thrashing on rapid dispatches
   useEffect(() => {
-    localStorage.setItem('youth_educated_state', JSON.stringify(state));
+    const timer = setTimeout(() => {
+      localStorage.setItem('youth_educated_state', JSON.stringify(state));
+    }, 500);
+    return () => clearTimeout(timer);
   }, [state]);
 
   // 4. Online/Offline listeners
   useEffect(() => {
     const handleOnline = () => dispatch({ type: 'SET_OFFLINE', payload: false });
     const handleOffline = () => dispatch({ type: 'SET_OFFLINE', payload: true });
-
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
-
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
