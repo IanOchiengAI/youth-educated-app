@@ -1,20 +1,42 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, Phone, ChevronRight, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Phone, ChevronRight, RefreshCw, ChevronDown } from 'lucide-react';
 import { sendOTP, verifyOTP } from '../lib/auth';
 import { useAppContext } from '../AppContext';
+
+const COUNTRY_CODES = [
+  { code: '254', flag: '🇰🇪', name: 'Kenya' },
+  { code: '256', flag: '🇺🇬', name: 'Uganda' },
+  { code: '255', flag: '🇹🇿', name: 'Tanzania' },
+  { code: '250', flag: '🇷🇼', name: 'Rwanda' },
+  { code: '251', flag: '🇪🇹', name: 'Ethiopia' },
+  { code: '234', flag: '🇳🇬', name: 'Nigeria' },
+  { code: '233', flag: '🇬🇭', name: 'Ghana' },
+  { code: '27',  flag: '🇿🇦', name: 'South Africa' },
+  { code: '265', flag: '🇲🇼', name: 'Malawi' },
+  { code: '260', flag: '🇿🇲', name: 'Zambia' },
+  { code: '263', flag: '🇿🇼', name: 'Zimbabwe' },
+  { code: '243', flag: '🇨🇩', name: 'DR Congo' },
+  { code: '44',  flag: '🇬🇧', name: 'United Kingdom' },
+  { code: '1',   flag: '🇺🇸', name: 'United States' },
+  { code: '49',  flag: '🇩🇪', name: 'Germany' },
+];
 
 const SignIn: React.FC = () => {
   const navigate = useNavigate();
   const { dispatch } = useAppContext();
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
-  const [phone, setPhone] = useState('0');
-  const [otp, setOtp] = useState(['', '', '', '', '', '']); // Supabase uses 6 digits by default
+  const [phone, setPhone] = useState('');
+  const [countryCode, setCountryCode] = useState('254');
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const selectedCountry = COUNTRY_CODES.find(c => c.code === countryCode) ?? COUNTRY_CODES[0];
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -24,18 +46,18 @@ const SignIn: React.FC = () => {
     return () => clearInterval(timer);
   }, [countdown]);
 
-  const handleSendOTP = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSendOTP = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setIsLoading(true);
     setError(null);
 
-    const { success, error: authError } = await sendOTP(phone);
+    const { success, error: authError } = await sendOTP(phone, countryCode);
 
     if (success) {
       setStep('otp');
       setCountdown(60);
     } else {
-      setError(authError?.message || 'Failed to send code');
+      setError(authError?.message || 'Failed to send code. Check the number and try again.');
     }
     setIsLoading(false);
   };
@@ -48,15 +70,12 @@ const SignIn: React.FC = () => {
     setIsLoading(true);
     setError(null);
 
-    const { success, onboardingCompleted, role, error: authError } = await verifyOTP(phone, token);
+    const { success, onboardingCompleted, role, error: authError } = await verifyOTP(phone, token, countryCode);
 
     if (success) {
-      // In a real app, the session is managed by Supabase
-      // We'll update the context in AppContext.tsx's useEffect
       if (onboardingCompleted) {
-        if (role === 'mentor') {
-          navigate('/mentor-dashboard');
-        } else if (role === 'dsl') {
+        // All roles land on /dashboard — mentor panel is accessible from the nav
+        if (role === 'dsl') {
           navigate('/dsl');
         } else if (role === 'admin') {
           navigate('/admin');
@@ -67,7 +86,7 @@ const SignIn: React.FC = () => {
         navigate('/onboarding');
       }
     } else {
-      setError(authError?.message || 'Invalid code');
+      setError(authError?.message || 'Invalid code. Please try again.');
     }
     setIsLoading(false);
   };
@@ -77,15 +96,8 @@ const SignIn: React.FC = () => {
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
-
-    // Auto-advance
-    if (value && index < 5) {
-      otpRefs.current[index + 1]?.focus();
-    }
-
-    // Auto-verify if full
+    if (value && index < 5) otpRefs.current[index + 1]?.focus();
     if (newOtp.every(digit => digit !== '') && index === 5) {
-      // Small timeout to allow the last digit to render
       setTimeout(() => handleVerifyOTP(), 100);
     }
   };
@@ -99,8 +111,8 @@ const SignIn: React.FC = () => {
   return (
     <div className="min-h-screen bg-off-white flex flex-col font-nunito">
       <header className="p-6">
-        <button 
-          onClick={() => step === 'otp' ? setStep('phone') : navigate('/')} 
+        <button
+          onClick={() => step === 'otp' ? setStep('phone') : navigate('/')}
           className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-navy transition-transform active:scale-95"
         >
           <ArrowLeft size={20} />
@@ -109,9 +121,9 @@ const SignIn: React.FC = () => {
 
       <main className="flex-1 px-6 pt-4 pb-12 flex flex-col max-w-md mx-auto w-full">
         <div className="mb-12">
-          <motion.img 
-            src="/logo-full.png" 
-            alt="Youth Educated" 
+          <motion.img
+            src="/logo-full.png"
+            alt="Youth Educated"
             className="w-28 h-auto mb-6"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -121,47 +133,88 @@ const SignIn: React.FC = () => {
             {step === 'phone' ? 'Welcome Back' : 'Verify Code'}
           </h1>
           <p className="text-grey leading-relaxed">
-            {step === 'phone' 
+            {step === 'phone'
               ? 'Enter your phone number to continue your journey.'
-              : `We've sent a 6-digit code to ${phone}.`}
+              : `We sent a 6-digit code to +${countryCode} ${phone}.`}
           </p>
         </div>
 
         <AnimatePresence mode="wait">
           {step === 'phone' ? (
-            <motion.form 
+            <motion.form
               key="phone-step"
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
-              onSubmit={handleSendOTP} 
+              onSubmit={handleSendOTP}
               className="space-y-6 flex-1"
             >
               <div className="space-y-2">
                 <label className="text-[13px] font-bold text-navy uppercase tracking-wider ml-1">Phone Number</label>
-                <div className="relative">
-                  <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2 pointer-events-none">
-                    <Phone className="text-grey" size={18} />
-                    <span className="text-navy font-bold text-[15px] border-r border-grey/20 pr-2">+254</span>
+                <div className="flex gap-2">
+                  {/* Country code picker */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setShowCountryPicker(prev => !prev)}
+                      className="h-14 px-3 bg-white rounded-2xl shadow-sm border border-navy/10 flex items-center gap-1 text-navy font-bold text-[14px] whitespace-nowrap"
+                    >
+                      <span>{selectedCountry.flag}</span>
+                      <span>+{selectedCountry.code}</span>
+                      <ChevronDown size={14} className="text-grey" />
+                    </button>
+
+                    <AnimatePresence>
+                      {showCountryPicker && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -8 }}
+                          className="absolute top-16 left-0 z-50 bg-white rounded-2xl shadow-xl border border-navy/10 w-52 max-h-64 overflow-y-auto"
+                        >
+                          {COUNTRY_CODES.map(c => (
+                            <button
+                              key={c.code}
+                              type="button"
+                              onClick={() => { setCountryCode(c.code); setShowCountryPicker(false); }}
+                              className={`w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-navy/5 transition-colors text-[14px] font-nunito ${countryCode === c.code ? 'bg-yellow/20 font-bold text-navy' : 'text-navy/80'}`}
+                            >
+                              <span>{c.flag}</span>
+                              <span>{c.name}</span>
+                              <span className="ml-auto text-grey text-[12px]">+{c.code}</span>
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-                  <input
-                    type="tel"
-                    required
-                    value={phone.startsWith('0') ? phone.slice(1) : phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-                    className="input-field pl-24 text-[15px] font-nunito"
-                    placeholder="712345678"
-                    disabled={isLoading}
-                    autoFocus
-                  />
+
+                  {/* Phone number input */}
+                  <div className="relative flex-1">
+                    <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <Phone className="text-grey" size={18} />
+                    </div>
+                    <input
+                      type="tel"
+                      required
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                      className="input-field pl-11 text-[15px] font-nunito w-full"
+                      placeholder="712345678"
+                      disabled={isLoading}
+                      autoFocus
+                    />
+                  </div>
                 </div>
               </div>
 
-              {error && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-xl border border-red-100">{error}</p>}
+              {error && (
+                <p className="text-red-500 text-sm bg-red-50 p-3 rounded-xl border border-red-100">{error}</p>
+              )}
 
               <div className="pt-8 space-y-4">
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={isLoading || !phone}
                   className="btn-primary w-full disabled:opacity-50 flex items-center justify-center group"
                 >
@@ -174,8 +227,7 @@ const SignIn: React.FC = () => {
                     </>
                   )}
                 </button>
-                
-                {/* Temporary Dev Bypass */}
+
                 {import.meta.env.DEV && (
                   <div className="space-y-3">
                     <button
@@ -226,23 +278,23 @@ const SignIn: React.FC = () => {
                             mentorPairId: null
                           }
                         });
-                        navigate('/mentor-dashboard');
+                        navigate('/dashboard');
                       }}
                       className="w-full py-3 bg-blue-100 text-blue-700 font-bold rounded-2xl border-2 border-blue-200 border-dashed hover:bg-blue-200 transition-colors"
                     >
-                      🎓 MENTOR BYPASS (Phase 3)
+                      🎓 MENTOR BYPASS
                     </button>
                   </div>
                 )}
               </div>
             </motion.form>
           ) : (
-            <motion.form 
+            <motion.form
               key="otp-step"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              onSubmit={handleVerifyOTP} 
+              onSubmit={handleVerifyOTP}
               className="space-y-8 flex-1"
             >
               <div className="flex justify-between gap-2">
@@ -262,21 +314,23 @@ const SignIn: React.FC = () => {
                 ))}
               </div>
 
-              {error && <p className="text-red-500 text-sm bg-red-50 p-3 rounded-xl border border-red-100">{error}</p>}
+              {error && (
+                <p className="text-red-500 text-sm bg-red-50 p-3 rounded-xl border border-red-100">{error}</p>
+              )}
 
               <div className="text-center space-y-4 pt-4">
                 <button
                   type="button"
                   disabled={countdown > 0 || isLoading}
-                  onClick={handleSendOTP}
+                  onClick={() => handleSendOTP()}
                   className="text-navy font-bold text-sm disabled:text-grey transition-colors"
                 >
                   {countdown > 0 ? `Resend code in ${countdown}s` : 'Resend code'}
                 </button>
 
                 <div className="pt-4">
-                  <button 
-                    type="submit" 
+                  <button
+                    type="submit"
                     disabled={isLoading || otp.some(d => !d)}
                     className="btn-primary w-full disabled:opacity-50"
                   >

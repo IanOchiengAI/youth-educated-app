@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, Sparkles, MessageCircle, Users, User, WifiOff, Globe, ShieldAlert } from 'lucide-react';
+import { Home, Sparkles, MessageCircle, Globe, User, WifiOff, Users, ShieldAlert, LayoutDashboard } from 'lucide-react';
 import { useAppContext } from '../AppContext';
 import { useGamification } from '../hooks/useGamification';
 import { motion, AnimatePresence } from 'motion/react';
@@ -22,16 +22,19 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const hideNavRoutes = ['/onboarding', '/signin'];
   const shouldHideNav = hideNavRoutes.includes(location.pathname) || !state.user;
 
-  const navItems = [
+  // Base student nav — available to all authenticated roles
+  const navItems: { path: string; label: string; icon: React.ElementType; badge?: string | null }[] = [
     { path: '/dashboard', label: 'Home', icon: Home },
     { path: '/learn', label: 'Life Kit', icon: Sparkles },
     { path: '/chat', label: 'Chat', icon: MessageCircle, badge: state.notifications.unreadChat ? 'yellow' : null },
     { path: '/circles', label: 'Circles', icon: Globe },
-    { path: '/mentor', label: 'Ask Mentor', icon: User },
+    { path: '/mentor', label: 'Mentor', icon: User },
   ];
 
-  if (state.user?.role === 'admin') {
-    // Replace circles slot with Admin for admins, to keep it clean, or just append
+  // Role-specific additions
+  if (state.user?.role === 'mentor') {
+    navItems.push({ path: '/mentor-dashboard', label: 'My Panel', icon: LayoutDashboard });
+  } else if (state.user?.role === 'admin') {
     navItems.push({ path: '/admin', label: 'Admin', icon: Users });
   } else if (state.user?.role === 'dsl') {
     navItems.push({ path: '/dsl', label: 'DSL', icon: ShieldAlert });
@@ -57,14 +60,19 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         {!shouldHideNav && (
           <div className="sticky top-0 z-40 bg-off-white/90 backdrop-blur-md border-b border-navy/5 px-4 py-2 flex items-center gap-2">
             <img src="/logo-mark.png" alt="YE" className="w-6 h-6 object-contain" />
-            <span className="text-[10px] font-black uppercase tracking-[0.15em] text-navy/50">Youth Educated App</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.15em] text-navy/50">Youth Educated</span>
+            {state.user?.role === 'mentor' && (
+              <span className="ml-auto text-[10px] font-black uppercase tracking-widest text-yellow bg-navy/10 px-2 py-0.5 rounded-full">
+                Mentor
+              </span>
+            )}
           </div>
         )}
         {children}
       </main>
 
       {!shouldHideNav && (
-        <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-navy/5 px-2 h-20 flex items-center justify-around z-50">
+        <nav className="fixed bottom-0 left-0 right-0 max-w-md mx-auto bg-white border-t border-navy/5 px-1 h-20 flex items-center justify-around z-50">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
@@ -80,14 +88,11 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   {isActive && (
                     <motion.div
                       layoutId="nav-indicator"
-                      className="absolute top-0 w-12 h-[3px] bg-yellow rounded-b-full"
+                      className="absolute top-0 w-10 h-[3px] bg-yellow rounded-b-full"
                     />
                   )}
                   <div className="relative">
-                    <item.icon
-                      size={24}
-                      className={isActive ? 'text-navy' : ''}
-                    />
+                    <item.icon size={22} className={isActive ? 'text-navy' : ''} />
                     {item.badge && (
                       <span
                         className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white ${
@@ -96,7 +101,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                       />
                     )}
                   </div>
-                  <span className={`text-[10px] font-bold mt-1 uppercase tracking-widest ${isActive ? 'text-navy' : 'text-navy/30'}`}>
+                  <span className={`text-[9px] font-bold mt-1 uppercase tracking-widest ${isActive ? 'text-navy' : 'text-navy/30'}`}>
                     {item.label}
                   </span>
                 </>

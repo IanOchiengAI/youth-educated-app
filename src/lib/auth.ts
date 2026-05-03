@@ -1,29 +1,32 @@
 import { supabase } from './supabase'
 
 /**
- * Normalises phone to E.164: strip leading 0, prepend +254
+ * Normalises phone to E.164 using the provided country code.
+ * Strips leading zeros from the local part before prepending.
  */
-export const normalizePhone = (phone: string): string => {
+export const normalizePhone = (phone: string, countryCode: string = '254'): string => {
   let cleaned = phone.replace(/\D/g, '')
-  if (cleaned.startsWith('0')) {
-    cleaned = '254' + cleaned.substring(1)
-  } else if (!cleaned.startsWith('254')) {
-    cleaned = '254' + cleaned
+  // Already a full international number — use as-is
+  if (cleaned.startsWith(countryCode) && cleaned.length > countryCode.length + 5) {
+    return `+${cleaned}`
   }
-  return `+${cleaned}`
+  // Strip leading zero from local number
+  if (cleaned.startsWith('0')) {
+    cleaned = cleaned.substring(1)
+  }
+  return `+${countryCode}${cleaned}`
 }
 
-export const sendOTP = async (phone: string) => {
-  const normalized = normalizePhone(phone)
+export const sendOTP = async (phone: string, countryCode: string = '254') => {
+  const normalized = normalizePhone(phone, countryCode)
   const { data, error } = await supabase.auth.signInWithOtp({
     phone: normalized,
   })
-  
-  return { success: !error, error }
+  return { success: !error, error, normalized }
 }
 
-export const verifyOTP = async (phone: string, token: string) => {
-  const normalized = normalizePhone(phone)
+export const verifyOTP = async (phone: string, token: string, countryCode: string = '254') => {
+  const normalized = normalizePhone(phone, countryCode)
   const { data: { session }, error: verifyError } = await supabase.auth.verifyOtp({
     phone: normalized,
     token,
@@ -34,7 +37,6 @@ export const verifyOTP = async (phone: string, token: string) => {
     return { success: false, error: verifyError }
   }
 
-  // Fetch profile to check onboarding status and role
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('onboarding_completed, role')
@@ -42,13 +44,11 @@ export const verifyOTP = async (phone: string, token: string) => {
     .single()
 
   if (profileError) {
-    // If profile doesn't exist yet (trigger might be slow or failed), 
-    // we return success but with default values
-    return { 
-      success: true, 
-      onboardingCompleted: false, 
-      role: 'student', 
-      error: profileError 
+    return {
+      success: true,
+      onboardingCompleted: false,
+      role: 'student',
+      error: profileError
     }
   }
 
