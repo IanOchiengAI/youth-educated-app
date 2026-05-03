@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, Sparkles, MessageCircle, Globe, User, WifiOff, Users, ShieldAlert, LayoutDashboard } from 'lucide-react';
+import { Home, Sparkles, MessageCircle, Globe, User, WifiOff, Users, ShieldAlert, LayoutDashboard, CalendarDays } from 'lucide-react';
 import { useAppContext } from '../AppContext';
 import { useGamification } from '../hooks/useGamification';
 import { motion, AnimatePresence } from 'motion/react';
@@ -29,6 +29,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     { path: '/chat', label: 'Chat', icon: MessageCircle, badge: state.notifications.unreadChat ? 'yellow' : null },
     { path: '/circles', label: 'Circles', icon: Globe },
     { path: '/mentor', label: 'Mentor', icon: User },
+    { path: '/calendar', label: 'Calendar', icon: CalendarDays },
   ];
 
   // Role-specific additions
