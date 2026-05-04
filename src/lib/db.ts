@@ -66,7 +66,7 @@ export class YouthEducatedDB extends Dexie {
   moodLogs!: Table<LocalMoodLog>;
   chatMessages!: Table<LocalChatMessage>;
   circleResponses!: Table<LocalCircleResponse>;
-  goals!: Table<{ id?: number; userId: string; title: string; isCompleted: boolean; weekNumber: number; synced: boolean }>;
+  goals!: Table<{ id?: number; remote_id?: string; userId: string; title: string; isCompleted: boolean; weekNumber: number; synced: boolean }>;
   achievements!: Table<{ id: string; userId: string; unlockedAt: string }>;
   profile!: Table<{ userId: string; data: any }, string>;
 
@@ -83,6 +83,9 @@ export class YouthEducatedDB extends Dexie {
       goals: '++id, userId, weekNumber, synced',
       achievements: 'id, userId',
       profile: 'userId'
+    });
+    this.version(2).stores({
+      goals: '++id, remote_id, userId, weekNumber, synced'
     });
   }
 }

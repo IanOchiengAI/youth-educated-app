@@ -18,6 +18,10 @@ import { useAppContext } from '../AppContext';
 import Leaderboard from '../components/Leaderboard';
 import MoodTracker from '../components/MoodTracker';
 import { getCurrentTier, getProgressToNextTier } from '../utils/gamification';
+import { db } from '../lib/db';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { MODULES } from '../data/modules';
+import { LIFEKIT_ARTICLES } from '../data/lifekit';
 
 const Dashboard: React.FC = () => {
   const { state } = useAppContext();
@@ -27,6 +31,16 @@ const Dashboard: React.FC = () => {
 
   const currentTier = getCurrentTier(state.progress.points);
   const progressToNext = getProgressToNextTier(state.progress.points);
+
+  const recentResponses = useLiveQuery(
+    () => db.circleResponses.orderBy('id').reverse().limit(3).toArray()
+  ) || [];
+
+  const nextModule = MODULES.find(m => !state.modules.completed.includes(m.id)) || MODULES[0];
+  const moduleIndex = MODULES.findIndex(m => m.id === nextModule.id) + 1;
+
+  // Use the first 3 LifeKit articles as featured
+  const featuredArticles = LIFEKIT_ARTICLES.slice(0, 3);
 
   const QUICK_ACTIONS = [
     { id: 'chat', label: t('action.ask_amara', lang), icon: <MessageCircle size={24} />, color: 'bg-blue-500', path: '/chat' },
@@ -136,24 +150,26 @@ const Dashboard: React.FC = () => {
             </button>
           </div>
           <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-6 px-6">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="min-w-[280px] bg-white p-5 rounded-[32px] border border-navy/5 shadow-sm space-y-3">
+            {recentResponses.length > 0 ? recentResponses.map((resp, index) => (
+              <div key={resp.id || index} className="min-w-[280px] bg-white p-5 rounded-[32px] border border-navy/5 shadow-sm space-y-3">
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 bg-off-white rounded-xl flex items-center justify-center text-sm shadow-inner">
-                    {['🦁', '🦒', '🐘'][i-1]}
+                    {resp.userId === state.user?.id ? '👤' : ['🦁', '🦒', '🐘', '🐆', '🦓'][index % 5]}
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-navy">{['Juma', 'Zainab', 'Mwangi'][i-1]}</h4>
-                    <p className="text-[9px] text-navy/30 font-bold uppercase">{i * 10}m ago</p>
+                    <h4 className="text-xs font-bold text-navy">{resp.userId === state.user?.id ? 'You' : 'Scholar'}</h4>
+                    <p className="text-[9px] text-navy/30 font-bold uppercase">Week {resp.weekNumber}</p>
                   </div>
                 </div>
                 <p className="text-xs text-navy/60 font-medium line-clamp-2">
-                  {i === 1 ? "Just completed the High Confidence module! Highly recommend. 🔥" : 
-                   i === 2 ? "Who wants to study together this Saturday? 📚" : 
-                   "Started a new goal: Save 500 KES this month! 💰"}
+                  {resp.responseText}
                 </p>
               </div>
-            ))}
+            )) : (
+              <div className="min-w-[280px] bg-white p-5 rounded-[32px] border border-navy/5 shadow-sm text-center">
+                <p className="text-xs text-navy/60 font-medium">{t('dashboard.no_recent_activity', lang) || "No recent activity. Start the conversation!"}</p>
+              </div>
+            )}
           </div>
         </section>
 
@@ -161,18 +177,18 @@ const Dashboard: React.FC = () => {
         <section className="space-y-4">
           <h2 className="text-xl font-bold text-navy">{t('dashboard.continue_learning', lang)}</h2>
           <div 
-            onClick={() => navigate('/learn/finance')}
+            onClick={() => navigate(`/learn/${nextModule.id}`)}
             className="bg-navy rounded-[40px] p-8 text-white flex items-center justify-between shadow-xl shadow-navy/20 cursor-pointer group"
           >
             <div className="space-y-2">
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Module 3</span>
-              <h3 className="text-2xl font-bold leading-tight">Financial Literacy</h3>
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30">Module {moduleIndex}</span>
+              <h3 className="text-2xl font-bold leading-tight">{nextModule.title}</h3>
               <div className="flex items-center gap-4 pt-2">
                 <div className="flex items-center gap-1 text-[10px] font-bold text-white/40">
-                  <BookOpen size={12} /> 12 min left
+                  <BookOpen size={12} /> {nextModule.duration}
                 </div>
                 <div className="w-24 h-1 bg-white/10 rounded-full overflow-hidden">
-                  <div className="w-1/3 h-full bg-yellow rounded-full" />
+                  <div className="w-0 h-full bg-yellow rounded-full" />
                 </div>
               </div>
             </div>
@@ -191,37 +207,19 @@ const Dashboard: React.FC = () => {
             </Link>
           </div>
           <div className="space-y-3">
-            {[
-              {
-                emoji: '💙',
-                title: 'Feeling overwhelmed? Try this 5-minute reset',
-                tags: ['Stress', 'MentalHealth'],
-                readTime: '2 min',
-              },
-              {
-                emoji: '🚀',
-                title: 'Do not know what you want to be? Start here',
-                tags: ['Career', 'Future'],
-                readTime: '4 min',
-              },
-              {
-                emoji: '💰',
-                title: 'Got pocket money? Here is how to manage it',
-                tags: ['Money'],
-                readTime: '2 min',
-              },
-            ].map((article, idx) => (
+            {featuredArticles.map((article, idx) => (
               <div
-                key={idx}
-                className="flex items-center gap-4 bg-white rounded-2xl p-4 shadow-sm border border-navy/5 active:scale-[0.98] transition-transform duration-120"
+                key={article.id || idx}
+                onClick={() => navigate(`/learn/lifekit/${article.id}`)}
+                className="flex items-center gap-4 bg-white rounded-2xl p-4 shadow-sm border border-navy/5 cursor-pointer hover:border-yellow active:scale-[0.98] transition-all duration-120 group"
               >
                 <span className="text-2xl flex-shrink-0 leading-none">{article.emoji}</span>
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-nunito font-semibold text-navy text-sm leading-snug mb-1.5">
-                    {article.title}
+                  <h4 className="font-nunito font-semibold text-navy text-sm leading-snug mb-1.5 line-clamp-2 group-hover:text-blue-600 transition-colors">
+                    {lang === 'Kiswahili' ? article.title_sw : article.title}
                   </h4>
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    {article.tags.map((tag) => (
+                    {article.tags.slice(0, 2).map((tag) => (
                       <span
                         key={tag}
                         className="bg-pale-yellow text-navy/70 text-[11px] font-semibold px-2 py-0.5 rounded-full"
@@ -234,7 +232,7 @@ const Dashboard: React.FC = () => {
                     </span>
                   </div>
                 </div>
-                <ChevronRight size={18} className="text-navy/30 flex-shrink-0" />
+                <ChevronRight size={18} className="text-navy/30 flex-shrink-0 group-hover:text-yellow transition-colors" />
               </div>
             ))}
           </div>

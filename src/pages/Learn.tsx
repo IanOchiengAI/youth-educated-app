@@ -18,6 +18,8 @@ interface ArticleCardProps {
 
 const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
   const navigate = useNavigate();
+  const { state } = useAppContext();
+  const lang: Language = state.user?.language ?? 'English';
   return (
   <div
     onClick={() => navigate(`/learn/article/${article.id}`)}

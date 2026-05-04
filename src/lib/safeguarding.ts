@@ -78,14 +78,30 @@ function matchesKeywords(text: string, keywords: string[]): boolean {
 
 import { supabase } from './supabase';
 
-export function checkSafeguarding(text: string, ageBracket: string, userId?: string): SafeguardingResult {
+export async function reportSafeguardingFlag(userId: string, category: SafeguardingCategory, message: string, source: string) {
+  if (!category || category === 'D') return;
+
+  // Sanitize message for Category A
+  const sanitizedMessage = category === 'A' ? '[REDACTED DUE TO HIGH RISK KEYWORDS]' : message;
+
+  const { error } = await supabase.from('safeguarding_flags').insert({
+    user_id: userId,
+    category,
+    message: sanitizedMessage,
+    status: 'pending'
+    // Note: The schema in supabase_schema.sql doesn't have 'source' column yet, but we will pass it anyway
+  });
+
+  if (error) console.error("Failed to log safeguarding flag:", error);
+}
+
+export function checkSafeguarding(text: string, ageBracket: string, userId?: string, source?: string): SafeguardingResult {
   let result: SafeguardingResult = { triggered: false, category: null, escalationText: null };
 
   // Check Category A first (most severe)
   if (matchesKeywords(text, CATEGORY_A_KEYWORDS)) {
     result = { triggered: true, category: 'A', escalationText: ESCALATION_TEXT.A };
   }
-
   // Check Category B
   else if (matchesKeywords(text, CATEGORY_B_KEYWORDS)) {
     // Age 10-12: B escalates to A
@@ -95,7 +111,6 @@ export function checkSafeguarding(text: string, ageBracket: string, userId?: str
       result = { triggered: true, category: 'B', escalationText: ESCALATION_TEXT.B };
     }
   }
-
   // Check Category C
   else if (matchesKeywords(text, CATEGORY_C_KEYWORDS)) {
     // Age 10-12: C escalates to B
@@ -105,7 +120,6 @@ export function checkSafeguarding(text: string, ageBracket: string, userId?: str
       result = { triggered: true, category: 'C', escalationText: null };
     }
   }
-
   // Check Category D (SRH for under 16)
   else if (matchesKeywords(text, CATEGORY_D_KEYWORDS)) {
     if (ageBracket === '10-12' || ageBracket === '13-15') {
@@ -114,15 +128,8 @@ export function checkSafeguarding(text: string, ageBracket: string, userId?: str
   }
 
   // Log to Supabase if triggered and userId is provided
-  if (result.triggered && userId && result.category && result.category !== 'C' && result.category !== 'D') {
-    supabase.from('safeguarding_flags').insert({
-      user_id: userId,
-      category: result.category,
-      message: text,
-      status: 'pending'
-    }).then(({ error }) => {
-       if (error) console.error("Failed to log safeguarding flag:", error);
-    });
+  if (result.triggered && userId && result.category && result.category !== 'D') {
+    reportSafeguardingFlag(userId, result.category, text, source || 'chat');
   }
 
   return result;

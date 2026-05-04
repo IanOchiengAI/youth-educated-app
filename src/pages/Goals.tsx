@@ -53,11 +53,16 @@ const Goals: React.FC = () => {
 
     // 2. Sync
     if (!state.isOffline) {
-      const { error } = await supabase.from('goals').insert({
+      const { data, error } = await supabase.from('goals').insert({
         user_id: state.user.id,
         ...payload
-      });
-      if (error) await queueOfflineAction(state.user.id, 'GOAL_CREATE', payload);
+      }).select('id').single();
+      
+      if (!error && data) {
+        await db.goals.update(id, { remote_id: data.id });
+      } else {
+        await queueOfflineAction(state.user.id, 'GOAL_CREATE', payload);
+      }
     } else {
       await queueOfflineAction(state.user.id, 'GOAL_CREATE', payload);
     }
@@ -79,13 +84,15 @@ const Goals: React.FC = () => {
       // Sync completion
       const goal = await db.goals.get(id);
       if (goal && !state.isOffline) {
-        // We need the remote ID if we want to update it. 
-        // For simplicity, we'll use a title-based match or assume we have the ID from Supabase.
-        // In a real app, 'goals' table would have a 'remote_id'.
-        const { error } = await supabase.from('goals').update({ is_completed: true }).eq('user_id', state.user.id).eq('title', goal.title);
-        if (error) await queueOfflineAction(state.user.id, 'GOAL_COMPLETE', { title: goal.title });
+        if (goal.remote_id) {
+          const { error } = await supabase.from('goals').update({ is_completed: true }).eq('id', goal.remote_id);
+          if (error) await queueOfflineAction(state.user.id, 'GOAL_COMPLETE', { remote_id: goal.remote_id, title: goal.title });
+        } else {
+          const { error } = await supabase.from('goals').update({ is_completed: true }).eq('user_id', state.user.id).eq('title', goal.title);
+          if (error) await queueOfflineAction(state.user.id, 'GOAL_COMPLETE', { title: goal.title });
+        }
       } else if (state.isOffline) {
-        await queueOfflineAction(state.user.id, 'GOAL_COMPLETE', { title: goal?.title });
+        await queueOfflineAction(state.user.id, 'GOAL_COMPLETE', { remote_id: goal?.remote_id, title: goal?.title });
       }
     }
   };

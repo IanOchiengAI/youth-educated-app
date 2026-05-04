@@ -58,9 +58,19 @@ export const processOfflineQueue = async (userId: string) => {
           }))
           break
         case 'GOAL_COMPLETE':
-          ({ error } = await supabase.from('goals').update({
-            is_completed: true,
-          }).eq('id', item.payload.id))
+          if (item.payload.remote_id) {
+            ({ error } = await supabase.from('goals').update({
+              is_completed: true,
+            }).eq('id', item.payload.remote_id));
+          } else if (item.payload.title) {
+            ({ error } = await supabase.from('goals').update({
+              is_completed: true,
+            }).eq('user_id', item.userId).eq('title', item.payload.title));
+          } else if (item.payload.id) {
+            ({ error } = await supabase.from('goals').update({
+              is_completed: true,
+            }).eq('id', item.payload.id));
+          }
           break
         case 'AI_MESSAGE':
           ({ error } = await supabase.from('ai_conversations').upsert({

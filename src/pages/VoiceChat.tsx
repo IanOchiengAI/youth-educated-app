@@ -202,7 +202,7 @@ const VoiceChat: React.FC = () => {
 
   const handleProcessVoice = async (text: string) => {
     // 1. Safeguarding Check
-    const safeguard = checkSafeguarding(text, state.user?.ageBracket || '16-18', state.user?.id);
+    const safeguard = checkSafeguarding(text, state.user?.ageBracket || '16-18', state.user?.id, 'voice');
     if (safeguard.triggered && safeguard.escalationText) {
       safeguardingTriggeredRef.current = true;
       setResponse(safeguard.escalationText);

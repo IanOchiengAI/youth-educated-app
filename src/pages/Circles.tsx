@@ -19,12 +19,14 @@ import { db } from '../lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { supabase } from '../lib/supabase';
 import { queueOfflineAction } from '../lib/sync';
+import SafeguardingCard from '../components/SafeguardingCard';
 
 const Circles: React.FC = () => {
   const { state, dispatch } = useAppContext();
   const navigate = useNavigate();
   const [activePrompt, setActivePrompt] = useState<CirclePrompt | null>(null);
   const [responseText, setResponseText] = useState('');
+  const [safeguardingEscalation, setSafeguardingEscalation] = useState<string | null>(null);
 
   const weekNumber = Math.ceil(new Date().getDate() / 7);
 
@@ -71,23 +73,14 @@ const Circles: React.FC = () => {
     if (!responseText.trim() || !state.user) return;
 
     // 1. Safeguarding
-    const safeguard = checkSafeguarding(responseText, state.user.ageBracket);
+    const safeguard = checkSafeguarding(responseText, state.user.ageBracket, state.user.id, 'circle');
     if (safeguard.triggered) {
-      // Sync safeguarding event
-      if (!state.isOffline) {
-        await supabase.from('ai_conversations').upsert({
-          user_id: state.user.id,
-          message_history: [{ role: 'user', content: responseText }],
-          safeguarding_flagged: true,
-          updated_at: new Date().toISOString()
-        });
-      }
-      alert("Please keep our community safe. Your message contains sensitive content.");
+      setSafeguardingEscalation(safeguard.escalationText || "Please keep our community safe. Your message contains sensitive content.");
       return;
     }
 
     const payload = {
-      circle_id: 'default-circle-id', // In a real app, this would be dynamic
+      circle_id: state.user.county || 'default', // Using dynamic county from user profile
       week_number: weekNumber,
       response_text: responseText
     };
@@ -184,6 +177,13 @@ const Circles: React.FC = () => {
               <Send size={20} />
             </button>
           </div>
+          {safeguardingEscalation && (
+            <SafeguardingCard
+              message={safeguardingEscalation}
+              showDismiss={true}
+              onDismiss={() => setSafeguardingEscalation(null)}
+            />
+          )}
         </section>
 
         <div className="space-y-4 pt-4">
