@@ -4,12 +4,9 @@ import {
   Send, 
   Mic, 
   ChevronLeft, 
-  Info, 
-  AlertCircle, 
   Languages, 
   WifiOff, 
   Sparkles,
-  Phone,
   Plus,
   Target,
   BookOpen,
@@ -29,6 +26,8 @@ import {
 import { checkSafeguarding } from '../lib/safeguarding';
 import { addPoints } from '../lib/gamification';
 import { supabase } from '../lib/supabase';
+import { t, type Language } from '../lib/i18n';
+import SafeguardingCard from '../components/SafeguardingCard';
 
 interface Message {
   id: string;
@@ -47,6 +46,7 @@ const Chat: React.FC = () => {
   const [isLocked, setIsLocked] = useState(false);
   const [language, setLanguage] = useState<'English' | 'Kiswahili'>(state.user?.language || 'English');
   const [activeMode, setActiveMode] = useState<InteractionMode>('default');
+  const lang: Language = state.user?.language ?? 'English';
   const [activeScenario, setActiveScenario] = useState<RoleplayScenario | null>(null);
   const [showActionModeMenu, setShowActionModeMenu] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -301,7 +301,7 @@ const Chat: React.FC = () => {
               <div className="flex items-center gap-1.5">
                 <div className={`w-2 h-2 rounded-full ${state.isOffline ? 'bg-grey' : 'bg-green-400'}`} />
                 <span className="text-[10px] text-white/60 font-medium uppercase tracking-widest">
-                  {state.isOffline ? 'Offline Mode' : 'Online'}
+                  {state.isOffline ? t('chat.offline_mode', lang) : t('chat.online', lang)}
                 </span>
               </div>
             </div>
@@ -335,7 +335,7 @@ const Chat: React.FC = () => {
             }}
             className="text-[9px] font-black uppercase bg-navy/10 px-2 py-1 rounded-lg hover:bg-navy/20"
           >
-            Exit Mode
+            {t('chat.exit_mode', lang)}
           </button>
         </div>
       )}
@@ -357,27 +357,23 @@ const Chat: React.FC = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              <div className={`max-w-[85%] rounded-[28px] p-4 ${
-                message.role === 'user' 
-                  ? 'bg-navy text-white rounded-br-none shadow-md' 
-                  : message.isEscalation 
-                    ? 'bg-red-50 border-2 border-red-200 text-red-700 rounded-bl-none shadow-sm' 
+              {message.isEscalation ? (
+                <div className="max-w-[85%]">
+                  <SafeguardingCard
+                    message={message.text}
+                    showDismiss={!isLocked}
+                    onDismiss={() => setIsLocked(false)}
+                  />
+                </div>
+              ) : (
+                <div className={`max-w-[85%] rounded-[28px] p-4 ${
+                  message.role === 'user'
+                    ? 'bg-navy text-white rounded-br-none shadow-md'
                     : 'bg-white text-navy rounded-bl-none shadow-sm border border-navy/5'
-              }`}>
-                {message.isEscalation && (
-                  <div className="flex items-center gap-2 mb-2 text-red-600">
-                    <AlertCircle size={18} />
-                    <span className="text-xs font-black uppercase tracking-widest">Priority Support 116</span>
-                  </div>
-                )}
-                <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{message.text}</p>
-                {message.isEscalation && (
-                  <button className="mt-4 w-full py-3 bg-red-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2">
-                    <Phone size={18} />
-                    Call Childline 116
-                  </button>
-                )}
-              </div>
+                }`}>
+                  <p className="text-[15px] leading-relaxed whitespace-pre-wrap">{message.text}</p>
+                </div>
+              )}
             </motion.div>
           ))}
         </AnimatePresence>
@@ -406,7 +402,7 @@ const Chat: React.FC = () => {
               className="absolute bottom-full left-4 mb-4 bg-white rounded-[32px] shadow-2xl border border-navy/5 p-4 w-72 z-50 overflow-hidden"
             >
               <div className="flex justify-between items-center mb-4 px-2">
-                <h3 className="text-xs font-black uppercase tracking-widest text-navy/40">Action Modes</h3>
+                <h3 className="text-xs font-black uppercase tracking-widest text-navy/40">{t('chat.action_modes', lang)}</h3>
                 <button onClick={() => setShowActionModeMenu(false)} className="text-navy/20 hover:text-navy">
                   <X size={16} />
                 </button>
@@ -425,13 +421,13 @@ const Chat: React.FC = () => {
                     <BookOpen size={20} />
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-navy">Socratic Quiz</h4>
-                    <p className="text-[10px] text-navy/40 font-medium">Test your knowledge with Amara.</p>
+                    <h4 className="text-sm font-bold text-navy">{t('chat.socratic_quiz', lang)}</h4>
+                    <p className="text-[10px] text-navy/40 font-medium">{t('chat.socratic_desc', lang)}</p>
                   </div>
                 </button>
 
                 <div className="mt-4 pt-4 border-t border-navy/5 px-2">
-                  <h3 className="text-[10px] font-black uppercase tracking-widest text-navy/20 mb-3">Roleplay Scenarios</h3>
+                  <h3 className="text-[10px] font-black uppercase tracking-widest text-navy/20 mb-3">{t('chat.roleplay_scenarios', lang)}</h3>
                   <div className="space-y-1">
                     {ROLEPLAY_SCENARIOS.map((scenario) => (
                       <button 
@@ -473,7 +469,7 @@ const Chat: React.FC = () => {
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-            placeholder={isLocked ? "Chat disabled for your safety. Please seek help." : "Talk to Amara..."}
+            placeholder={isLocked ? t('chat.locked_safety', lang) : t('chat.amara_greeting', lang)}
             disabled={isLocked}
             className="flex-1 bg-transparent outline-none text-navy placeholder:text-navy/30 py-2 disabled:cursor-not-allowed"
           />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -11,13 +11,15 @@ import {
   Shield, 
   Languages, 
   Calendar,
-  Users
+  Users,
+  Mic
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useAppContext } from '../AppContext';
 import { COUNTIES, GOAL_OPTIONS } from '../data/modules';
 import { addPoints } from '../lib/gamification';
 import { supabase } from '../lib/supabase';
+import { t, type Language } from '../lib/i18n';
 
 const ONBOARDING_STEPS = 6;
 
@@ -28,6 +30,8 @@ const Onboarding: React.FC = () => {
   
   // Form State
   const [name, setName] = useState('');
+  const [introduction, setIntroduction] = useState('');
+  const [isListening, setIsListening] = useState(false);
   const [language, setLanguage] = useState<'English' | 'Kiswahili'>('English');
   const [ageBracket, setAgeBracket] = useState('');
   const [county, setCounty] = useState('');
@@ -36,6 +40,67 @@ const Onboarding: React.FC = () => {
   const [guardianConsent, setGuardianConsent] = useState(false);
   const [guardianPhone, setGuardianPhone] = useState('');
   const [isVerifyingSession, setIsVerifyingSession] = useState(true);
+  const lang: Language = language;
+
+  // Speech Recognition for self-introduction
+  const introRecognitionRef = useRef<any>(null);
+  const speechSupported = typeof window !== 'undefined' &&
+    !!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition);
+
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    const recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = language === 'Kiswahili' ? 'sw-KE' : 'en-KE';
+
+    recognition.onresult = (event: any) => {
+      let text = '';
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        text += event.results[i][0].transcript;
+      }
+      setIntroduction(text);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.onerror = (event: any) => {
+      // Graceful — never crash. The kid in Garissa should never see a white screen.
+      if (event.error !== 'no-speech') {
+        console.warn('Speech recognition error:', event.error);
+      }
+      setIsListening(false);
+    };
+
+    introRecognitionRef.current = recognition;
+
+    return () => {
+      if (introRecognitionRef.current) {
+        try { introRecognitionRef.current.stop(); } catch { /* already stopped */ }
+      }
+    };
+  }, [language]);
+
+  const toggleIntroListening = async () => {
+    if (!introRecognitionRef.current) return;
+    if (isListening) {
+      introRecognitionRef.current.stop();
+      setIsListening(false);
+    } else {
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        introRecognitionRef.current.start();
+        setIsListening(true);
+      } catch {
+        // Mic permission denied — degrade silently, textarea still works
+        console.warn('Microphone permission denied');
+      }
+    }
+  };
 
   // Check for session on mount
   useEffect(() => {
@@ -196,7 +261,7 @@ const Onboarding: React.FC = () => {
           <img src="/logo-mark.png" alt="Youth Educated" className="h-10 w-auto" />
         )}
         <div className="ml-auto text-sm font-bold text-white/50 tracking-widest uppercase">
-          Step {step} of {ONBOARDING_STEPS}
+          {t('onboarding.step_indicator', lang)} {step} {t('onboarding.of', lang)} {ONBOARDING_STEPS}
         </div>
       </header>
 
@@ -215,20 +280,46 @@ const Onboarding: React.FC = () => {
                 <div className="bg-yellow/20 w-16 h-16 rounded-3xl flex items-center justify-center text-yellow mb-2">
                   <UserIcon size={32} />
                 </div>
-                <h1 className="text-4xl font-bold leading-tight">Mambo! Let's get started.</h1>
+                <h1 className="text-4xl font-bold leading-tight">{t('onboarding.mambo', lang)}</h1>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-white/50 ml-1">What's your name?</label>
+                    <label className="text-xs font-bold uppercase tracking-widest text-white/50 ml-1">{t('onboarding.what_name', lang)}</label>
                     <input 
                       type="text" 
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Enter your name"
+                      placeholder={t('onboarding.enter_name', lang)}
                       className="w-full bg-white/10 border-2 border-white/10 rounded-3xl px-6 py-4 text-lg focus:border-yellow transition-all outline-none"
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-widest text-white/50 ml-1">Preferred Language</label>
+                    <label className="text-xs font-bold uppercase tracking-widest text-white/50 ml-1">{t('onboarding.tell_us_intro', lang)}</label>
+                    <div className="flex gap-3 items-start">
+                      <textarea
+                        value={introduction}
+                        onChange={(e) => setIntroduction(e.target.value)}
+                        placeholder={t('onboarding.intro_placeholder', lang)}
+                        rows={3}
+                        className="flex-1 bg-white/10 border-2 border-white/10 rounded-2xl px-5 py-3 text-base focus:border-yellow transition-all outline-none resize-none"
+                      />
+                      {speechSupported && (
+                        <button
+                          type="button"
+                          onClick={toggleIntroListening}
+                          className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 transition-all mt-1 ${
+                            isListening
+                              ? 'bg-yellow text-navy animate-pulse shadow-lg shadow-yellow/40'
+                              : 'bg-white/10 text-white/60 hover:bg-white/20'
+                          }`}
+                          aria-label={isListening ? 'Stop recording' : 'Start voice input'}
+                        >
+                          <Mic size={20} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-white/50 ml-1">{t('onboarding.pref_lang', lang)}</label>
                     <div className="grid grid-cols-2 gap-3">
                       {['English', 'Kiswahili'].map((lang) => (
                         <button
@@ -255,8 +346,8 @@ const Onboarding: React.FC = () => {
                 <div className="bg-yellow/20 w-16 h-16 rounded-3xl flex items-center justify-center text-yellow mb-2">
                   <Calendar size={32} />
                 </div>
-                <h1 className="text-4xl font-bold leading-tight">How old are you?</h1>
-                <p className="text-white/60">We use this to show you age-appropriate modules.</p>
+                <h1 className="text-4xl font-bold leading-tight">{t('onboarding.how_old', lang)}</h1>
+                <p className="text-white/60">{t('onboarding.age_hint', lang)}</p>
                 <div className="grid grid-cols-1 gap-3">
                   {['10-12', '13-15', '16-18', '19-22'].map((bracket) => (
                     <button
@@ -268,7 +359,7 @@ const Onboarding: React.FC = () => {
                           : 'bg-white/5 border-white/5 text-white'
                       }`}
                     >
-                      <span className="text-lg font-bold">{bracket} years old</span>
+                      <span className="text-lg font-bold">{bracket} {t('onboarding.years_old', lang)}</span>
                       {ageBracket === bracket && <Check size={20} />}
                     </button>
                   ))}
@@ -282,15 +373,15 @@ const Onboarding: React.FC = () => {
                 <div className="bg-yellow/20 w-16 h-16 rounded-3xl flex items-center justify-center text-yellow mb-2">
                   <MapPin size={32} />
                 </div>
-                <h1 className="text-4xl font-bold leading-tight">Where do you live?</h1>
+                <h1 className="text-4xl font-bold leading-tight">{t('onboarding.where_live', lang)}</h1>
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-white/50 ml-1">Select your county</label>
+                  <label className="text-xs font-bold uppercase tracking-widest text-white/50 ml-1">{t('onboarding.select_county', lang)}</label>
                   <select 
                     value={county}
                     onChange={(e) => setCounty(e.target.value)}
                     className="w-full bg-white/10 border-2 border-white/10 rounded-3xl px-6 py-4 text-lg focus:border-yellow transition-all outline-none appearance-none"
                   >
-                    <option value="" disabled className="bg-navy">Choose County</option>
+                    <option value="" disabled className="bg-navy">{t('onboarding.choose_county', lang)}</option>
                     {COUNTIES.map(c => (
                       <option key={c} value={c} className="bg-navy">{c}</option>
                     ))}
@@ -305,12 +396,12 @@ const Onboarding: React.FC = () => {
                 <div className="bg-yellow/20 w-16 h-16 rounded-3xl flex items-center justify-center text-yellow mb-2">
                   <Users size={32} />
                 </div>
-                <h1 className="text-4xl font-bold leading-tight">Tell us about yourself.</h1>
+                <h1 className="text-4xl font-bold leading-tight">{t('onboarding.tell_about_self', lang)}</h1>
                 <div className="grid grid-cols-1 gap-3">
                   {[
-                    { id: 'male', label: 'Male' },
-                    { id: 'female', label: 'Female' },
-                    { id: 'prefer_not_to_say', label: 'Prefer not to say' }
+                    { id: 'male', label: t('onboarding.gender_male', lang) },
+                    { id: 'female', label: t('onboarding.gender_female', lang) },
+                    { id: 'prefer_not_to_say', label: t('onboarding.gender_none', lang) }
                   ].map((g) => (
                     <button
                       key={g.id}
@@ -335,8 +426,8 @@ const Onboarding: React.FC = () => {
                 <div className="bg-yellow/20 w-16 h-16 rounded-3xl flex items-center justify-center text-yellow mb-2">
                   <Target size={32} />
                 </div>
-                <h1 className="text-4xl font-bold leading-tight">What are your goals?</h1>
-                <p className="text-white/60">Pick up to 3 things you want to work on.</p>
+                <h1 className="text-4xl font-bold leading-tight">{t('onboarding.what_goals', lang)}</h1>
+                <p className="text-white/60">{t('onboarding.goals_hint', lang)}</p>
                 <div className="grid grid-cols-2 gap-2">
                   {GOAL_OPTIONS.map((goal) => (
                     <button
@@ -363,8 +454,8 @@ const Onboarding: React.FC = () => {
                 </div>
                 {ageBracket === '10-12' || ageBracket === '13-15' ? (
                   <>
-                    <h1 className="text-4xl font-bold leading-tight">Keep it safe.</h1>
-                    <p className="text-white/60">Since you're under 16, we need a parent or guardian to know you're using this app.</p>
+                    <h1 className="text-4xl font-bold leading-tight">{t('onboarding.keep_safe', lang)}</h1>
+                    <p className="text-white/60">{t('onboarding.guardian_hint', lang)}</p>
                     <div className="space-y-6">
                       <div className="bg-white/5 p-6 rounded-3xl border-2 border-white/5 space-y-4">
                         <label className="flex items-start gap-4 cursor-pointer">
@@ -375,12 +466,12 @@ const Onboarding: React.FC = () => {
                             className="mt-1 w-6 h-6 rounded-lg bg-white/10 border-white/20 text-yellow focus:ring-yellow"
                           />
                           <span className="text-sm leading-relaxed">
-                            I have my parent/guardian's permission to use Youth Educated.
+                            {t('onboarding.guardian_agree', lang)}
                           </span>
                         </label>
                       </div>
                       <div className="space-y-2">
-                        <label className="text-xs font-bold uppercase tracking-widest text-white/50 ml-1">Guardian's Phone Number</label>
+                        <label className="text-xs font-bold uppercase tracking-widest text-white/50 ml-1">{t('onboarding.guardian_phone', lang)}</label>
                         <input 
                           type="tel" 
                           value={guardianPhone}
@@ -393,8 +484,8 @@ const Onboarding: React.FC = () => {
                   </>
                 ) : (
                   <div className="text-center py-12 space-y-6">
-                    <h1 className="text-4xl font-bold">You're all set!</h1>
-                    <p className="text-white/60 text-lg">Ready to start your journey with Amara?</p>
+                    <h1 className="text-4xl font-bold">{t('onboarding.all_set', lang)}</h1>
+                    <p className="text-white/60 text-lg">{t('onboarding.ready_journey', lang)}</p>
                     <div className="bg-yellow/10 p-8 rounded-full border border-yellow/20 inline-block">
                       <Check size={64} className="text-yellow" />
                     </div>
@@ -415,7 +506,7 @@ const Onboarding: React.FC = () => {
                 : 'bg-white/10 text-white/30 scale-95 cursor-not-allowed border-none'
             }`}
           >
-            {step === ONBOARDING_STEPS ? 'Complete' : 'Continue'}
+            {step === ONBOARDING_STEPS ? t('onboarding.complete', lang) : t('btn.continue', lang)}
             <ChevronRight size={22} />
           </button>
         </div>

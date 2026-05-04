@@ -6,13 +6,16 @@ import { supabase } from './supabase'
  */
 export const normalizePhone = (phone: string, countryCode: string = '254'): string => {
   let cleaned = phone.replace(/\D/g, '')
-  // Already a full international number — use as-is
-  if (cleaned.startsWith(countryCode) && cleaned.length > countryCode.length + 5) {
-    return `+${cleaned}`
-  }
-  // Strip leading zero from local number
-  if (cleaned.startsWith('0')) {
-    cleaned = cleaned.substring(1)
+  // Strip all leading zeros from local number (e.g. 0712... → 712...)
+  cleaned = cleaned.replace(/^0+/, '')
+  // If the user typed the full number with + prefix already stripped,
+  // and it starts with the country code — accept it as-is only if the
+  // remaining local part is a realistic length (7-12 digits).
+  if (cleaned.startsWith(countryCode)) {
+    const localPart = cleaned.slice(countryCode.length)
+    if (localPart.length >= 7 && localPart.length <= 12) {
+      return `+${cleaned}`
+    }
   }
   return `+${countryCode}${cleaned}`
 }

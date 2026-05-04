@@ -1,7 +1,7 @@
 /**
  * TTS Service Abstraction
  * Current: Web Speech API (browser-native, free, works offline)
- * Future: ElevenLabs API (trained African accent voice)
+ * Premium: ElevenLabs API (multilingual v2 — African accent voice)
  * To swap: implement TTSService interface with ElevenLabs SDK
  */
 
@@ -167,7 +167,142 @@ class WebSpeechTTS implements TTSService {
 }
 
 // ---------------------------------------------------------------------------
+// ElevenLabs API implementation — premium African accent voice
+// ---------------------------------------------------------------------------
+
+class ElevenLabsTTS implements TTSService {
+  onStart?: () => void;
+  onEnd?: () => void;
+
+  private voiceId: string;
+  private audioElement: HTMLAudioElement | null = null;
+
+  /** Shared WebSpeechTTS instance used as a fallback when the API is unreachable. */
+  private fallback = new WebSpeechTTS();
+
+  constructor(voiceId: string) {
+    this.voiceId = voiceId;
+  }
+
+  // ------ public API -------------------------------------------------------
+
+  speak(text: string, lang = 'en-US'): void {
+    const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY as string | undefined;
+
+    if (!apiKey) {
+      console.warn('[ElevenLabsTTS] No API key configured — falling back to Web Speech.');
+      this.fallback.onStart = this.onStart;
+      this.fallback.onEnd = this.onEnd;
+      this.fallback.speak(text, lang);
+      return;
+    }
+
+    // Signal that speech is starting
+    this.onStart?.();
+
+    fetch(`https://api.elevenlabs.io/v1/text-to-speech/${this.voiceId}`, {
+      method: 'POST',
+      headers: {
+        'xi-api-key': apiKey,
+        'Content-Type': 'application/json',
+        Accept: 'audio/mpeg',
+      },
+      body: JSON.stringify({
+        text,
+        model_id: 'eleven_multilingual_v2',
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75,
+        },
+      }),
+    })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(`ElevenLabs API responded with ${res.status}`);
+        }
+        return res.blob();
+      })
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        this.audioElement = new Audio(url);
+        this.audioElement.addEventListener('ended', () => this.onEnd?.());
+        this.audioElement.addEventListener('error', () => this.onEnd?.());
+        this.audioElement.play();
+      })
+      .catch((err) => {
+        // Network failures are common on spotty Kenyan mobile data —
+        // fall back to the free browser TTS so the student still hears the response.
+        console.warn('[ElevenLabsTTS] Fetch failed, using Web Speech fallback:', err);
+        this.fallback.onStart = this.onStart;
+        this.fallback.onEnd = this.onEnd;
+        this.fallback.speak(text, lang);
+      });
+  }
+
+  stop(): void {
+    if (this.audioElement) {
+      this.audioElement.pause();
+      this.audioElement.currentTime = 0;
+    }
+    this.onEnd?.();
+  }
+
+  isSpeaking(): boolean {
+    if (!this.audioElement) return false;
+    return !this.audioElement.paused && !this.audioElement.ended;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Singleton — single TTS engine instance for the entire app
 // ---------------------------------------------------------------------------
 
-export const tts = new WebSpeechTTS();
+let _currentService: TTSService | null = null;
+let _lastVoiceId: string | null = null;
+
+/**
+ * Returns the appropriate TTS backend based on the user's selected voice
+ * and whether the ElevenLabs API key is configured.
+ */
+export function getTTSService(): TTSService {
+  if (typeof window === 'undefined') return new WebSpeechTTS();
+
+  const selectedVoice = getSelectedVoiceId();
+  const apiKey = import.meta.env.VITE_ELEVENLABS_API_KEY as string | undefined;
+
+  // Cache management — don't recreate the service if the voice hasn't changed
+  if (selectedVoice === _lastVoiceId && _currentService) {
+    return _currentService;
+  }
+
+  // If voice changed, stop current audio before switching
+  if (_currentService) {
+    _currentService.stop();
+  }
+
+  _lastVoiceId = selectedVoice;
+
+  if (selectedVoice === 'elevenlabs_african' && apiKey) {
+    _currentService = new ElevenLabsTTS('EXAVo6Kbc98qBr9vO0s9');
+  } else {
+    _currentService = new WebSpeechTTS();
+  }
+
+  return _currentService;
+}
+
+/**
+ * The 'tts' singleton is a proxy that always uses the currently 
+ * active service based on user settings.
+ */
+export const tts: TTSService = {
+  speak: (text: string, lang?: string) => getTTSService().speak(text, lang),
+  stop: () => getTTSService().stop(),
+  isSpeaking: () => getTTSService().isSpeaking(),
+};
+
+/**
+ * Direct factory for consuming code that wants to explicitly use ElevenLabs.
+ */
+export const getElevenLabsTTS = () =>
+  new ElevenLabsTTS('EXAVo6Kbc98qBr9vO0s9');

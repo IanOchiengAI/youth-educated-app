@@ -16,6 +16,8 @@ import { sendToJabari, fetchAIConversations, updateAIConversations, generateChec
 import { checkSafeguarding } from '../lib/safeguarding';
 import { supabase } from '../lib/supabase';
 import { tts } from '../lib/tts';
+import { t, type Language } from '../lib/i18n';
+import SafeguardingCard from '../components/SafeguardingCard';
 
 interface Message {
   role: 'user' | 'model';
@@ -33,6 +35,7 @@ const VoiceChat: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isEscalation, setIsEscalation] = useState(false);
+  const lang: Language = state.user?.language ?? 'English';
 
   const recognitionRef = useRef<any>(null);
   // TTS singleton callbacks wired to local state
@@ -111,12 +114,12 @@ const VoiceChat: React.FC = () => {
 
       recognitionRef.current.onerror = (event: any) => {
         if (event.error !== 'no-speech') {
-          setError("Microphone error. Please check permissions.");
+          setError(t('voice.mic_error', lang));
         }
         setIsListening(false);
       };
     } else {
-      setError("Voice recognition is not supported in this browser.");
+      setError(t('voice.unsupported', lang));
     }
 
     return () => {
@@ -192,7 +195,7 @@ const VoiceChat: React.FC = () => {
         recognitionRef.current.start();
         setIsListening(true);
       } catch (err) {
-        setError("Microphone permission denied. Please allow it in settings.");
+        setError(t('voice.mic_denied', lang));
       }
     }
   };
@@ -248,9 +251,9 @@ const VoiceChat: React.FC = () => {
       }
     } catch (err: any) {
       if (err.message === 'Timeout') {
-        setError("Amara is taking too long to respond. Please try again.");
+        setError(t('voice.timeout', lang));
       } else {
-        setError("Could not reach Amara. Check your connection.");
+        setError(t('voice.network_error', lang));
       }
     } finally {
       setIsThinking(false);
@@ -276,15 +279,15 @@ const VoiceChat: React.FC = () => {
         <div className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-full border border-white/10">
           <div className={`w-2 h-2 rounded-full ${state.isOffline ? 'bg-grey' : 'bg-green-400 animate-pulse'}`} />
           <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">
-            {state.isOffline ? 'Offline' : 'Amara Active'}
+            {state.isOffline ? t('chat.offline_mode', lang) : t('voice.amara_active', lang)}
           </span>
         </div>
       </header>
 
       <main className="flex-1 w-full flex flex-col items-center justify-center gap-12 z-10 text-center">
         <div className="space-y-4 max-w-sm">
-          <h1 className="text-4xl font-bold tracking-tight">Voice Chat</h1>
-          <p className="text-white/40 font-medium">Talk to Amara naturally. She's listening.</p>
+          <h1 className="text-4xl font-bold tracking-tight">{t('voice.title', lang)}</h1>
+          <p className="text-white/40 font-medium">{t('voice.subtitle', lang)}</p>
         </div>
 
         {/* Sound Wave Animation */}
@@ -316,26 +319,23 @@ const VoiceChat: React.FC = () => {
             </motion.p>
           )}
           {response && !isThinking && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              className={isEscalation
-                ? "bg-red-500/20 p-6 rounded-[32px] border-2 border-red-400/40"
-                : "bg-white/10 p-6 rounded-[32px] border border-white/10"
-              }>
-              {isEscalation && (
-                <div className="flex items-center justify-center gap-2 mb-3 text-red-300">
-                  <AlertCircle size={18} />
-                  <span className="text-xs font-black uppercase tracking-widest">Priority Support 116</span>
-                </div>
-              )}
-              <p className={`font-medium text-sm leading-relaxed ${isEscalation ? 'text-white' : 'text-yellow'}`}>
-                {response}
-              </p>
-              {isEscalation && (
-                <a href="tel:116" className="mt-4 w-full py-3 bg-red-500 text-white rounded-2xl font-bold flex items-center justify-center gap-2 no-underline">
-                  📞 Call Childline 116
-                </a>
-              )}
-            </motion.div>
+            isEscalation ? (
+              <SafeguardingCard
+                message={response}
+                showDismiss={true}
+                onDismiss={() => {
+                  setIsEscalation(false);
+                  setResponse('');
+                }}
+              />
+            ) : (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                className="bg-white/10 p-6 rounded-[32px] border border-white/10">
+                <p className="font-medium text-sm leading-relaxed text-yellow">
+                  {response}
+                </p>
+              </motion.div>
+            )
           )}
           {error && (
             <div className="flex items-center justify-center gap-2 text-red-400 font-bold bg-red-400/10 px-4 py-2 rounded-full border border-red-400/20">

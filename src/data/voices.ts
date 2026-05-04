@@ -23,6 +23,12 @@ export const JABARI_VOICE_OPTIONS: VoiceOption[] = [
     label: 'Tutor Mode',
     description: 'Slower, very clear',
     gender: 'female'
+  },
+  {
+    id: 'elevenlabs_african',
+    label: 'Jabari (African)',
+    description: 'Premium African accent voice',
+    gender: 'male'
   }
 ];
 

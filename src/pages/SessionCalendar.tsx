@@ -46,6 +46,7 @@ const SessionCalendar: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [statusError, setStatusError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
     title: '',
@@ -85,8 +86,17 @@ const SessionCalendar: React.FC = () => {
         mentor_name: s.mentor?.name,
         mentee_name: s.mentee?.name,
       })));
+    } else if (error) {
+      // Log real errors — distinguish from genuinely empty results
+      console.warn('[SessionCalendar] fetch error:', error.message, error.code);
+      // PGRST116 = table doesn't exist yet; treat as empty. Otherwise surface it.
+      if (error.code === '42P01' || error.message?.includes('does not exist')) {
+        setSessions([]);
+      } else {
+        setStatusError(`Could not load sessions: ${error.message}`);
+        setSessions([]);
+      }
     } else {
-      // Table may not exist yet — show empty state gracefully
       setSessions([]);
     }
     setLoading(false);
@@ -133,6 +143,7 @@ const SessionCalendar: React.FC = () => {
     if (!state.user) return;
     if (!form.title.trim()) { setFormError('Session title is required.'); return; }
     if (isMentor && !form.mentee_id) { setFormError('Select a student for this session.'); return; }
+    if (!isMentor && !state.user.mentorPairId) { setFormError('You don\'t have a mentor assigned yet. Ask your coordinator to pair you.'); return; }
 
     setSaving(true);
     setFormError(null);
@@ -160,7 +171,13 @@ const SessionCalendar: React.FC = () => {
   };
 
   const updateStatus = async (id: string, status: Session['status']) => {
-    await supabase.from('mentor_sessions').update({ status }).eq('id', id);
+    setStatusError(null);
+    const { error } = await supabase.from('mentor_sessions').update({ status }).eq('id', id);
+    if (error) {
+      console.error('[SessionCalendar] updateStatus error:', error.message);
+      setStatusError(`Failed to update session: ${error.message}`);
+      return;
+    }
     fetchSessions();
   };
 
@@ -235,6 +252,14 @@ const SessionCalendar: React.FC = () => {
 
         {/* Sessions for selected day */}
         <div className="space-y-3">
+          {statusError && (
+            <div className="bg-red-50 border border-red-200 rounded-2xl px-4 py-3 flex items-center justify-between">
+              <p className="text-red-600 text-[13px] font-bold flex-1">{statusError}</p>
+              <button onClick={() => setStatusError(null)} className="text-red-400 ml-2 shrink-0">
+                <X size={16} />
+              </button>
+            </div>
+          )}
           <div className="flex items-center justify-between px-1">
             <h2 className="font-poppins font-bold text-navy text-[15px]">
               {selectedDay

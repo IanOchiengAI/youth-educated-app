@@ -4,11 +4,13 @@ import { Home, Sparkles, MessageCircle, Globe, User, WifiOff, Users, ShieldAlert
 import { useAppContext } from '../AppContext';
 import { useGamification } from '../hooks/useGamification';
 import { motion, AnimatePresence } from 'motion/react';
+import { t, type Language } from '../lib/i18n';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { state } = useAppContext();
   const { checkAndUpdateStreak } = useGamification();
   const location = useLocation();
+  const lang: Language = state.user?.language ?? 'English';
 
   useEffect(() => {
     if (state.user) {
@@ -24,19 +26,19 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   // Base student nav — available to all authenticated roles
   const navItems: { path: string; label: string; icon: React.ElementType; badge?: string | null }[] = [
-    { path: '/dashboard', label: 'Home', icon: Home },
-    { path: '/learn', label: 'Life Kit', icon: Sparkles },
-    { path: '/chat', label: 'Chat', icon: MessageCircle, badge: state.notifications.unreadChat ? 'yellow' : null },
-    { path: '/circles', label: 'Circles', icon: Globe },
-    { path: '/mentor', label: 'Mentor', icon: User },
-    { path: '/calendar', label: 'Calendar', icon: CalendarDays },
+    { path: '/dashboard', label: t('nav.home', lang), icon: Home },
+    { path: '/learn', label: t('nav.lifekit', lang), icon: Sparkles },
+    { path: '/chat', label: t('nav.chat', lang), icon: MessageCircle, badge: state.notifications.unreadChat ? 'yellow' : null },
+    { path: '/circles', label: t('nav.circles', lang), icon: Globe },
+    { path: '/mentor', label: t('nav.mentor', lang), icon: User },
+    { path: '/calendar', label: t('nav.calendar', lang), icon: CalendarDays },
   ];
 
   // Role-specific additions
   if (state.user?.role === 'mentor') {
-    navItems.push({ path: '/mentor-dashboard', label: 'My Panel', icon: LayoutDashboard });
+    navItems.push({ path: '/mentor-dashboard', label: t('nav.mypanel', lang), icon: LayoutDashboard });
   } else if (state.user?.role === 'admin') {
-    navItems.push({ path: '/admin', label: 'Admin', icon: Users });
+    navItems.push({ path: '/admin', label: t('nav.admin', lang), icon: Users });
   } else if (state.user?.role === 'dsl') {
     navItems.push({ path: '/dsl', label: 'DSL', icon: ShieldAlert });
   }
@@ -52,7 +54,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             className="sticky top-0 z-[100] bg-yellow px-4 py-2 flex items-center justify-center gap-2 border-b border-navy/10"
           >
             <WifiOff size={14} className="text-navy" />
-            <span className="text-[11px] font-black uppercase tracking-widest text-navy">Offline Mode</span>
+            <span className="text-[11px] font-black uppercase tracking-widest text-navy">{t('app.offline', lang)}</span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -61,10 +63,10 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         {!shouldHideNav && (
           <div className="sticky top-0 z-40 bg-off-white/90 backdrop-blur-md border-b border-navy/5 px-4 py-2 flex items-center gap-2">
             <img src="/logo-mark.png" alt="YE" className="w-6 h-6 object-contain" />
-            <span className="text-[10px] font-black uppercase tracking-[0.15em] text-navy/50">Youth Educated</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.15em] text-navy/50">{t('app.name', lang)}</span>
             {state.user?.role === 'mentor' && (
               <span className="ml-auto text-[10px] font-black uppercase tracking-widest text-yellow bg-navy/10 px-2 py-0.5 rounded-full">
-                Mentor
+                {t('app.mentor_badge', lang)}
               </span>
             )}
           </div>

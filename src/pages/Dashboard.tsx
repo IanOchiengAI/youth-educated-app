@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { t, type Language } from '../lib/i18n';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   MessageCircle, 
@@ -22,15 +23,16 @@ const Dashboard: React.FC = () => {
   const { state } = useAppContext();
   const navigate = useNavigate();
   const [showMoodTracker, setShowMoodTracker] = useState(false);
+  const lang: Language = state.user?.language ?? 'English';
 
   const currentTier = getCurrentTier(state.progress.points);
   const progressToNext = getProgressToNextTier(state.progress.points);
 
   const QUICK_ACTIONS = [
-    { id: 'chat', label: 'Ask Amara', icon: <MessageCircle size={24} />, color: 'bg-blue-500', path: '/chat' },
-    { id: 'career', label: 'Career Map', icon: <Compass size={24} />, color: 'bg-purple-500', path: '/career-mapper' },
-    { id: 'opps', label: 'Opps Board', icon: <Briefcase size={24} />, color: 'bg-orange-500', path: '/opportunities' },
-    { id: 'goals', label: 'My Goals', icon: <Target size={24} />, color: 'bg-green-500', path: '/goals' },
+    { id: 'chat', label: t('action.ask_amara', lang), icon: <MessageCircle size={24} />, color: 'bg-blue-500', path: '/chat' },
+    { id: 'career', label: t('action.career', lang), icon: <Compass size={24} />, color: 'bg-purple-500', path: '/career-mapper' },
+    { id: 'opps', label: t('action.opps', lang), icon: <Briefcase size={24} />, color: 'bg-orange-500', path: '/opportunities' },
+    { id: 'goals', label: t('action.goals', lang), icon: <Target size={24} />, color: 'bg-green-500', path: '/goals' },
   ];
 
   return (
@@ -49,14 +51,14 @@ const Dashboard: React.FC = () => {
               className="w-14 h-14 rounded-2xl object-contain shadow-lg shadow-yellow/20"
             />
             <div>
-              <h2 className="text-sm font-bold text-yellow tracking-wide">Youth Educated App</h2>
-              <p className="text-white/40 italic font-nunito text-[11px]">A mentor in every pocket</p>
+              <h2 className="text-sm font-bold text-yellow tracking-wide">{t('app.name_full', lang)}</h2>
+              <p className="text-white/40 italic font-nunito text-[11px]">{t('dashboard.tagline', lang)}</p>
             </div>
           </div>
         </div>
         <div className="mb-8 relative z-10">
-          <h1 className="text-3xl font-bold">Jambo, {state.user?.name}!</h1>
-          <p className="text-white/60 font-medium">Ready for your next step?</p>
+          <h1 className="text-3xl font-bold">{t('dashboard.greeting', lang)}, {state.user?.name}!</h1>
+          <p className="text-white/60 font-medium">{t('dashboard.ready', lang)}</p>
         </div>
 
         <div className="bg-white/10 rounded-[32px] p-6 border border-white/10 backdrop-blur-md relative z-10">
@@ -64,19 +66,21 @@ const Dashboard: React.FC = () => {
             <div className="flex items-center gap-3">
               <div className="text-2xl">{currentTier.icon}</div>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-white/40 leading-none mb-1">Current Tier</p>
-                <h3 className="text-xl font-bold text-yellow">{currentTier.swahili}</h3>
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/40 leading-none mb-1">{t('dashboard.current_tier', lang)}</p>
+                <h3 className="text-xl font-bold text-yellow">
+                  {lang === 'Kiswahili' ? currentTier.swahili : currentTier.name}
+                </h3>
               </div>
             </div>
             <div className="text-right">
               <p className="text-2xl font-bold">{state.progress.points}</p>
-              <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Total Points</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-white/40">{t('dashboard.total_points', lang)}</p>
             </div>
           </div>
           
           <div className="space-y-2">
             <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-white/40">
-              <span>Next: {progressToNext.nextTier?.swahili || 'MAX'}</span>
+              <span>Next: {progressToNext.nextTier ? (lang === 'Kiswahili' ? progressToNext.nextTier.swahili : progressToNext.nextTier.name) : 'MAX'}</span>
               <span>{Math.round(progressToNext.percent)}%</span>
             </div>
             <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
@@ -115,8 +119,8 @@ const Dashboard: React.FC = () => {
           className="bg-yellow rounded-[40px] p-8 flex items-center justify-between shadow-xl shadow-yellow/20 cursor-pointer active:scale-[0.98] transition-all"
         >
           <div className="space-y-2">
-            <h3 className="text-2xl font-bold text-navy leading-tight">Mood Check-in</h3>
-            <p className="text-navy/70 text-sm font-medium">Earn +10 points daily.</p>
+            <h3 className="text-2xl font-bold text-navy leading-tight">{t('dashboard.mood_checkin', lang)}</h3>
+            <p className="text-navy/70 text-sm font-medium">{t('dashboard.earn_points', lang)}</p>
           </div>
           <div className="w-14 h-14 bg-navy text-white rounded-full flex items-center justify-center shadow-lg">
             <Heart size={28} className="fill-current" />
@@ -126,9 +130,9 @@ const Dashboard: React.FC = () => {
         {/* Cohort Activity Feed (Horizontal) */}
         <section className="space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold text-navy">Circle Activity</h2>
+            <h2 className="text-xl font-bold text-navy">{t('dashboard.circle_activity', lang)}</h2>
             <button onClick={() => navigate('/circles')} className="text-xs font-bold text-blue-600 flex items-center">
-              View All <ChevronRight size={16} />
+              {t('dashboard.view_all', lang)} <ChevronRight size={16} />
             </button>
           </div>
           <div className="flex gap-4 overflow-x-auto no-scrollbar -mx-6 px-6">
@@ -155,7 +159,7 @@ const Dashboard: React.FC = () => {
 
         {/* Continue Learning */}
         <section className="space-y-4">
-          <h2 className="text-xl font-bold text-navy">Continue Learning</h2>
+          <h2 className="text-xl font-bold text-navy">{t('dashboard.continue_learning', lang)}</h2>
           <div 
             onClick={() => navigate('/learn/finance')}
             className="bg-navy rounded-[40px] p-8 text-white flex items-center justify-between shadow-xl shadow-navy/20 cursor-pointer group"
@@ -181,9 +185,9 @@ const Dashboard: React.FC = () => {
         {/* From the Life Kit */}
         <section className="space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold text-navy">From the Life Kit</h2>
+            <h2 className="text-xl font-bold text-navy">{t('dashboard.from_lifekit', lang)}</h2>
             <Link to="/learn" className="text-xs font-bold text-blue-600 flex items-center">
-              See all <ChevronRight size={16} />
+              {t('dashboard.see_all', lang)} <ChevronRight size={16} />
             </Link>
           </div>
           <div className="space-y-3">
@@ -238,7 +242,7 @@ const Dashboard: React.FC = () => {
 
         {/* Leaderboard Section */}
         <section className="space-y-4 pb-4">
-          <h2 className="text-xl font-bold text-navy">Top of the Cohort</h2>
+          <h2 className="text-xl font-bold text-navy">{t('dashboard.top_cohort', lang)}</h2>
           <Leaderboard />
         </section>
       </main>

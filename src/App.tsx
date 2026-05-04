@@ -27,6 +27,7 @@ const SessionCalendar = lazy(() => import('./pages/SessionCalendar'));
 const AdminDashboard  = lazy(() => import('./pages/AdminDashboard'));
 const DSLDashboard    = lazy(() => import('./pages/DSLDashboard'));
 const MentorDashboard = lazy(() => import('./pages/MentorDashboard'));
+const ArticleDetail   = lazy(() => import('./pages/ArticleDetail'));
 const PrivacyPolicy   = lazy(() => import('./pages/PrivacyPolicy'));
 
 const PageLoader: React.FC = () => (
@@ -76,6 +77,7 @@ const AnimatedRoutes = () => {
             <Route path="/dashboard"       element={<ProtectedRoute><PageWrapper><Dashboard /></PageWrapper></ProtectedRoute>} />
             <Route path="/learn"           element={<ProtectedRoute><PageWrapper><Learn /></PageWrapper></ProtectedRoute>} />
             <Route path="/learn/:moduleId" element={<ProtectedRoute><PageWrapper><ModuleView /></PageWrapper></ProtectedRoute>} />
+            <Route path="/learn/article/:articleId" element={<ProtectedRoute><PageWrapper><ArticleDetail /></PageWrapper></ProtectedRoute>} />
             <Route path="/chat"            element={<ProtectedRoute><PageWrapper><Chat /></PageWrapper></ProtectedRoute>} />
             <Route path="/chat/voice"      element={<ProtectedRoute><PageWrapper><VoiceChat /></PageWrapper></ProtectedRoute>} />
             <Route path="/circles"         element={<ProtectedRoute><PageWrapper><Circles /></PageWrapper></ProtectedRoute>} />

@@ -1,5 +1,8 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, ChevronRight, Sparkles } from 'lucide-react';
+import { useAppContext } from '../AppContext';
+import { t, type Language } from '../lib/i18n';
 import {
   LIFEKIT_CATEGORIES,
   LIFEKIT_TAGS,
@@ -13,15 +16,19 @@ interface ArticleCardProps {
   article: LifeKitArticle;
 }
 
-const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => (
-  <div className="flex items-center gap-4 bg-white rounded-2xl p-4 shadow-sm border border-navy/5 active:scale-[0.98] transition-transform duration-120 cursor-pointer">
+const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
+  const navigate = useNavigate();
+  return (
+  <div
+    onClick={() => navigate(`/learn/article/${article.id}`)}
+    className="flex items-center gap-4 bg-white rounded-2xl p-4 shadow-sm border border-navy/5 active:scale-[0.98] transition-transform duration-120 cursor-pointer">
     {/* Emoji */}
     <span className="text-2xl flex-shrink-0 leading-none">{article.emoji}</span>
 
     {/* Content */}
     <div className="flex-1 min-w-0">
       <h4 className="font-nunito font-semibold text-navy text-sm leading-snug mb-1.5">
-        {article.title}
+        {lang === 'Kiswahili' ? article.title_sw : article.title}
       </h4>
       <div className="flex items-center gap-1.5 flex-wrap">
         {article.tags.map((tag) => (
@@ -29,7 +36,7 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => (
             key={tag}
             className="bg-pale-yellow text-navy/70 text-[11px] font-semibold px-2 py-0.5 rounded-full"
           >
-            #{tag}
+            #{t('tag.' + tag, lang)}
           </span>
         ))}
         <span className="text-grey text-[11px] ml-auto flex-shrink-0">
@@ -41,14 +48,18 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => (
     {/* Chevron */}
     <ChevronRight size={18} className="text-navy/30 flex-shrink-0" />
   </div>
-);
+  );
+};
 
 // ── Learn (Life Kit) Page ────────────────────────────────────
 
 const Learn: React.FC = () => {
+  const { state } = useAppContext();
+  const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState('all');
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const lang: Language = state.user?.language ?? 'English';
 
   // ── Filtered articles ──────────────────────────────────────
   const filteredArticles = useMemo(() => {
@@ -96,10 +107,10 @@ const Learn: React.FC = () => {
         <div className="mb-1">
           <h1 className="text-2xl font-poppins font-bold text-white flex items-center gap-2">
             <Sparkles size={22} className="text-yellow" />
-            YE+ Life Kit
+            {t('learn.title', lang)}
           </h1>
           <p className="text-white/60 font-nunito text-sm mt-1">
-            Guides and stories for real life
+            {t('learn.subtitle', lang)}
           </p>
         </div>
 
@@ -111,7 +122,7 @@ const Learn: React.FC = () => {
           />
           <input
             type="text"
-            placeholder="Search articles…"
+            placeholder={t('learn.search_placeholder', lang)}
             value={searchQuery}
             onChange={handleSearchChange}
             className="w-full bg-white/10 border border-white/20 rounded-2xl pl-11 pr-4 py-3 text-white placeholder:text-white/30 focus:border-yellow transition-all outline-none text-sm font-nunito"
@@ -131,7 +142,7 @@ const Learn: React.FC = () => {
               }`}
             >
               <span>{cat.emoji}</span>
-              <span>{cat.shortLabel}</span>
+              <span>{lang === 'Kiswahili' ? cat.shortLabel_sw : cat.shortLabel}</span>
             </button>
           ))}
         </div>
@@ -173,14 +184,14 @@ const Learn: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <h2 className="text-[16px] font-poppins font-bold text-navy flex items-center gap-2">
                       <span>{cat.emoji}</span>
-                      {cat.label}
+                      {lang === 'Kiswahili' ? cat.label_sw : cat.label}
                     </h2>
                     {catArticles.length > 2 && (
                       <button
                         onClick={() => handleCategoryTap(cat.id)}
                         className="text-[12px] font-bold text-navy/50 hover:text-navy transition-colors"
                       >
-                        See all →
+                        {t('learn.see_all_arrow', lang)}
                       </button>
                     )}
                   </div>
@@ -207,7 +218,7 @@ const Learn: React.FC = () => {
           <div className="flex flex-col items-center justify-center py-20">
             <span className="text-4xl mb-3">🔍</span>
             <p className="text-grey text-sm font-nunito text-center">
-              No articles found
+              {t('learn.no_articles', lang)}
             </p>
           </div>
         )}

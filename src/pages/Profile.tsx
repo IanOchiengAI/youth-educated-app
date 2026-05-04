@@ -14,7 +14,8 @@ import {
   Sparkles,
   Shield,
   Volume2,
-  ChevronDown
+  ChevronDown,
+  Users
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -31,6 +32,7 @@ import { getCurrentTier } from '../utils/gamification';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../lib/db';
 import { signOut } from '../lib/auth';
+import { supabase } from '../lib/supabase';
 import { JABARI_VOICE_OPTIONS, getSelectedVoiceId, setSelectedVoiceId } from '../data/voices';
 import { tts } from '../lib/tts';
 
@@ -41,6 +43,58 @@ const Profile: React.FC = () => {
   const [selectedVoice, setSelectedVoice] = useState(getSelectedVoiceId());
   const [systemVoices, setSystemVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [showSystemVoices, setShowSystemVoices] = useState(false);
+  const [canSwitchRole, setCanSwitchRole] = useState(false);
+
+  // Check if user has an approved mentor profile — only vetted mentors may switch roles
+  useEffect(() => {
+    const checkMentorProfile = async () => {
+      if (!state.user?.id) {
+        setCanSwitchRole(false);
+        return;
+      }
+      // Admin and DSL roles must never see the switch — fail closed
+      if (state.user.role === 'admin' || state.user.role === 'dsl') {
+        setCanSwitchRole(false);
+        return;
+      }
+      const { data } = await supabase
+        .from('mentor_profiles')
+        .select('id, is_available')
+        .eq('user_id', state.user.id)
+        .maybeSingle();
+
+      // Only show switch if the row exists — no row means not vetted
+      setCanSwitchRole(!!data);
+    };
+    checkMentorProfile();
+  }, [state.user?.id, state.user?.role]);
+
+  const handleRoleSwitch = async () => {
+    // Guard: no user, no switch
+    if (!state.user?.id) return;
+
+    // Determine new role — only student <-> mentor is allowed
+    const currentRole = state.user.role;
+    if (currentRole !== 'student' && currentRole !== 'mentor') return;
+    const newRole: 'student' | 'mentor' = currentRole === 'mentor' ? 'student' : 'mentor';
+
+    // Server-side update FIRST — never trust local-only state changes
+    const { error } = await supabase
+      .from('profiles')
+      .update({ role: newRole })
+      .eq('id', state.user.id);
+
+    if (error) {
+      console.error('[RoleSwitch] Supabase update failed — aborting local state change:', error);
+      return;
+    }
+
+    // Only NOW update local state — server has accepted the change
+    dispatch({ type: 'SET_USER', payload: { ...state.user, role: newRole } });
+
+    // Navigate to the correct dashboard for the new role
+    navigate(newRole === 'mentor' ? '/mentor-dashboard' : '/dashboard');
+  };
 
   // Load system voices (they can load async on some browsers)
   useEffect(() => {
@@ -382,6 +436,31 @@ const Profile: React.FC = () => {
                     </AnimatePresence>
                   </div>
                 </div>
+
+                {/* ── Switch Role ── */}
+                {canSwitchRole && (state.user?.role === 'student' || state.user?.role === 'mentor') && (
+                  <div className="bg-white rounded-[40px] overflow-hidden border border-navy/5 shadow-sm">
+                    <div className="p-6 border-b border-navy/5 flex items-center gap-3">
+                      <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">
+                        <Users size={18} />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-navy">Switch Role</h3>
+                        <p className="text-[10px] text-navy/40 font-bold uppercase tracking-widest">
+                          Currently: {state.user?.role}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="p-4">
+                      <button
+                        onClick={handleRoleSwitch}
+                        className="w-full py-4 bg-navy text-white rounded-2xl font-bold hover:bg-navy/90 transition-colors"
+                      >
+                        {state.user?.role === 'mentor' ? 'Switch to Student View' : 'Switch to Mentor View'}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* ── Account & Settings ── */}
                 <div className="bg-white rounded-[40px] overflow-hidden border border-navy/5 shadow-sm">

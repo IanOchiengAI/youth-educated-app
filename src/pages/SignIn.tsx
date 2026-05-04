@@ -46,6 +46,14 @@ const SignIn: React.FC = () => {
     return () => clearInterval(timer);
   }, [countdown]);
 
+  useEffect(() => {
+    const handleClickOutside = () => setShowCountryPicker(false);
+    if (showCountryPicker) {
+      document.addEventListener('click', handleClickOutside);
+    }
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, [showCountryPicker]);
+
   const handleSendOTP = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setIsLoading(true);
@@ -156,7 +164,10 @@ const SignIn: React.FC = () => {
                   <div className="relative">
                     <button
                       type="button"
-                      onClick={() => setShowCountryPicker(prev => !prev)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowCountryPicker(prev => !prev);
+                      }}
                       className="h-14 px-3 bg-white rounded-2xl shadow-sm border border-navy/10 flex items-center gap-1 text-navy font-bold text-[14px] whitespace-nowrap"
                     >
                       <span>{selectedCountry.flag}</span>
@@ -176,7 +187,11 @@ const SignIn: React.FC = () => {
                             <button
                               key={c.code}
                               type="button"
-                              onClick={() => { setCountryCode(c.code); setShowCountryPicker(false); }}
+                              onClick={(e) => { 
+                                e.stopPropagation();
+                                setCountryCode(c.code); 
+                                setShowCountryPicker(false); 
+                              }}
                               className={`w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-navy/5 transition-colors text-[14px] font-nunito ${countryCode === c.code ? 'bg-yellow/20 font-bold text-navy' : 'text-navy/80'}`}
                             >
                               <span>{c.flag}</span>
@@ -228,64 +243,91 @@ const SignIn: React.FC = () => {
                   )}
                 </button>
 
-                {import.meta.env.DEV && (
-                  <div className="space-y-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        dispatch({
-                          type: 'SET_USER',
-                          payload: {
-                            id: 'dev-mock-user-123',
-                            name: 'Test Scholar',
-                            ageBracket: '16-18',
-                            gender: 'female',
-                            county: 'Nairobi',
-                            language: 'English',
-                            goals: ['Learn Tech', 'Build Confidence'],
-                            guardianConsent: true,
-                            onboardingCompleted: true,
-                            joinedAt: new Date().toISOString(),
-                            role: 'student',
-                            jabariVoice: 'default_male',
-                            mentorPairId: null
-                          }
-                        });
-                        navigate('/dashboard');
-                      }}
-                      className="w-full py-3 bg-red-100 text-red-700 font-bold rounded-2xl border-2 border-red-200 border-dashed hover:bg-red-200 transition-colors"
-                    >
-                      🛠️ STUDENT BYPASS
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        dispatch({
-                          type: 'SET_USER',
-                          payload: {
-                            id: 'dev-mock-mentor-456',
-                            name: 'Coach Kevin',
-                            ageBracket: '25-30',
-                            gender: 'male',
-                            county: 'Kiambu',
-                            language: 'English',
-                            goals: ['Community Growth'],
-                            guardianConsent: true,
-                            onboardingCompleted: true,
-                            joinedAt: new Date().toISOString(),
-                            role: 'mentor',
-                            jabariVoice: 'default_male',
-                            mentorPairId: null
-                          }
-                        });
-                        navigate('/dashboard');
-                      }}
-                      className="w-full py-3 bg-blue-100 text-blue-700 font-bold rounded-2xl border-2 border-blue-200 border-dashed hover:bg-blue-200 transition-colors"
-                    >
-                      🎓 MENTOR BYPASS
-                    </button>
-                  </div>
-                )}
+                {/* Trial Access — available during trial phase */}
+                <div className="space-y-3 pt-2">
+                  <p className="text-center text-grey text-[11px] font-bold uppercase tracking-wider">Trial Access</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      dispatch({
+                        type: 'SET_USER',
+                        payload: {
+                          id: 'trial-student-001',
+                          name: 'Trial Student',
+                          ageBracket: '16-18',
+                          gender: 'female',
+                          county: 'Nairobi',
+                          language: 'English',
+                          goals: ['Learn Tech', 'Build Confidence'],
+                          guardianConsent: true,
+                          onboardingCompleted: true,
+                          joinedAt: new Date().toISOString(),
+                          role: 'student',
+                          jabariVoice: 'default_female',
+                          mentorPairId: null
+                        }
+                      });
+                      navigate('/dashboard');
+                    }}
+                    className="w-full py-3.5 bg-gradient-to-r from-yellow/20 to-yellow/10 text-navy font-bold rounded-2xl border-2 border-yellow/40 hover:border-yellow hover:from-yellow/30 hover:to-yellow/20 transition-all flex items-center justify-center gap-2"
+                  >
+                    🎒 Enter as Student
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      dispatch({
+                        type: 'SET_USER',
+                        payload: {
+                          id: 'trial-mentor-001',
+                          name: 'Coach Kevin',
+                          ageBracket: '25+',
+                          gender: 'male',
+                          county: 'Kiambu',
+                          language: 'English',
+                          goals: ['Community Growth', 'Mentorship'],
+                          guardianConsent: true,
+                          onboardingCompleted: true,
+                          joinedAt: new Date().toISOString(),
+                          role: 'mentor',
+                          jabariVoice: 'default_male',
+                          mentorPairId: null
+                        }
+                      });
+                      navigate('/dashboard');
+                    }}
+                    className="w-full py-3.5 bg-gradient-to-r from-blue-500/10 to-blue-500/5 text-navy font-bold rounded-2xl border-2 border-blue-500/30 hover:border-blue-500/50 hover:from-blue-500/15 hover:to-blue-500/10 transition-all flex items-center justify-center gap-2"
+                  >
+                    🎓 Enter as Mentor (Adult)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      dispatch({
+                        type: 'SET_USER',
+                        payload: {
+                          id: 'trial-admin-001',
+                          name: 'Admin User',
+                          ageBracket: '25+',
+                          gender: 'prefer_not_to_say',
+                          county: 'Nairobi',
+                          language: 'English',
+                          goals: ['Platform Management'],
+                          guardianConsent: true,
+                          onboardingCompleted: true,
+                          joinedAt: new Date().toISOString(),
+                          role: 'admin',
+                          jabariVoice: 'default_female',
+                          mentorPairId: null
+                        }
+                      });
+                      navigate('/admin');
+                    }}
+                    className="w-full py-3.5 bg-gradient-to-r from-navy/10 to-navy/5 text-navy font-bold rounded-2xl border-2 border-navy/20 hover:border-navy/40 hover:from-navy/15 hover:to-navy/10 transition-all flex items-center justify-center gap-2"
+                  >
+                    ⚙️ Enter as Admin
+                  </button>
+                </div>
               </div>
             </motion.form>
           ) : (

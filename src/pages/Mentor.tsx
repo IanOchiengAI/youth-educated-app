@@ -117,8 +117,11 @@ const Mentor: React.FC = () => {
                         <p className="text-[10px] font-black uppercase tracking-widest text-navy/30 mb-1">{m.field}</p>
                         <p className="text-xs text-navy/60 line-clamp-1">{m.bio}</p>
                       </div>
-                      <button className="bg-navy text-white rounded-full px-6 py-3 font-bold text-sm active:scale-95 transition">
-                        Connect
+                      <button 
+                        onClick={() => setIsMatched(true)}
+                        className="bg-navy text-white rounded-full px-6 py-3 font-bold text-sm active:scale-95 transition"
+                      >
+                         Connect
                       </button>
                     </div>
                   ))}
@@ -176,7 +179,7 @@ const Mentor: React.FC = () => {
                           <MessageCircle size={20} />
                           Message
                        </button>
-                       <button className="w-14 h-14 bg-off-white border border-navy/5 rounded-2xl flex items-center justify-center text-navy">
+                       <button onClick={() => navigate('/calendar')} className="w-14 h-14 bg-off-white border border-navy/5 rounded-2xl flex items-center justify-center text-navy hover:bg-navy hover:text-white transition-all">
                           <Calendar size={20} />
                        </button>
                     </div>
