@@ -2,9 +2,9 @@
 
 -- ENUMS
 CREATE TYPE role_type AS ENUM ('student', 'mentor', 'admin', 'dsl');
-CREATE TYPE gender_type AS ENUM ('male', 'female', 'prefer_not_to_say');
+CREATE TYPE gender_type AS ENUM ('male', 'female', 'prefer_not_to_say', 'All', 'Female', 'Male');
 CREATE TYPE match_status AS ENUM ('active', 'ended');
-CREATE TYPE opportunity_type AS ENUM ('job', 'internship', 'training');
+CREATE TYPE opportunity_type AS ENUM ('Job', 'Internship', 'Training', 'Scholarship', 'Mentorship');
 CREATE TYPE risk_level_type AS ENUM ('low', 'medium', 'high');
 CREATE TYPE case_status AS ENUM ('open', 'resolved');
 CREATE TYPE circle_type AS ENUM ('mixed', 'brothers_keepers');
@@ -44,6 +44,11 @@ CREATE TABLE modules (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
   description TEXT,
+  points INTEGER DEFAULT 0,
+  duration TEXT,
+  category TEXT,
+  tier_requirement TEXT,
+  premium BOOLEAN DEFAULT FALSE,
   is_published BOOLEAN DEFAULT TRUE,
   last_updated TIMESTAMPTZ DEFAULT NOW()
 );
@@ -52,7 +57,10 @@ CREATE TABLE lessons (
   id TEXT PRIMARY KEY,
   module_id TEXT REFERENCES modules(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
-  content_url TEXT,
+  type TEXT NOT NULL,
+  duration TEXT,
+  content TEXT,
+  quiz_data JSONB,
   sort_order INTEGER NOT NULL
 );
 
@@ -189,10 +197,17 @@ CREATE TABLE circle_reactions (
 );
 
 CREATE TABLE opportunities (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
+  provider TEXT NOT NULL,
   description TEXT NOT NULL,
-  type opportunity_type NOT NULL,
+  category opportunity_type NOT NULL,
+  points_required INTEGER DEFAULT 0,
+  deadline DATE,
+  gender TEXT DEFAULT 'All',
+  min_age INTEGER DEFAULT 13,
+  max_age INTEGER DEFAULT 25,
+  counties TEXT[] DEFAULT '{}',
   is_published BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -200,9 +215,37 @@ CREATE TABLE opportunities (
 CREATE TABLE saved_opportunities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  opportunity_id UUID REFERENCES opportunities(id) ON DELETE CASCADE,
+  opportunity_id TEXT REFERENCES opportunities(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(user_id, opportunity_id)
+);
+
+CREATE TABLE lifekit_articles (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  category TEXT NOT NULL,
+  min_age INTEGER DEFAULT 13,
+  max_age INTEGER DEFAULT 25,
+  read_time TEXT,
+  content TEXT NOT NULL,
+  tags TEXT[] DEFAULT '{}',
+  is_premium BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE career_questions (
+  id TEXT PRIMARY KEY,
+  text TEXT NOT NULL,
+  options JSONB NOT NULL,
+  sort_order INTEGER NOT NULL
+);
+
+CREATE TABLE analytics_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
+  event_name TEXT NOT NULL,
+  event_data JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 CREATE TABLE safeguarding_flags (
@@ -284,6 +327,7 @@ ALTER TABLE opportunities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE saved_opportunities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE safeguarding_cases ENABLE ROW LEVEL SECURITY;
 ALTER TABLE offline_sync_queue ENABLE ROW LEVEL SECURITY;
+ALTER TABLE analytics_events ENABLE ROW LEVEL SECURITY;
 
 -- POLICIES
 
@@ -295,9 +339,11 @@ CREATE POLICY "Mentors can view their students' profiles" ON profiles FOR SELECT
 CREATE POLICY "Admins/DSL can view all profiles" ON profiles FOR SELECT
   USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'dsl')));
 
--- Modules & Lessons: Public SELECT
+-- Modules, Lessons, LifeKit, Career Questions: Public SELECT
 CREATE POLICY "Anyone can view published modules" ON modules FOR SELECT USING (is_published = true);
 CREATE POLICY "Anyone can view lessons" ON lessons FOR SELECT USING (TRUE);
+CREATE POLICY "Anyone can view lifekit articles" ON lifekit_articles FOR SELECT USING (TRUE);
+CREATE POLICY "Anyone can view career questions" ON career_questions FOR SELECT USING (TRUE);
 
 -- User Progress: Own rows, Mentors SELECT students
 CREATE POLICY "Users can manage own progress" ON user_module_progress FOR ALL USING (auth.uid() = user_id);
@@ -340,6 +386,10 @@ CREATE POLICY "Users can manage own saved opportunities" ON saved_opportunities 
 -- Messaging
 CREATE POLICY "Users can send messages" ON messages FOR INSERT WITH CHECK (auth.uid() = sender_id);
 CREATE POLICY "Users can view their messages" ON messages FOR SELECT USING (auth.uid() IN (sender_id, receiver_id));
+
+-- Analytics
+CREATE POLICY "Users can insert own analytics events" ON analytics_events FOR INSERT WITH CHECK (auth.uid() = user_id OR user_id IS NULL);
+CREATE POLICY "Admins can view analytics" ON analytics_events FOR SELECT USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'));
 
 -- Mentoring Extensions
 CREATE POLICY "Users can view their mentor matches" ON mentor_matches FOR SELECT USING (auth.uid() IN (student_id, mentor_id));
