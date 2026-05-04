@@ -38,7 +38,7 @@ const Opportunities: React.FC = () => {
     const matchesGender = state.user ? (opp.gender === 'all' || opp.gender === state.user.gender) : true;
     const matchesCounty = opp.counties.includes('All') || opp.counties.includes(state.user?.county || '');
 
-    return matchesSearch && matchesCategory; // && matchesAge && matchesGender && matchesCounty;
+    return matchesSearch && matchesCategory && matchesAge && matchesGender && matchesCounty;
   });
 
   const getUrgency = (deadline: string) => {
@@ -47,6 +47,7 @@ const Opportunities: React.FC = () => {
     const diff = dead.getTime() - today.getTime();
     const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
     
+    if (days < 0) return null; // Expired — hide deadline chip
     if (days < 30) return { label: `${days} days left`, color: 'bg-red-100 text-red-600' };
     if (days < 90) return { label: 'Closing soon', color: 'bg-orange-100 text-orange-600' };
     return { label: 'Apply anytime', color: 'bg-blue-100 text-blue-600' };
@@ -141,9 +142,11 @@ const Opportunities: React.FC = () => {
                           <span className="px-2.5 py-1 bg-navy/5 text-[9px] font-black text-navy uppercase tracking-widest rounded-lg">
                             {opp.category}
                           </span>
+                          {urgency && (
                           <span className={`px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-lg ${urgency.color}`}>
                             {urgency.label}
                           </span>
+                          )}
                         </div>
                         <h3 className="text-xl font-bold text-navy leading-tight">{opp.title}</h3>
                         <p className="text-sm font-bold text-navy/40">{opp.provider}</p>

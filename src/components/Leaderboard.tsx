@@ -1,43 +1,92 @@
 
-import React, { useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../AppContext';
 import { motion } from 'motion/react';
-import { Trophy, TrendingUp, Users } from 'lucide-react';
+import { Trophy, TrendingUp, Users, WifiOff } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+
+interface LeaderboardEntry {
+  name: string;
+  points: number;
+  isUser: boolean;
+}
 
 const Leaderboard: React.FC = () => {
   const { state } = useAppContext();
   const { user, progress } = state;
+  const [members, setMembers] = useState<LeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isOffline, setIsOffline] = useState(false);
 
-  // Simulate cohort members
-  const cohortMembers = useMemo(() => {
-    const seed = user?.county || 'Nairobi';
-    const members = [
-      { name: 'Keziah M.', points: 1240, isUser: false },
-      { name: 'Otieno J.', points: 1150, isUser: false },
-      { name: 'Wanjiku N.', points: 980, isUser: false },
-      { name: 'Musa A.', points: 850, isUser: false },
-      { name: 'Fatuma S.', points: 720, isUser: false },
-      { name: 'Brian K.', points: 640, isUser: false },
-      { name: 'Achieng L.', points: 590, isUser: false },
-      { name: 'Mutua P.', points: 410, isUser: false },
-      { name: 'Zainab R.', points: 320, isUser: false },
-      { name: 'David O.', points: 280, isUser: false },
-    ];
+  useEffect(() => {
+    const fetchLeaderboard = async () => {
+      setLoading(true);
+      try {
+        if (state.isOffline) {
+          throw new Error('offline');
+        }
 
-    // Add user
-    members.push({
-      name: user?.name || 'You',
-      points: progress.weeklyPoints,
-      isUser: true
-    });
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id, name, points')
+          .eq('county', user?.county || 'Nairobi')
+          .order('points', { ascending: false })
+          .limit(10);
 
-    // Sort by points
-    return members.sort((a, b) => b.points - a.points);
-  }, [user, progress.weeklyPoints]);
+        if (error) throw error;
 
-  const top5 = cohortMembers.slice(0, 5);
-  const userRank = cohortMembers.findIndex(m => m.isUser) + 1;
-  const isInTopHalf = userRank <= Math.ceil(cohortMembers.length / 2);
+        if (data && data.length > 0) {
+          const entries: LeaderboardEntry[] = data.map(p => ({
+            name: p.name || 'Scholar',
+            points: p.points || 0,
+            isUser: p.id === user?.id,
+          }));
+
+          // Ensure the current user is in the list
+          const userInList = entries.some(e => e.isUser);
+          if (!userInList) {
+            entries.push({
+              name: user?.name || 'You',
+              points: progress.weeklyPoints,
+              isUser: true,
+            });
+          }
+
+          setMembers(entries.sort((a, b) => b.points - a.points));
+          setIsOffline(false);
+        } else {
+          // Empty table — show user-only fallback
+          throw new Error('empty');
+        }
+      } catch {
+        // Offline or fetch failed — show user-only entry
+        setIsOffline(true);
+        setMembers([{
+          name: user?.name || 'You',
+          points: progress.weeklyPoints,
+          isUser: true,
+        }]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLeaderboard();
+  }, [user?.county, user?.id, user?.name, progress.weeklyPoints, state.isOffline]);
+
+  const top5 = members.slice(0, 5);
+  const userRank = members.findIndex(m => m.isUser) + 1;
+  const isInTopHalf = userRank <= Math.ceil(members.length / 2);
+
+  if (loading) {
+    return (
+      <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+        <div className="flex items-center justify-center py-8">
+          <div className="w-6 h-6 border-3 border-yellow border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
@@ -56,10 +105,17 @@ const Leaderboard: React.FC = () => {
         </div>
       </div>
 
+      {isOffline && (
+        <div className="bg-navy/5 rounded-2xl p-3 mb-4 flex items-center gap-2">
+          <WifiOff size={14} className="text-navy/40" />
+          <span className="text-[10px] font-bold text-navy/40 uppercase tracking-widest">Leaderboard unavailable offline</span>
+        </div>
+      )}
+
       <div className="space-y-3 mb-6">
         {top5.map((member, index) => (
           <motion.div
-            key={member.name}
+            key={`${member.name}-${index}`}
             initial={{ x: -10, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             transition={{ delay: index * 0.1 }}
@@ -87,7 +143,7 @@ const Leaderboard: React.FC = () => {
         ))}
       </div>
 
-      {userRank > 5 && (
+      {userRank > 5 && top5.length >= 5 && (
         <div className="bg-navy/5 rounded-2xl p-4 flex items-center gap-3 border border-dashed border-navy/10">
           <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-navy shadow-sm">
             <TrendingUp size={20} />

@@ -3,6 +3,14 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
+// In production, fail loudly if env vars are missing
+if (import.meta.env.PROD && (!supabaseUrl || !supabaseAnonKey)) {
+  throw new Error(
+    '🚨 FATAL: Supabase credentials missing in production!\n' +
+    'Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your environment (e.g. Vercel dashboard).'
+  )
+}
+
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn(
     '⚠️ Supabase credentials missing! Copy .env.example to .env:\n' +
@@ -11,7 +19,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
-// Use a safe placeholder URL when env vars are missing to prevent createClient from crashing
+// Use a safe placeholder URL when env vars are missing to prevent createClient from crashing (dev only)
 const PLACEHOLDER_URL = 'https://placeholder.supabase.co'
 const PLACEHOLDER_KEY = 'eyBwbGFjZWhvbGRlciB9'
 
