@@ -20,6 +20,7 @@ import { useAppContext } from '../AppContext';
 import { generateMentorBriefing } from '../api/jabari';
 import { updateMentorGoals } from '../lib/mentoring';
 import { supabase } from '../lib/supabase';
+import { t, type Language } from '../lib/i18n';
 
 interface Student {
   id: string;
@@ -28,6 +29,7 @@ interface Student {
   lastActive: string;
   progress: string;
   recentActivity: string;
+  guardian_phone?: string;
 }
 
 interface JabariCheckin {
@@ -72,6 +74,7 @@ function SafeguardingBanner({ flag }: { flag: boolean | string | null }) {
 const MentorDashboard: React.FC = () => {
   const { state } = useAppContext();
   const navigate = useNavigate();
+  const lang: Language = state.user?.language ?? 'English';
 
   // AI briefing state
   const [briefings, setBriefings] = useState<{ [key: string]: string }>({});
@@ -118,41 +121,81 @@ const MentorDashboard: React.FC = () => {
     }
   ];
 
-  // ── Fetch pair IDs and existing goals ──
+  // Fetch pair IDs and student profiles
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
+
   useEffect(() => {
-    const fetchPairs = async () => {
+    const fetchPairsAndStudents = async () => {
       if (!state.user?.id) return;
-      const { data } = await supabase
-        .from('mentor_matches')
-        .select('id, student_id, jabari_goals, jabari_agenda')
-        .eq('mentor_id', state.user.id)
-        .eq('status', 'active');
+      
+      try {
+        const { data, error } = await supabase
+          .from('mentor_matches')
+          .select(`
+            id,
+            student_id,
+            jabari_goals,
+            jabari_agenda,
+            profiles!mentor_matches_student_id_fkey (
+              name,
+              current_tier,
+              last_active_date,
+              guardian_phone
+            )
+          `)
+          .eq('mentor_id', state.user.id)
+          .eq('status', 'active');
 
-      if (!data || data.length === 0) return;
+        if (error || !data) {
+          setLoading(false);
+          return;
+        }
 
-      const pairs: typeof studentPairs = {};
-      const forms: Record<string, GoalFormData> = {};
+        const pairs: typeof studentPairs = {};
+        const forms: Record<string, GoalFormData> = {};
+        const fetchedStudents: Student[] = [];
 
-      data.forEach((m: any) => {
-        pairs[m.student_id] = {
-          pairId: m.id,
-          goals: m.jabari_goals ?? [],
-          agenda: m.jabari_agenda ?? '',
-        };
-        forms[m.student_id] = {
-          goals: [
-            m.jabari_goals?.[0] ?? '',
-            m.jabari_goals?.[1] ?? '',
-            m.jabari_goals?.[2] ?? '',
-          ] as [string, string, string],
-          agenda: m.jabari_agenda ?? '',
-        };
-      });
+        data.forEach((m: any) => {
+          pairs[m.student_id] = {
+            pairId: m.id,
+            goals: m.jabari_goals ?? [],
+            agenda: m.jabari_agenda ?? '',
+          };
+          forms[m.student_id] = {
+            goals: [
+              m.jabari_goals?.[0] ?? '',
+              m.jabari_goals?.[1] ?? '',
+              m.jabari_goals?.[2] ?? '',
+            ] as [string, string, string],
+            agenda: m.jabari_agenda ?? '',
+          };
+          
+          if (m.profiles) {
+            fetchedStudents.push({
+              id: m.student_id,
+              name: m.profiles.name || 'Anonymous Student',
+              avatar: '👤',
+              lastActive: m.profiles.last_active_date 
+                ? new Date(m.profiles.last_active_date).toLocaleDateString()
+                : 'Unknown',
+              progress: m.profiles.current_tier || 'New',
+              recentActivity: 'Student assigned and active.', // Will be refined by checkins later
+              guardian_phone: m.profiles.guardian_phone || undefined
+            } as any); // Type cast until we update Student interface
+          }
+        });
 
-      setStudentPairs(pairs);
-      setGoalForms(prev => ({ ...prev, ...forms }));
+        setStudentPairs(pairs);
+        setGoalForms(prev => ({ ...prev, ...forms }));
+        setStudents(fetchedStudents);
+      } catch (err) {
+        console.error('Failed to fetch students', err);
+      } finally {
+        setLoading(false);
+      }
     };
-    fetchPairs();
+    fetchPairsAndStudents();
   }, [state.user?.id]);
 
   // ── Fetch check-ins for paired students ──
@@ -248,9 +291,9 @@ const MentorDashboard: React.FC = () => {
         <div className="absolute top-[-40px] right-[-40px] w-64 h-64 bg-blue-500/10 rounded-full blur-3xl opacity-20" />
         <div className="flex justify-between items-start mb-8 relative z-10">
           <div>
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow/60">Mentor Console</span>
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow/60">{t('mentor.console', lang)}</span>
             <h1 className="text-3xl font-bold">Jambo, {state.user?.name}!</h1>
-            <p className="text-white/60 font-medium">Empowering your students today.</p>
+            <p className="text-white/60 font-medium">{t('mentor.empowering', lang)}</p>
           </div>
           <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/10">
             <Users size={24} className="text-yellow" />
@@ -260,9 +303,9 @@ const MentorDashboard: React.FC = () => {
         {/* Stats Grid */}
         <div className="grid grid-cols-3 gap-3 relative z-10">
           {[
-            { label: 'Students', val: '12', icon: <Users size={14} /> },
-            { label: 'Sessions', val: '48', icon: <Calendar size={14} /> },
-            { label: 'Impact', val: '8.4', icon: <Heart size={14} /> },
+            { label: t('mentor.students', lang), val: '12', icon: <Users size={14} /> },
+            { label: t('mentor.sessions', lang), val: '48', icon: <Calendar size={14} /> },
+            { label: t('mentor.impact', lang), val: '8.4', icon: <Heart size={14} /> },
           ].map((s, i) => (
             <div key={i} className="bg-white/5 border border-white/10 p-4 rounded-3xl text-center backdrop-blur-sm">
               <div className="flex items-center justify-center gap-1.5 text-white/40 mb-1">
@@ -278,14 +321,22 @@ const MentorDashboard: React.FC = () => {
         {/* Student List */}
         <section className="space-y-4">
           <div className="flex justify-between items-center px-2">
-            <h2 className="text-xl font-bold text-navy">My Portfolio</h2>
+            <h2 className="text-xl font-bold text-navy">{t('mentor.portfolio', lang)}</h2>
             <div className="flex items-center gap-1 text-[10px] font-black text-navy/40 uppercase tracking-widest">
-              <Clock size={12} /> Recent Sync: Just Now
+              <Clock size={12} /> {t('mentor.recent_sync', lang)}: {t('mentor.just_now', lang)}
             </div>
           </div>
 
           <div className="space-y-4">
-            {STUDENTS.map((student) => {
+            {loading ? (
+              <div className="flex justify-center p-8">
+                <div className="w-8 h-8 border-4 border-yellow border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            ) : students.length === 0 ? (
+              <div className="bg-white p-8 rounded-[32px] border border-navy/5 text-center shadow-sm">
+                <p className="text-sm font-medium text-navy/40">{t('mentor.no_students', lang)}</p>
+              </div>
+            ) : students.map((student) => {
               const form = goalForms[student.id] ?? { ...DEFAULT_FORM, goals: ['', '', ''] as [string, string, string] };
               const hasPair = !!studentPairs[student.id];
               const studentCheckins = checkins[student.id] ?? [];
@@ -293,19 +344,24 @@ const MentorDashboard: React.FC = () => {
               return (
               <div key={student.id} className="bg-white rounded-[40px] border border-navy/5 shadow-xl shadow-navy/5 overflow-hidden">
                 <div className="p-6 flex items-center gap-4">
-                  <div className="w-16 h-16 bg-off-white rounded-3xl flex items-center justify-center text-3xl shadow-inner">
+                  <div className="w-16 h-16 bg-off-white rounded-3xl flex items-center justify-center text-3xl shadow-inner flex-shrink-0">
                     {student.avatar}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-navy">{student.name}</h3>
+                    <h3 className="font-bold text-navy truncate">{student.name}</h3>
                     <div className="flex items-center gap-3 mt-1">
                       <span className="text-[10px] font-black uppercase tracking-widest text-navy/30">{student.lastActive}</span>
-                      <div className="w-1.5 h-1.5 rounded-full bg-navy/10" />
-                      <span className="text-[10px] font-bold text-blue-600">{student.progress}</span>
+                      <div className="w-1.5 h-1.5 rounded-full bg-navy/10 flex-shrink-0" />
+                      <span className="text-[10px] font-bold text-blue-600 truncate">{student.progress}</span>
                     </div>
+                    {student.guardian_phone && (
+                      <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-orange-600">
+                        <span>📞 Parent/Guardian: {student.guardian_phone}</span>
+                      </div>
+                    )}
                   </div>
                   <button 
-                    className="w-12 h-12 bg-off-white rounded-2xl flex items-center justify-center text-navy/20 hover:bg-navy hover:text-white transition-all shadow-sm"
+                    className="w-12 h-12 bg-off-white rounded-2xl flex items-center justify-center text-navy/20 hover:bg-navy hover:text-white transition-all shadow-sm flex-shrink-0"
                     aria-label={`Message ${student.name}`}
                   >
                     <MessageCircle size={20} />

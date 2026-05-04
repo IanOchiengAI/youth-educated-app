@@ -18,6 +18,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
 import { useCareerQuestions } from '../hooks/useContent';
 import { addPoints } from '../lib/gamification';
+import { t, type Language } from '../lib/i18n';
 
 const CareerMapper: React.FC = () => {
   const { state, dispatch } = useAppContext();
@@ -25,6 +26,7 @@ const CareerMapper: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(0); // 0: Start, 1-10: Questions, 11: Result
   const [answers, setAnswers] = useState<number[]>([]);
   const [showResult, setShowResult] = useState(false);
+  const lang: Language = state.user?.language ?? 'English';
 
   const { data: CAREER_QUESTIONS, loading } = useCareerQuestions();
 
@@ -121,8 +123,8 @@ const CareerMapper: React.FC = () => {
             <ChevronLeft size={20} />
           </button>
           <div className="text-right">
-            <h1 className="text-2xl font-bold">Career Mapper</h1>
-            <p className="text-white/40 text-xs font-bold uppercase tracking-widest">Find your path</p>
+            <h1 className="text-2xl font-bold">{t('career.title', lang)}</h1>
+            <p className="text-white/40 text-xs font-bold uppercase tracking-widest">{t('career.subtitle', lang)}</p>
           </div>
         </div>
 

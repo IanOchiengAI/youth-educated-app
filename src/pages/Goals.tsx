@@ -19,12 +19,14 @@ import { db } from '../lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { supabase } from '../lib/supabase';
 import { queueOfflineAction } from '../lib/sync';
+import { t, type Language } from '../lib/i18n';
 
 const Goals: React.FC = () => {
   const { state, dispatch } = useAppContext();
   const [newGoalText, setNewGoalText] = useState('');
   const [showReflection, setShowReflection] = useState(false);
   const [reflectionText, setReflectionText] = useState('');
+  const lang: Language = state.user?.language ?? 'English';
 
   const weekNumber = Math.ceil(new Date().getDate() / 7);
 
@@ -136,8 +138,8 @@ const Goals: React.FC = () => {
       <header className="bg-navy text-white px-6 pt-12 pb-16 rounded-b-[40px]">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold mb-1 font-poppins text-yellow">Weekly Goals</h1>
-            <p className="text-white/60 font-nunito">Small steps, big impact.</p>
+            <h1 className="text-3xl font-bold mb-1 font-poppins text-yellow">{t('goals.title', lang)}</h1>
+            <p className="text-white/60 font-nunito">{t('goals.subtitle', lang)}</p>
           </div>
           <div className="w-14 h-14 bg-yellow rounded-2xl flex items-center justify-center text-navy shadow-lg shadow-yellow/20">
             <Target size={32} />

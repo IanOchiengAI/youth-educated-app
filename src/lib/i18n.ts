@@ -151,6 +151,40 @@ const translations: Record<string, Record<Language, string>> = {
   'onboarding.all_set': { English: "You're all set!", Kiswahili: 'Umekamilisha kila kitu!' },
   'onboarding.ready_journey': { English: 'Ready to start your journey with Amara?', Kiswahili: 'Uko tayari kuanza safari yako na Amara?' },
   'onboarding.complete': { English: 'Complete', Kiswahili: 'Kamilisha' },
+
+  /* ── Opportunities ──────────────────────────────────────── */
+  'opps.title': { English: 'Opportunities', Kiswahili: 'Fursa' },
+  'opps.subtitle': { English: 'Growth & Funding', Kiswahili: 'Ukuaji & Ufadhili' },
+  'opps.search': { English: 'Search programs, scholarships...', Kiswahili: 'Tafuta programu, ufadhili...' },
+  'opps.merit_score': { English: 'Your Merit Score', Kiswahili: 'Alama Zako za Kustahili' },
+  'opps.loading': { English: 'Loading Opportunities...', Kiswahili: 'Inapakia Fursa...' },
+  'opps.apply_anytime': { English: 'Apply anytime', Kiswahili: 'Tuma maombi wakati wowote' },
+  'opps.closing_soon': { English: 'Closing soon', Kiswahili: 'Inafungwa hivi karibuni' },
+  'opps.days_left': { English: 'days left', Kiswahili: 'siku zimesalia' },
+
+  /* ── CareerMapper ───────────────────────────────────────── */
+  'career.title': { English: 'Career Map', Kiswahili: 'Ramani ya Kazi' },
+  'career.subtitle': { English: 'Your Future Path', Kiswahili: 'Njia Yako ya Hatima' },
+  'career.discover': { English: 'Discover your ideal path', Kiswahili: 'Gundua njia yako bora' },
+  'career.match': { English: 'Match', Kiswahili: 'Mechi' },
+  'career.demand': { English: 'Demand', Kiswahili: 'Mahitaji' },
+
+  /* ── Goals ──────────────────────────────────────────────── */
+  'goals.title': { English: 'My Goals', Kiswahili: 'Malengo Yangu' },
+  'goals.subtitle': { English: 'Track Your Progress', Kiswahili: 'Fuatilia Maendeleo Yako' },
+  'goals.add_new': { English: 'Add New Goal', Kiswahili: 'Ongeza Lengo Jipya' },
+  'goals.completed': { English: 'Completed', Kiswahili: 'Imekamilika' },
+
+  /* ── Mentor Dashboard ───────────────────────────────────── */
+  'mentor.console': { English: 'Mentor Console', Kiswahili: 'Dashibodi ya Mshauri' },
+  'mentor.empowering': { English: 'Empowering your students today.', Kiswahili: 'Kuwawezesha wanafunzi wako leo.' },
+  'mentor.students': { English: 'Students', Kiswahili: 'Wanafunzi' },
+  'mentor.sessions': { English: 'Sessions', Kiswahili: 'Vipindi' },
+  'mentor.impact': { English: 'Impact', Kiswahili: 'Athari' },
+  'mentor.portfolio': { English: 'My Portfolio', Kiswahili: 'Wanafunzi Wangu' },
+  'mentor.recent_sync': { English: 'Recent Sync', Kiswahili: 'Usawazishaji wa Hivi Karibuni' },
+  'mentor.just_now': { English: 'Just Now', Kiswahili: 'Sasa Hivi' },
+  'mentor.no_students': { English: 'No matched students yet.', Kiswahili: 'Hakuna wanafunzi waliolinganishwa bado.' },
 };
 
 /**

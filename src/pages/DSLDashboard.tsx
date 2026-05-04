@@ -10,6 +10,9 @@ interface SafeguardingFlag {
   message: string;
   created_at: string;
   status: 'pending' | 'reviewed' | 'resolved';
+  profiles?: {
+    guardian_phone?: string;
+  };
 }
 
 const DSLDashboard: React.FC = () => {
@@ -26,11 +29,11 @@ const DSLDashboard: React.FC = () => {
       try {
         const { data, error } = await supabase
           .from('safeguarding_flags')
-          .select('*')
+          .select('*, profiles(guardian_phone)')
           .order('created_at', { ascending: false });
         
         if (!error && data) {
-          setFlags(data);
+          setFlags(data as SafeguardingFlag[]);
         }
       } catch (err) {
         console.error('Failed to fetch safeguarding flags', err);
@@ -119,6 +122,9 @@ const DSLDashboard: React.FC = () => {
                   <div>
                     <p className="text-[10px] font-black tracking-widest text-navy/30 uppercase mb-1">User ID</p>
                     <p className="text-xs font-bold text-navy truncate max-w-[120px]">{flag.user_id}</p>
+                    {flag.profiles?.guardian_phone && (
+                      <p className="text-[10px] font-bold text-orange-600 mt-1">📞 Parent: {flag.profiles.guardian_phone}</p>
+                    )}
                   </div>
                   
                   {flag.status === 'pending' && (

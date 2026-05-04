@@ -17,12 +17,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
 import { Opportunity } from '../data/opportunities';
 import { useOpportunities } from '../hooks/useContent';
+import { t, type Language } from '../lib/i18n';
 
 const Opportunities: React.FC = () => {
   const { state } = useAppContext();
   const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState<'all' | Opportunity['category']>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const lang: Language = state.user?.language ?? 'English';
 
   const { data: OPPORTUNITIES, loading } = useOpportunities();
 
@@ -48,9 +50,9 @@ const Opportunities: React.FC = () => {
     const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
     
     if (days < 0) return null; // Expired — hide deadline chip
-    if (days < 30) return { label: `${days} days left`, color: 'bg-red-100 text-red-600' };
-    if (days < 90) return { label: 'Closing soon', color: 'bg-orange-100 text-orange-600' };
-    return { label: 'Apply anytime', color: 'bg-blue-100 text-blue-600' };
+    if (days < 30) return { label: `${days} ${t('opps.days_left', lang)}`, color: 'bg-red-100 text-red-600' };
+    if (days < 90) return { label: t('opps.closing_soon', lang), color: 'bg-orange-100 text-orange-600' };
+    return { label: t('opps.apply_anytime', lang), color: 'bg-blue-100 text-blue-600' };
   };
 
   return (
@@ -63,8 +65,8 @@ const Opportunities: React.FC = () => {
             <ChevronLeft size={20} />
           </button>
           <div className="text-right">
-            <h1 className="text-2xl font-bold">Opportunities</h1>
-            <p className="text-white/40 text-xs font-bold uppercase tracking-widest">Growth & Funding</p>
+            <h1 className="text-2xl font-bold">{t('opps.title', lang)}</h1>
+            <p className="text-white/40 text-xs font-bold uppercase tracking-widest">{t('opps.subtitle', lang)}</p>
           </div>
         </div>
 
@@ -72,7 +74,7 @@ const Opportunities: React.FC = () => {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" size={20} />
           <input 
             type="text"
-            placeholder="Search programs, scholarships..."
+            placeholder={t('opps.search', lang)}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-white/10 border border-white/10 rounded-2xl pl-12 pr-4 py-4 text-white focus:border-yellow outline-none transition-all"
@@ -104,8 +106,8 @@ const Opportunities: React.FC = () => {
               <Trophy size={20} />
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-navy/30 leading-none mb-1">Your Merit Score</p>
-              <p className="text-lg font-bold text-navy">{state.progress.points} Points</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-navy/30 leading-none mb-1">{t('opps.merit_score', lang)}</p>
+              <p className="text-lg font-bold text-navy">{state.progress.points} {t('dashboard.points', lang)}</p>
             </div>
           </div>
           <Sparkles className="text-yellow" size={24} />
@@ -116,7 +118,7 @@ const Opportunities: React.FC = () => {
           {loading ? (
             <div className="p-8 text-center">
               <div className="w-8 h-8 border-4 border-yellow border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <p className="text-xs font-bold text-navy/40 uppercase tracking-widest">Loading Opportunities...</p>
+              <p className="text-xs font-bold text-navy/40 uppercase tracking-widest">{t('opps.loading', lang)}</p>
             </div>
           ) : (
             <AnimatePresence mode="popLayout">
