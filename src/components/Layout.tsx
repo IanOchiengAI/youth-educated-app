@@ -24,23 +24,32 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const hideNavRoutes = ['/onboarding', '/signin'];
   const shouldHideNav = hideNavRoutes.includes(location.pathname) || !state.user;
 
-  // Base student nav — available to all authenticated roles
-  const navItems: { path: string; label: string; icon: React.ElementType; badge?: string | null }[] = [
-    { path: '/dashboard', label: t('nav.home', lang), icon: Home },
-    { path: '/learn', label: t('nav.lifekit', lang), icon: Sparkles },
-    { path: '/chat', label: t('nav.chat', lang), icon: MessageCircle, badge: state.notifications.unreadChat ? 'yellow' : null },
-    { path: '/circles', label: t('nav.circles', lang), icon: Globe },
-    { path: '/mentor', label: t('nav.mentor', lang), icon: User },
-    { path: '/calendar', label: t('nav.calendar', lang), icon: CalendarDays },
-  ];
+  // Role-based nav — mentors get their own focused set
+  let navItems: { path: string; label: string; icon: React.ElementType; badge?: string | null }[];
 
-  // Role-specific additions
   if (state.user?.role === 'mentor') {
-    navItems.push({ path: '/mentor-dashboard', label: t('nav.mypanel', lang), icon: LayoutDashboard });
-  } else if (state.user?.role === 'admin') {
-    navItems.push({ path: '/admin', label: t('nav.admin', lang), icon: Users });
-  } else if (state.user?.role === 'dsl') {
-    navItems.push({ path: '/dsl', label: 'DSL', icon: ShieldAlert });
+    navItems = [
+      { path: '/mentor-dashboard', label: t('nav.mypanel', lang), icon: LayoutDashboard },
+      { path: '/calendar',         label: t('nav.calendar', lang), icon: CalendarDays },
+      { path: '/mentor',           label: t('nav.mentor', lang),   icon: Users },
+      { path: '/profile',          label: 'Profile',               icon: User },
+    ];
+  } else {
+    // Student nav
+    navItems = [
+      { path: '/dashboard', label: t('nav.home', lang), icon: Home },
+      { path: '/learn', label: t('nav.lifekit', lang), icon: Sparkles },
+      { path: '/chat', label: t('nav.chat', lang), icon: MessageCircle, badge: state.notifications.unreadChat ? 'yellow' : null },
+      { path: '/circles', label: t('nav.circles', lang), icon: Globe },
+      { path: '/mentor', label: t('nav.mentor', lang), icon: User },
+      { path: '/calendar', label: t('nav.calendar', lang), icon: CalendarDays },
+    ];
+
+    if (state.user?.role === 'admin') {
+      navItems.push({ path: '/admin', label: t('nav.admin', lang), icon: Users });
+    } else if (state.user?.role === 'dsl') {
+      navItems.push({ path: '/dsl', label: 'DSL', icon: ShieldAlert });
+    }
   }
 
   return (

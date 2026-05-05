@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Clock, ShieldAlert, CheckCircle } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAppContext } from '../AppContext';
 
 interface SafeguardingFlag {
@@ -17,12 +17,13 @@ interface SafeguardingFlag {
 
 const DSLDashboard: React.FC = () => {
   const [flags, setFlags] = useState<SafeguardingFlag[]>([]);
+  const [lowRatings, setLowRatings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const { state } = useAppContext();
 
   useEffect(() => {
     const fetchFlags = async () => {
-      if (state.isOffline) {
+      if (state.isOffline || !isSupabaseConfigured) {
         setLoading(false);
         return;
       }
@@ -34,6 +35,17 @@ const DSLDashboard: React.FC = () => {
         
         if (!error && data) {
           setFlags(data as SafeguardingFlag[]);
+        }
+
+        const { data: ratingData } = await supabase
+          .from('session_ratings')
+          .select('id, session_id, rater_id, score, created_at, mentor_sessions(title, scheduled_at, mentor_id, mentee_id), profiles!session_ratings_rater_id_fkey(name)')
+          .lte('score', 2)
+          .order('created_at', { ascending: false })
+          .limit(10);
+          
+        if (ratingData) {
+          setLowRatings(ratingData);
         }
       } catch (err) {
         console.error('Failed to fetch safeguarding flags', err);
@@ -143,6 +155,47 @@ const DSLDashboard: React.FC = () => {
                       </button>
                     </div>
                   )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Low Session Ratings Oversight */}
+        <div className="space-y-4 pt-6 border-t border-navy/10">
+          <h2 className="text-lg font-bold text-navy px-2">Session Ratings Alert (≤ 2)</h2>
+          
+          {loading ? (
+             <div className="flex justify-center p-8">
+               <div className="w-8 h-8 border-4 border-navy border-t-transparent rounded-full animate-spin"></div>
+             </div>
+          ) : lowRatings.length === 0 ? (
+             <div className="bg-white p-8 rounded-[32px] text-center border border-navy/5">
+                <p className="text-navy font-bold text-lg mb-1">Looking Good</p>
+                <p className="text-sm text-navy/50 font-medium">No exceptionally low ratings recently.</p>
+             </div>
+          ) : (
+            lowRatings.map(rating => (
+              <div key={rating.id} className="bg-white rounded-[32px] p-6 shadow-sm border border-orange-200 border-l-4 border-l-orange-500">
+                <div className="flex justify-between items-start mb-4">
+                  <div className="flex gap-2 items-center">
+                    <span className="px-2.5 py-1 rounded-lg text-[9px] font-black tracking-widest text-white uppercase bg-orange-500">
+                      LOW RATING ({rating.score}/5)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-navy/40 uppercase tracking-wider">
+                    <Clock size={12} />
+                    {new Date(rating.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+                
+                <div className="bg-off-white p-4 rounded-2xl border border-navy/5 relative mb-2">
+                  <p className="text-navy/80 text-sm font-bold">
+                    Session: {rating.mentor_sessions?.title || 'Unknown Session'}
+                  </p>
+                  <p className="text-navy/60 text-xs mt-1">
+                    Rated by: {rating.profiles?.name || rating.rater_id}
+                  </p>
                 </div>
               </div>
             ))

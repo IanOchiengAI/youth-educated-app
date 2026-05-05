@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { flushSync } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft, Phone, ChevronRight, RefreshCw, ChevronDown } from 'lucide-react';
@@ -82,14 +83,7 @@ const SignIn: React.FC = () => {
 
     if (success) {
       if (onboardingCompleted) {
-        // All roles land on /dashboard — mentor panel is accessible from the nav
-        if (role === 'dsl') {
-          navigate('/dsl');
-        } else if (role === 'admin') {
-          navigate('/admin');
-        } else {
-          navigate('/dashboard');
-        }
+        navigate('/redirect');  // PostLoginRedirect handles role-based routing after state settles
       } else {
         navigate('/onboarding');
       }
@@ -249,7 +243,7 @@ const SignIn: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      dispatch({
+                      flushSync(() => dispatch({
                         type: 'SET_USER',
                         payload: {
                           id: 'trial-student-001',
@@ -266,7 +260,7 @@ const SignIn: React.FC = () => {
                           jabariVoice: 'default_female',
                           mentorPairId: null
                         }
-                      });
+                      }));
                       navigate('/dashboard');
                     }}
                     className="w-full py-3.5 bg-gradient-to-r from-yellow/20 to-yellow/10 text-navy font-bold rounded-2xl border-2 border-yellow/40 hover:border-yellow hover:from-yellow/30 hover:to-yellow/20 transition-all flex items-center justify-center gap-2"
@@ -276,7 +270,7 @@ const SignIn: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      dispatch({
+                      flushSync(() => dispatch({
                         type: 'SET_USER',
                         payload: {
                           id: 'trial-mentor-001',
@@ -293,8 +287,8 @@ const SignIn: React.FC = () => {
                           jabariVoice: 'default_male',
                           mentorPairId: null
                         }
-                      });
-                      navigate('/dashboard');
+                      }));
+                      navigate('/mentor-dashboard');
                     }}
                     className="w-full py-3.5 bg-gradient-to-r from-blue-500/10 to-blue-500/5 text-navy font-bold rounded-2xl border-2 border-blue-500/30 hover:border-blue-500/50 hover:from-blue-500/15 hover:to-blue-500/10 transition-all flex items-center justify-center gap-2"
                   >
@@ -303,7 +297,7 @@ const SignIn: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      dispatch({
+                      flushSync(() => dispatch({
                         type: 'SET_USER',
                         payload: {
                           id: 'trial-admin-001',
@@ -320,7 +314,7 @@ const SignIn: React.FC = () => {
                           jabariVoice: 'default_female',
                           mentorPairId: null
                         }
-                      });
+                      }));
                       navigate('/admin');
                     }}
                     className="w-full py-3.5 bg-gradient-to-r from-navy/10 to-navy/5 text-navy font-bold rounded-2xl border-2 border-navy/20 hover:border-navy/40 hover:from-navy/15 hover:to-navy/10 transition-all flex items-center justify-center gap-2"

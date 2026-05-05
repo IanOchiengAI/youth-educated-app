@@ -37,6 +37,7 @@ const translations: Record<string, Record<Language, string>> = {
   'dashboard.from_lifekit': { English: 'From the Life Kit',      Kiswahili: 'Kutoka Mfuko wa Maisha' },
   'dashboard.see_all': { English: 'See all',                     Kiswahili: 'Ona zote' },
   'dashboard.top_cohort': { English: 'Top of the Cohort',        Kiswahili: 'Bora Kundi' },
+  'dashboard.no_recent_activity': { English: 'No recent activity. Start the conversation!', Kiswahili: 'Hakuna shughuli hivi karibuni. Anza mazungumzo!' },
 
   /* ── Quick Actions ─────────────────────────────────────── */
   'action.ask_amara': { English: 'Ask Amara',   Kiswahili: 'Uliza Amara' },

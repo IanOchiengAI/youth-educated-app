@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../AppContext';
 import { motion } from 'motion/react';
 import { Trophy, TrendingUp, Users, WifiOff } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 interface LeaderboardEntry {
   name: string;
@@ -22,7 +22,7 @@ const Leaderboard: React.FC = () => {
     const fetchLeaderboard = async () => {
       setLoading(true);
       try {
-        if (state.isOffline) {
+        if (state.isOffline || !isSupabaseConfigured) {
           throw new Error('offline');
         }
 

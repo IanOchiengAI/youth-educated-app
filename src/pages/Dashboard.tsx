@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { t, type Language } from '../lib/i18n';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -11,7 +11,10 @@ import {
   Users,
   Briefcase,
   Compass,
-  X
+  X,
+  ThumbsUp,
+  Send,
+  RefreshCw
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
@@ -19,7 +22,9 @@ import Leaderboard from '../components/Leaderboard';
 import MoodTracker from '../components/MoodTracker';
 import { getCurrentTier, getProgressToNextTier } from '../utils/gamification';
 import { db } from '../lib/db';
+import { supabase } from '../lib/supabase';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { checkSafeguarding } from '../lib/safeguarding';
 import { MODULES } from '../data/modules';
 import { LIFEKIT_ARTICLES } from '../data/lifekit';
 
@@ -29,6 +34,246 @@ const Dashboard: React.FC = () => {
   const [showMoodTracker, setShowMoodTracker] = useState(false);
   const lang: Language = state.user?.language ?? 'English';
 
+  // Nudge state
+  const [unreadNudge, setUnreadNudge] = useState<any | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [showReplyInput, setShowReplyInput] = useState(false);
+  const [replyStatus, setReplyStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
+
+  // Session Commit state
+  const [upcomingSession, setUpcomingSession] = useState<any | null>(null);
+  const [commitmentText, setCommitmentText] = useState('');
+  const [savingCommitment, setSavingCommitment] = useState(false);
+
+  // Session Rating state
+  const [unratedSession, setUnratedSession] = useState<any | null>(null);
+  const [ratingScore, setRatingScore] = useState<number>(0);
+  const [savingRating, setSavingRating] = useState(false);
+
+  useEffect(() => {
+    if (!state.user?.id) return;
+
+    const fetchUpcomingSession = async () => {
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      const endOfToday = new Date();
+      endOfToday.setHours(23, 59, 59, 999);
+
+      const { data, error } = await supabase
+        .from('mentor_sessions')
+        .select(`
+          id, scheduled_at, title, student_commitment, mentor_id,
+          profiles!mentor_sessions_mentor_id_fkey(name)
+        `)
+        .eq('mentee_id', state.user.id)
+        .eq('status', 'confirmed')
+        .gte('scheduled_at', startOfToday.toISOString())
+        .lte('scheduled_at', endOfToday.toISOString())
+        .order('scheduled_at', { ascending: true })
+        .limit(1)
+        .single();
+      
+      if (data && !data.student_commitment && !error) {
+        setUpcomingSession(data);
+      } else {
+        setUpcomingSession(null);
+      }
+    };
+    
+    fetchUpcomingSession();
+
+    const channel = supabase
+      .channel('dashboard_sessions')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'mentor_sessions' }, () => {
+        fetchUpcomingSession();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [state.user?.id]);
+
+  useEffect(() => {
+    const fetchUnratedSession = async () => {
+      if (!state.user?.id) return;
+      
+      const { data: recentCompleted } = await supabase
+        .from('mentor_sessions')
+        .select('id, title, mentor_id, profiles!mentor_sessions_mentor_id_fkey(name)')
+        .eq('mentee_id', state.user.id)
+        .eq('status', 'completed')
+        .order('scheduled_at', { ascending: false })
+        .limit(5);
+
+      if (recentCompleted && recentCompleted.length > 0) {
+        const sessionIds = recentCompleted.map(s => s.id);
+        const { data: ratings } = await supabase
+          .from('session_ratings')
+          .select('session_id')
+          .in('session_id', sessionIds)
+          .eq('rater_id', state.user.id);
+        
+        const ratedIds = new Set(ratings?.map(r => r.session_id) || []);
+        const unrated = recentCompleted.find(s => !ratedIds.has(s.id));
+        if (unrated) {
+          setUnratedSession(unrated);
+        }
+      }
+    };
+    fetchUnratedSession();
+  }, [state.user?.id]);
+
+  const handleSaveCommitment = async () => {
+    if (!upcomingSession || !commitmentText.trim()) return;
+    
+    const safeCheck = checkSafeguarding(commitmentText, state.user?.ageBracket || '', state.user?.id, 'session_commitment');
+    if (safeCheck.triggered && safeCheck.escalationText) {
+      alert(safeCheck.escalationText);
+    }
+
+    setSavingCommitment(true);
+    const { error } = await supabase
+      .from('mentor_sessions')
+      .update({ student_commitment: commitmentText.trim() })
+      .eq('id', upcomingSession.id);
+    
+    if (!error) {
+      setUpcomingSession(null);
+    }
+    setSavingCommitment(false);
+  };
+
+  const handleSaveRating = async () => {
+    if (!unratedSession || ratingScore === 0) return;
+    setSavingRating(true);
+    const { error } = await supabase
+      .from('session_ratings')
+      .insert({
+        session_id: unratedSession.id,
+        rater_id: state.user?.id,
+        score: ratingScore
+      });
+    if (!error) setUnratedSession(null);
+    setSavingRating(false);
+  };
+
+  useEffect(() => {
+    if (!state.user?.id) return;
+
+    const fetchUnreadNudge = async () => {
+      const { data, error } = await supabase
+        .from('mentor_nudges')
+        .select(`
+          id, message, created_at,
+          mentor_matches!inner(student_id, status),
+          profiles!mentor_nudges_mentor_id_fkey(name)
+        `)
+        .eq('mentor_matches.student_id', state.user.id)
+        .eq('mentor_matches.status', 'active')
+        .is('read_at', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      
+      if (data && !error) {
+        setUnreadNudge(data);
+      } else {
+        setUnreadNudge(null);
+      }
+    };
+
+    fetchUnreadNudge();
+
+    const channel = supabase
+      .channel('dashboard_nudges')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mentor_nudges' }, () => {
+        fetchUnreadNudge();
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'mentor_nudges' }, () => {
+        fetchUnreadNudge();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [state.user?.id]);
+
+  const handleGotIt = async () => {
+    if (!unreadNudge) return;
+    setUnreadNudge(null);
+    await supabase
+      .from('mentor_nudges')
+      .update({ read_at: new Date().toISOString() })
+      .eq('id', unreadNudge.id);
+  };
+
+  const handleReply = async () => {
+    if (!unreadNudge || !replyText.trim()) return;
+    
+    const safeCheck = checkSafeguarding(replyText, state.user?.ageBracket || '', state.user?.id, 'nudge_reply');
+    if (safeCheck.triggered && safeCheck.escalationText) {
+      alert(safeCheck.escalationText);
+    }
+
+    setReplyStatus('sending');
+    const { error } = await supabase
+      .from('mentor_nudges')
+      .update({ 
+        response: replyText.trim(),
+        read_at: new Date().toISOString() 
+      })
+      .eq('id', unreadNudge.id);
+    
+    if (!error) {
+      setUnreadNudge(null);
+    } else {
+      setReplyStatus('idle');
+    }
+  };
+  
+  const [todaysWisdom, setTodaysWisdom] = useState<{ text: string; mentorName: string } | null>(null);
+  const [isWisdomExpanded, setIsWisdomExpanded] = useState(false);
+
+  useEffect(() => {
+    const fetchMentorWisdom = async () => {
+      if (!state.user?.id) return;
+      
+      const { data, error } = await supabase
+        .from('mentor_matches')
+        .select(`
+          mentor_id,
+          profiles!mentor_matches_mentor_id_fkey (
+            name
+          )
+        `)
+        .eq('student_id', state.user.id)
+        .eq('status', 'active')
+        .single();
+        
+      if (data && data.mentor_id) {
+        const { data: profile } = await supabase
+          .from('mentor_profiles')
+          .select('today_wisdom, wisdom_updated_at')
+          .eq('id', data.mentor_id)
+          .single();
+          
+        if (profile?.today_wisdom && profile?.wisdom_updated_at) {
+          const isToday = new Date(profile.wisdom_updated_at).toDateString() === new Date().toDateString();
+          if (isToday) {
+            setTodaysWisdom({
+              text: profile.today_wisdom,
+              mentorName: (data.profiles as any)?.name || 'Your Mentor'
+            });
+          }
+        }
+      }
+    };
+    
+    fetchMentorWisdom();
+  }, [state.user?.id]);
+
   const currentTier = getCurrentTier(state.progress.points);
   const progressToNext = getProgressToNextTier(state.progress.points);
 
@@ -36,8 +281,15 @@ const Dashboard: React.FC = () => {
     () => db.circleResponses.orderBy('id').reverse().limit(3).toArray()
   ) || [];
 
-  const nextModule = MODULES.find(m => !state.modules.completed.includes(m.id)) || MODULES[0];
+  const inProgressId = state.modules.inProgress[state.modules.inProgress.length - 1];
+  const nextModule = MODULES.find(m => m.id === inProgressId)
+    ?? MODULES.find(m => !state.modules.completed.includes(m.id))
+    ?? MODULES[0];
   const moduleIndex = MODULES.findIndex(m => m.id === nextModule.id) + 1;
+  const moduleProgress = state.modules.moduleProgress[nextModule.id];
+  const progressPercent = moduleProgress && nextModule.content.length > 0
+    ? Math.round((moduleProgress.completedLessons.length / nextModule.content.length) * 100)
+    : 0;
 
   // Use the first 3 LifeKit articles as featured
   const featuredArticles = LIFEKIT_ARTICLES.slice(0, 3);
@@ -141,6 +393,179 @@ const Dashboard: React.FC = () => {
           </div>
         </section>
 
+        {/* Mentor Daily Nudge Card */}
+        <AnimatePresence>
+          {unreadNudge && (
+            <motion.section
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-navy rounded-[40px] p-6 text-white shadow-xl shadow-navy/20 relative overflow-hidden"
+            >
+              <div className="absolute top-[-20px] right-[-20px] w-32 h-32 bg-blue-500/20 rounded-full blur-2xl opacity-40 pointer-events-none" />
+              <div className="flex gap-4 relative z-10">
+                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">
+                  {unreadNudge.profiles?.avatar || '👤'}
+                </div>
+                <div className="flex-1 space-y-2">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow/80">
+                    Message from {unreadNudge.profiles?.name || 'Mentor'}
+                  </p>
+                  <p className="text-sm font-medium leading-snug">{unreadNudge.message}</p>
+                  
+                  {!showReplyInput ? (
+                    <div className="flex gap-2 pt-2">
+                      <button 
+                        onClick={handleGotIt}
+                        className="bg-white/10 hover:bg-white/20 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors flex items-center gap-1.5"
+                      >
+                        <ThumbsUp size={14} /> Got it
+                      </button>
+                      <button 
+                        onClick={() => setShowReplyInput(true)}
+                        className="bg-yellow hover:brightness-105 text-navy text-xs font-bold px-4 py-2 rounded-xl transition-all shadow-sm flex items-center gap-1.5"
+                      >
+                        <MessageCircle size={14} /> Reply
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex gap-2 pt-2">
+                      <input 
+                        type="text"
+                        maxLength={80}
+                        autoFocus
+                        value={replyText}
+                        onChange={e => setReplyText(e.target.value)}
+                        placeholder="Your reply..."
+                        className="flex-1 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-xs font-nunito text-white placeholder:text-white/40 outline-none focus:border-yellow transition-colors"
+                      />
+                      <button 
+                        onClick={handleReply}
+                        disabled={replyStatus === 'sending' || !replyText.trim()}
+                        className="bg-yellow text-navy px-3 py-2 rounded-xl flex items-center justify-center disabled:opacity-50 transition-all"
+                      >
+                        {replyStatus === 'sending' ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.section>
+          )}
+        </AnimatePresence>
+
+        {/* Session Commitment Prompt */}
+        <AnimatePresence>
+          {upcomingSession && (
+            <motion.section
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-[40px] p-6 shadow-xl shadow-navy/5 border border-navy/10 relative overflow-hidden"
+            >
+              <div className="flex gap-4">
+                <div className="w-12 h-12 bg-yellow/20 text-yellow-700 rounded-2xl flex items-center justify-center flex-shrink-0">
+                  <Target size={24} />
+                </div>
+                <div className="flex-1 space-y-2">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-navy/40">
+                    📌 Session Today with {upcomingSession.profiles?.name || 'Mentor'}
+                  </p>
+                  <p className="text-sm font-bold text-navy leading-snug">
+                    What's one thing you want to achieve in this session?
+                  </p>
+                  
+                  <div className="flex gap-2 pt-2">
+                    <input 
+                      type="text"
+                      maxLength={100}
+                      value={commitmentText}
+                      onChange={e => setCommitmentText(e.target.value)}
+                      placeholder="Type your goal here..."
+                      className="flex-1 bg-off-white border border-navy/10 rounded-xl px-3 py-2 text-xs font-nunito text-navy outline-none focus:border-yellow transition-colors"
+                    />
+                    <button 
+                      onClick={handleSaveCommitment}
+                      disabled={savingCommitment || !commitmentText.trim()}
+                      className="bg-navy text-white px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-50 transition-all flex items-center gap-1.5"
+                    >
+                      {savingCommitment ? <RefreshCw size={14} className="animate-spin" /> : 'Commit →'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.section>
+          )}
+        </AnimatePresence>
+
+        {/* Session Rating Prompt */}
+        <AnimatePresence>
+          {unratedSession && (
+            <motion.section
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-navy rounded-[40px] p-6 text-white shadow-xl shadow-navy/20"
+            >
+              <div className="text-center space-y-3">
+                <p className="text-xs font-medium text-white/80">
+                  How was your connection in the session with {unratedSession.profiles?.name}?
+                </p>
+                <div className="flex justify-center gap-3">
+                  {[
+                    { s: 1, e: '😕' },
+                    { s: 2, e: '😐' },
+                    { s: 3, e: '🙂' },
+                    { s: 4, e: '😊' },
+                    { s: 5, e: '🤩' }
+                  ].map(({ s, e }) => (
+                    <button
+                      key={s}
+                      onClick={() => setRatingScore(s)}
+                      className={`text-3xl transition-transform ${ratingScore === s ? 'scale-125 drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]' : 'opacity-50 hover:opacity-100 hover:scale-110 grayscale hover:grayscale-0'}`}
+                    >
+                      {e}
+                    </button>
+                  ))}
+                </div>
+                <div className="pt-2">
+                  <button
+                    onClick={handleSaveRating}
+                    disabled={savingRating || ratingScore === 0}
+                    className="bg-yellow text-navy px-6 py-2 rounded-xl text-xs font-bold disabled:opacity-50 transition-all"
+                  >
+                    {savingRating ? 'Saving...' : 'Submit'}
+                  </button>
+                </div>
+              </div>
+            </motion.section>
+          )}
+        </AnimatePresence>
+
+        {/* Today's Wisdom */}
+        {todaysWisdom && (
+          <motion.section 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-yellow rounded-3xl p-6 shadow-md border border-yellow/50 max-w-md mx-auto"
+          >
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-navy/60 flex items-center gap-1.5 mb-2">
+              💬 {todaysWisdom.mentorName} says today:
+            </h3>
+            <p className="font-nunito italic text-navy text-[15px] leading-relaxed">
+              "{isWisdomExpanded || todaysWisdom.text.length <= 100 ? todaysWisdom.text : todaysWisdom.text.slice(0, 100).trim() + '...'}"
+              {!isWisdomExpanded && todaysWisdom.text.length > 100 && (
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setIsWisdomExpanded(true); }}
+                  className="text-blue-600 not-italic text-xs font-bold ml-2 hover:underline focus:outline-none"
+                >
+                  [read more →]
+                </button>
+              )}
+            </p>
+          </motion.section>
+        )}
+
         {/* Cohort Activity Feed (Horizontal) */}
         <section className="space-y-4">
           <div className="flex justify-between items-center">
@@ -188,7 +613,7 @@ const Dashboard: React.FC = () => {
                   <BookOpen size={12} /> {nextModule.duration}
                 </div>
                 <div className="w-24 h-1 bg-white/10 rounded-full overflow-hidden">
-                  <div className="w-0 h-full bg-yellow rounded-full" />
+                  <div className="h-full bg-yellow rounded-full" style={{ width: `${progressPercent}%` }} />
                 </div>
               </div>
             </div>

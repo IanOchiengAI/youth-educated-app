@@ -27,33 +27,32 @@ async function seed() {
   // 1. Modules & Lessons
   console.log('Seeding Modules & Lessons...');
   for (const mod of MODULES) {
-    const { lessons, ...moduleData } = mod;
-    
-    // Upsert Module
+    const { content, ...moduleData } = mod;
+
     const { error: modErr } = await supabase.from('modules').upsert({
       id: moduleData.id,
       title: moduleData.title,
       description: moduleData.description,
-      points: moduleData.points,
+      icon: moduleData.icon,
+      min_age: moduleData.min_age,
+      is_sensitive: moduleData.is_sensitive,
+      brothers_keepers_variant: moduleData.brothers_keepers_variant,
+      lessons: moduleData.lessons,
       duration: moduleData.duration,
-      category: moduleData.category,
-      tier_requirement: moduleData.tierRequirement,
-      premium: moduleData.premium,
-      is_published: true
+      competency: moduleData.competency,
+      difficulty: moduleData.difficulty,
+      is_published: true,
     });
     if (modErr) console.error(`Failed to insert module ${mod.id}:`, modErr);
 
-    // Upsert Lessons
-    for (const [idx, lesson] of lessons.entries()) {
+    for (const [idx, lesson] of content.entries()) {
       const { error: lesErr } = await supabase.from('lessons').upsert({
         id: lesson.id,
         module_id: mod.id,
         title: lesson.title,
-        type: lesson.type,
         duration: lesson.duration,
-        content: lesson.content,
-        quiz_data: lesson.quiz,
-        sort_order: idx
+        sections: lesson.sections,
+        sort_order: idx,
       });
       if (lesErr) console.error(`Failed to insert lesson ${lesson.id}:`, lesErr);
     }
@@ -65,13 +64,14 @@ async function seed() {
     const { error } = await supabase.from('lifekit_articles').upsert({
       id: article.id,
       title: article.title,
+      title_sw: article.title_sw,
       category: article.category,
-      min_age: article.minAge,
-      max_age: article.maxAge,
-      read_time: article.readTime,
-      content: article.content,
       tags: article.tags,
-      is_premium: article.isPremium || false
+      emoji: article.emoji,
+      read_time: article.readTime,
+      body: article.body,
+      body_sw: article.body_sw,
+      month: article.month ?? null,
     });
     if (error) console.error(`Failed to insert lifekit article ${article.id}:`, error);
   }

@@ -27,3 +27,5 @@ export const supabase = createClient(
   supabaseUrl || PLACEHOLDER_URL,
   supabaseAnonKey || PLACEHOLDER_KEY
 )
+
+export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey)

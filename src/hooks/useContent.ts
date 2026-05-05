@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { MODULES, Module } from '../data/modules';
 import { OPPORTUNITIES, Opportunity } from '../data/opportunities';
 import { CAREER_QUESTIONS, CareerQuestion } from '../data/careerQuestions';
@@ -21,8 +21,8 @@ function useSupabaseFallback<T>(
     let isMounted = true;
 
     async function fetchData() {
-      // If offline, stick with fallback immediately
-      if (state.isOffline) {
+      // If offline or Supabase not configured, stick with fallback immediately
+      if (state.isOffline || !isSupabaseConfigured) {
         if (isMounted) {
           setData(fallbackData);
           setLoading(false);
@@ -36,7 +36,7 @@ function useSupabaseFallback<T>(
         if (error) throw error;
 
         if (remoteData && remoteData.length > 0 && isMounted) {
-          setData(transformData ? transformData(remoteData) : remoteData);
+          setData(transformData ? transformData(remoteData) : remoteData as unknown as T[]);
         } else if (isMounted) {
           // Empty table, use fallback
           setData(fallbackData);
@@ -67,21 +67,24 @@ export function useModules() {
       id: m.id,
       title: m.title,
       description: m.description,
-      points: m.points,
+      icon: m.icon,
+      min_age: m.min_age,
+      is_sensitive: m.is_sensitive,
+      brothers_keepers_variant: m.brothers_keepers_variant,
+      lessons: m.lessons,
       duration: m.duration,
-      category: m.category,
-      tierRequirement: m.tier_requirement,
-      premium: m.premium,
-      lessons: m.lessons?.sort((a: any, b: any) => a.sort_order - b.sort_order).map((l: any) => ({
-        id: l.id,
-        title: l.title,
-        type: l.type,
-        duration: l.duration,
-        content: l.content,
-        quiz: l.quiz_data
-      })) || []
+      competency: m.competency,
+      difficulty: m.difficulty,
+      content: (m.content as any[])
+        ?.sort((a, b) => a.sort_order - b.sort_order)
+        .map((l) => ({
+          id: l.id,
+          title: l.title,
+          duration: l.duration,
+          sections: l.sections || [],
+        })) ?? [],
     })),
-    '*, lessons(*)'
+    '*, content(*)'
   );
 }
 
@@ -111,11 +114,16 @@ export function useLifeKitArticles() {
     'lifekit_articles', 
     LIFEKIT_ARTICLES,
     (data) => data.map(a => ({
-      ...a,
-      minAge: a.min_age,
-      maxAge: a.max_age,
+      id: a.id,
+      title: a.title,
+      title_sw: a.title_sw,
+      category: a.category,
+      tags: a.tags,
+      emoji: a.emoji,
       readTime: a.read_time,
-      isPremium: a.is_premium
+      body: a.body,
+      body_sw: a.body_sw,
+      month: a.month,
     }))
   );
 }

@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "deploy:edge": "npx supabase functions deploy check-session-followup --no-verify-jwt"
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",

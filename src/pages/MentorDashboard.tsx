@@ -13,13 +13,15 @@ import {
   Check,
   AlertTriangle,
   Shield,
-  WifiOff
+  WifiOff,
+  Send
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
 import { generateMentorBriefing } from '../api/jabari';
 import { updateMentorGoals } from '../lib/mentoring';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { checkSafeguarding } from '../lib/safeguarding';
 import { t, type Language } from '../lib/i18n';
 
 interface Student {
@@ -30,6 +32,18 @@ interface Student {
   progress: string;
   recentActivity: string;
   guardian_phone?: string;
+  totalPoints: number;
+  streakDays: number;
+  tier: string;
+  lastActiveRaw: string | null;
+}
+
+interface PendingRequest {
+  id: string;
+  studentId: string;
+  studentName: string;
+  county: string;
+  createdAt: string;
 }
 
 interface JabariCheckin {
@@ -93,43 +107,124 @@ const MentorDashboard: React.FC = () => {
   const [checkins, setCheckins] = useState<Record<string, JabariCheckin[]>>({});
   const [checkinsOpen, setCheckinsOpen] = useState<Record<string, boolean>>({});
 
-  // Mock students for the Mentor
-  const STUDENTS: Student[] = [
-    { 
-      id: 'student-1', 
-      name: 'John Kamau', 
-      avatar: '🦁',
-      lastActive: '2h ago',
-      progress: 'Module 4: Finance',
-      recentActivity: "Logged mood 3/10 (Anxious). Chat history: 'I am worried about my rent next month.' Completed lesson 2/5 in Financial Literacy."
-    },
-    { 
-      id: 'student-2', 
-      name: 'Sarah Wambui', 
-      avatar: '🦒',
-      lastActive: '1d ago',
-      progress: 'Module 2: Confidence',
-      recentActivity: "Logged mood 8/10 (Happy). Chat history: 'I passed my interview!' Completed lesson 5/5 in Self Discovery."
-    },
-    { 
-      id: 'student-3', 
-      name: 'Musa Ali', 
-      avatar: '🐘',
-      lastActive: '3h ago',
-      progress: 'Module 1: Mental Health',
-      recentActivity: "Logged mood 5/10 (Neutral). Chat history: 'How can I manage stress during exams?' In progress with Mental Health module."
-    }
+  // Dynamic stats state
+  const [sessionCount, setSessionCount] = useState(0);
+  const [impactScore, setImpactScore] = useState('—');
+  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
+  const [refetchKey, setRefetchKey] = useState(0);
+
+  // Nudge state
+  const [nudgeDrafts, setNudgeDrafts] = useState<Record<string, string>>({});
+  const [nudgeStatus, setNudgeStatus] = useState<Record<string, 'idle' | 'sending' | 'sent'>>({});
+  const [todaysNudges, setTodaysNudges] = useState<Record<string, boolean>>({});
+
+  const NUDGE_PROMPTS = [
+    "What's one thing you're going to do differently today?",
+    "What was hard this week and what did you learn?",
+    "Name one person you're grateful for today."
   ];
+
+  // Wisdom state
+  const [wisdomText, setWisdomText] = useState('');
+  const [isEditingWisdom, setIsEditingWisdom] = useState(false);
+  const [savingWisdom, setSavingWisdom] = useState(false);
+
+  // Session Rating state
+  const [unratedSession, setUnratedSession] = useState<any | null>(null);
+  const [ratingScore, setRatingScore] = useState<number>(0);
+  const [savingRating, setSavingRating] = useState(false);
 
   // Fetch pair IDs and student profiles
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPairsAndStudents = async () => {
+    const fetchUnratedSession = async () => {
       if (!state.user?.id) return;
       
+      const { data: recentCompleted } = await supabase
+        .from('mentor_sessions')
+        .select('id, title, mentee_id, profiles!mentor_sessions_mentee_id_fkey(name)')
+        .eq('mentor_id', state.user.id)
+        .eq('status', 'completed')
+        .order('scheduled_at', { ascending: false })
+        .limit(5);
+
+      if (recentCompleted && recentCompleted.length > 0) {
+        const sessionIds = recentCompleted.map(s => s.id);
+        const { data: ratings } = await supabase
+          .from('session_ratings')
+          .select('session_id')
+          .in('session_id', sessionIds)
+          .eq('rater_id', state.user.id);
+        
+        const ratedIds = new Set(ratings?.map(r => r.session_id) || []);
+        const unrated = recentCompleted.find(s => !ratedIds.has(s.id));
+        if (unrated) {
+          setUnratedSession(unrated);
+        } else {
+          setUnratedSession(null);
+        }
+      }
+    };
+    
+    fetchUnratedSession();
+
+    if (!state.user?.id) return;
+    const channel = supabase
+      .channel('mentor_unrated_sessions')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'session_ratings' }, () => {
+        fetchUnratedSession();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [state.user?.id, refetchKey]);
+
+  const handleSaveRating = async () => {
+    if (!unratedSession || ratingScore === 0) return;
+    setSavingRating(true);
+    const { error } = await supabase
+      .from('session_ratings')
+      .insert({
+        session_id: unratedSession.id,
+        rater_id: state.user?.id,
+        score: ratingScore
+      });
+    if (!error) setUnratedSession(null);
+    setSavingRating(false);
+  };
+
+  useEffect(() => {
+    const fetchPairsAndStudents = async () => {
+      if (!state.user?.id || !isSupabaseConfigured) { setLoading(false); return; }
+      
       try {
+        // Fetch session count
+        const { count: sessCount } = await supabase
+          .from('mentor_sessions')
+          .select('*', { count: 'exact', head: true })
+          .eq('mentor_id', state.user.id)
+          .eq('status', 'completed');
+        setSessionCount(sessCount ?? 0);
+
+        // Fetch mentor's today wisdom
+        const { data: mentorProfile } = await supabase
+          .from('mentor_profiles')
+          .select('today_wisdom, wisdom_updated_at')
+          .eq('id', state.user.id)
+          .single();
+        
+        if (mentorProfile) {
+          if (mentorProfile.wisdom_updated_at && new Date(mentorProfile.wisdom_updated_at).toDateString() === new Date().toDateString()) {
+            setWisdomText(mentorProfile.today_wisdom || '');
+          } else {
+            setWisdomText('');
+          }
+        }
+
         const { data, error } = await supabase
           .from('mentor_matches')
           .select(`
@@ -140,6 +235,8 @@ const MentorDashboard: React.FC = () => {
             profiles!mentor_matches_student_id_fkey (
               name,
               current_tier,
+              total_points,
+              streak_days,
               last_active_date,
               guardian_phone
             )
@@ -152,9 +249,33 @@ const MentorDashboard: React.FC = () => {
           return;
         }
 
+        // Fetch pending requests
+        const { data: pendingData } = await supabase
+          .from('mentor_matches')
+          .select('id, student_id, created_at')
+          .eq('mentor_id', state.user.id)
+          .eq('status', 'pending');
+
+        if (pendingData && pendingData.length > 0) {
+          const studentIds = pendingData.map((p: any) => p.student_id);
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('id, name, county')
+            .in('id', studentIds);
+          const profileMap = new Map((profilesData || []).map((p: any) => [p.id, p]));
+          setPendingRequests(pendingData.map((p: any) => ({
+            id: p.id,
+            studentId: p.student_id,
+            studentName: profileMap.get(p.student_id)?.name || 'Student',
+            county: profileMap.get(p.student_id)?.county || '',
+            createdAt: p.created_at,
+          })));
+        }
+
         const pairs: typeof studentPairs = {};
         const forms: Record<string, GoalFormData> = {};
         const fetchedStudents: Student[] = [];
+        const pairIdToStudentId: Record<string, string> = {};
 
         data.forEach((m: any) => {
           pairs[m.student_id] = {
@@ -162,6 +283,7 @@ const MentorDashboard: React.FC = () => {
             goals: m.jabari_goals ?? [],
             agenda: m.jabari_agenda ?? '',
           };
+          pairIdToStudentId[m.id] = m.student_id;
           forms[m.student_id] = {
             goals: [
               m.jabari_goals?.[0] ?? '',
@@ -180,15 +302,71 @@ const MentorDashboard: React.FC = () => {
                 ? new Date(m.profiles.last_active_date).toLocaleDateString()
                 : 'Unknown',
               progress: m.profiles.current_tier || 'New',
-              recentActivity: 'Student assigned and active.', // Will be refined by checkins later
-              guardian_phone: m.profiles.guardian_phone || undefined
-            } as any); // Type cast until we update Student interface
+              recentActivity: 'Student assigned and active.',
+              guardian_phone: m.profiles.guardian_phone || undefined,
+              totalPoints: m.profiles.total_points ?? 0,
+              streakDays: m.profiles.streak_days ?? 0,
+              tier: m.profiles.current_tier || 'MWANZO',
+              lastActiveRaw: m.profiles.last_active_date || null,
+            });
           }
         });
+
+        // Enrich recentActivity from mood_logs + ai_conversations
+        for (const student of fetchedStudents) {
+          try {
+            const [moodResult, chatResult] = await Promise.all([
+              supabase.from('mood_logs')
+                .select('mood_score, created_at')
+                .eq('user_id', student.id)
+                .order('created_at', { ascending: false }).limit(3),
+              supabase.from('ai_conversations')
+                .select('user_message, created_at')
+                .eq('user_id', student.id)
+                .order('created_at', { ascending: false }).limit(3),
+            ]);
+            const moods = moodResult.data ?? [];
+            const chats = chatResult.data ?? [];
+            student.recentActivity = [
+              moods.length > 0 ? `Recent moods: ${moods.map((m: any) => m.mood_score).join(', ')}/10` : '',
+              chats.length > 0 ? `Recent Amara messages: "${(chats[0] as any).user_message}"` : '',
+              `Points: ${student.totalPoints}, Streak: ${student.streakDays}d, Tier: ${student.tier}`,
+            ].filter(Boolean).join('. ') || 'No recent activity recorded.';
+          } catch { /* keep placeholder */ }
+        }
+
+        // Compute impact score
+        const now = new Date();
+        const activeCount = fetchedStudents.filter(s => {
+          if (!s.lastActiveRaw) return false;
+          const diff = (now.getTime() - new Date(s.lastActiveRaw).getTime()) / (1000*60*60*24);
+          return diff < 7;
+        }).length;
+        const impact = fetchedStudents.length > 0
+          ? (activeCount / fetchedStudents.length * 10).toFixed(1) : '—';
+        setImpactScore(impact);
+
+        // Fetch today's nudges to disable send button
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const { data: nudgesData } = await supabase
+          .from('mentor_nudges')
+          .select('pair_id')
+          .eq('mentor_id', state.user.id)
+          .gte('created_at', startOfToday.toISOString());
+
+        const nudgesMap: Record<string, boolean> = {};
+        if (nudgesData) {
+          nudgesData.forEach((n: any) => {
+            const sid = pairIdToStudentId[n.pair_id];
+            if (sid) nudgesMap[sid] = true;
+          });
+        }
 
         setStudentPairs(pairs);
         setGoalForms(prev => ({ ...prev, ...forms }));
         setStudents(fetchedStudents);
+        setTodaysNudges(nudgesMap);
       } catch (err) {
         console.error('Failed to fetch students', err);
       } finally {
@@ -196,7 +374,7 @@ const MentorDashboard: React.FC = () => {
       }
     };
     fetchPairsAndStudents();
-  }, [state.user?.id]);
+  }, [state.user?.id, refetchKey]);
 
   // ── Fetch check-ins for paired students ──
   useEffect(() => {
@@ -269,6 +447,62 @@ const MentorDashboard: React.FC = () => {
     }
   };
 
+  const handleAcceptRequest = async (matchId: string) => {
+    const { error } = await supabase
+      .from('mentor_matches').update({ status: 'active' }).eq('id', matchId);
+    if (!error) {
+      setPendingRequests(prev => prev.filter(r => r.id !== matchId));
+      setRefetchKey(k => k + 1);
+    }
+  };
+  const handleDeclineRequest = async (matchId: string) => {
+    const { error } = await supabase
+      .from('mentor_matches').update({ status: 'ended' }).eq('id', matchId);
+    if (!error) setPendingRequests(prev => prev.filter(r => r.id !== matchId));
+  };
+
+  const handleSendNudge = async (studentId: string, pairId: string) => {
+    const draft = nudgeDrafts[studentId] || '';
+    if (!draft.trim() || draft.length > 80 || todaysNudges[studentId]) return;
+
+    const safeCheck = checkSafeguarding(draft, state.user?.ageBracket || 'adult', state.user?.id, 'mentor_nudge');
+    if (safeCheck.triggered && safeCheck.escalationText) {
+      alert(safeCheck.escalationText);
+    }
+
+    setNudgeStatus(prev => ({ ...prev, [studentId]: 'sending' }));
+
+    const { error } = await supabase.from('mentor_nudges').insert({
+      mentor_id: state.user!.id,
+      pair_id: pairId,
+      message: draft.trim()
+    });
+
+    if (!error) {
+      setNudgeStatus(prev => ({ ...prev, [studentId]: 'sent' }));
+      setTodaysNudges(prev => ({ ...prev, [studentId]: true }));
+      setNudgeDrafts(prev => ({ ...prev, [studentId]: '' }));
+    } else {
+      setNudgeStatus(prev => ({ ...prev, [studentId]: 'idle' }));
+    }
+  };
+
+  const handleSaveWisdom = async () => {
+    if (!state.user?.id) return;
+    setSavingWisdom(true);
+    const { error } = await supabase
+      .from('mentor_profiles')
+      .update({
+        today_wisdom: wisdomText,
+        wisdom_updated_at: new Date().toISOString(),
+      })
+      .eq('id', state.user.id);
+    setSavingWisdom(false);
+    if (!error) {
+      setIsEditingWisdom(false);
+    }
+  };
+
   const moodColor = (mood: string) => {
     switch (mood?.toLowerCase()) {
       case 'positive': return 'bg-green-500';
@@ -303,9 +537,9 @@ const MentorDashboard: React.FC = () => {
         {/* Stats Grid */}
         <div className="grid grid-cols-3 gap-3 relative z-10">
           {[
-            { label: t('mentor.students', lang), val: '12', icon: <Users size={14} /> },
-            { label: t('mentor.sessions', lang), val: '48', icon: <Calendar size={14} /> },
-            { label: t('mentor.impact', lang), val: '8.4', icon: <Heart size={14} /> },
+            { label: t('mentor.students', lang), val: String(students.length), icon: <Users size={14} /> },
+            { label: t('mentor.sessions', lang), val: String(sessionCount), icon: <Calendar size={14} /> },
+            { label: t('mentor.impact', lang), val: impactScore, icon: <Heart size={14} /> },
           ].map((s, i) => (
             <div key={i} className="bg-white/5 border border-white/10 p-4 rounded-3xl text-center backdrop-blur-sm">
               <div className="flex items-center justify-center gap-1.5 text-white/40 mb-1">
@@ -315,9 +549,125 @@ const MentorDashboard: React.FC = () => {
             </div>
           ))}
         </div>
+
+        {/* Today's Wisdom */}
+        <div className="mt-6 bg-white/10 rounded-3xl p-5 border border-white/10 relative z-10 backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[10px] font-black uppercase tracking-widest text-yellow/90 flex items-center gap-1.5">
+              <Sparkles size={12} /> TODAY'S WISDOM
+            </span>
+            {!isEditingWisdom && (
+              <button onClick={() => setIsEditingWisdom(true)} className="text-white/60 hover:text-white transition-colors flex items-center gap-1 text-[10px] font-bold uppercase bg-white/5 px-2 py-1 rounded-lg">
+                ✏️ Edit
+              </button>
+            )}
+          </div>
+          {isEditingWisdom ? (
+            <div className="space-y-3">
+              <textarea
+                value={wisdomText}
+                onChange={(e) => setWisdomText(e.target.value)}
+                maxLength={200}
+                placeholder="Share your wisdom for today..."
+                className="w-full bg-white/5 border border-white/20 rounded-2xl p-4 text-sm font-nunito text-white placeholder:text-white/40 focus:outline-none focus:border-yellow resize-none shadow-inner"
+                rows={2}
+              />
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black text-white/40">{wisdomText.length}/200</span>
+                <div className="flex gap-2">
+                  <button onClick={() => setIsEditingWisdom(false)} className="px-4 py-2 rounded-xl text-xs font-bold text-white/60 hover:text-white hover:bg-white/5 transition-colors">
+                    Cancel
+                  </button>
+                  <button onClick={handleSaveWisdom} disabled={savingWisdom} className="px-5 py-2 rounded-xl text-xs font-bold bg-yellow text-navy hover:brightness-105 active:scale-95 disabled:opacity-50 transition-all shadow-md shadow-yellow/10">
+                    {savingWisdom ? 'Saving...' : 'Done'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="font-nunito italic text-white/90 text-[15px] leading-relaxed">
+              {wisdomText ? `"${wisdomText}"` : <span className="text-white/40 not-italic">Share your wisdom for today...</span>}
+            </p>
+          )}
+        </div>
       </header>
 
       <main className="px-6 -mt-10 space-y-8 relative z-20">
+        {/* Session Rating Prompt */}
+        <AnimatePresence>
+          {unratedSession && (
+            <motion.section
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-[40px] p-6 shadow-xl shadow-navy/5 border border-navy/10 relative overflow-hidden"
+            >
+              <div className="text-center space-y-3 relative z-10">
+                <p className="text-xs font-bold text-navy">
+                  How was your connection in the session with {unratedSession.profiles?.name}?
+                </p>
+                <div className="flex justify-center gap-3">
+                  {[
+                    { s: 1, e: '😕' },
+                    { s: 2, e: '😐' },
+                    { s: 3, e: '🙂' },
+                    { s: 4, e: '😊' },
+                    { s: 5, e: '🤩' }
+                  ].map(({ s, e }) => (
+                    <button
+                      key={s}
+                      onClick={() => setRatingScore(s)}
+                      className={`text-3xl transition-transform ${ratingScore === s ? 'scale-125 drop-shadow-[0_0_8px_rgba(255,215,0,0.5)]' : 'opacity-50 hover:opacity-100 hover:scale-110 grayscale hover:grayscale-0'}`}
+                    >
+                      {e}
+                    </button>
+                  ))}
+                </div>
+                <div className="pt-2">
+                  <button
+                    onClick={handleSaveRating}
+                    disabled={savingRating || ratingScore === 0}
+                    className="bg-yellow text-navy px-6 py-2 rounded-xl text-xs font-bold disabled:opacity-50 transition-all shadow-sm"
+                  >
+                    {savingRating ? 'Saving...' : 'Submit Rating'}
+                  </button>
+                </div>
+              </div>
+            </motion.section>
+          )}
+        </AnimatePresence>
+
+        {/* Pending Requests */}
+        {pendingRequests.length > 0 && (
+          <section className="space-y-3">
+            <h2 className="text-lg font-bold text-navy flex items-center gap-2">
+              <span className="w-2.5 h-2.5 bg-yellow rounded-full animate-pulse" />
+              Pending Requests ({pendingRequests.length})
+            </h2>
+            {pendingRequests.map(req => (
+              <div key={req.id} className="bg-yellow/10 border border-yellow/30 rounded-[32px] p-5 flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-navy">{req.studentName}</p>
+                  <p className="text-xs text-navy/40">
+                    {req.county && `${req.county} · `}
+                    Requested {new Date(req.createdAt).toLocaleDateString('en-KE', { day: 'numeric', month: 'short' })}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => handleAcceptRequest(req.id)}
+                    className="px-4 py-2 bg-green-500 text-white rounded-xl text-xs font-bold hover:bg-green-600 transition-colors">
+                    Accept
+                  </button>
+                  <button onClick={() => handleDeclineRequest(req.id)}
+                    className="px-4 py-2 bg-off-white text-navy/60 rounded-xl text-xs font-bold hover:bg-navy/10 transition-colors">
+                    Decline
+                  </button>
+                </div>
+              </div>
+            ))}
+          </section>
+        )}
+
         {/* Student List */}
         <section className="space-y-4">
           <div className="flex justify-between items-center px-2">
@@ -360,6 +710,22 @@ const MentorDashboard: React.FC = () => {
                       </div>
                     )}
                   </div>
+
+                {/* Student Progress Grid */}
+                <div className="grid grid-cols-3 gap-2 mt-3 px-6 pb-2">
+                  <div className="bg-off-white rounded-2xl p-3 text-center">
+                    <p className="text-[10px] font-black text-navy/30 uppercase tracking-widest">Points</p>
+                    <p className="font-bold text-navy">{student.totalPoints.toLocaleString()}</p>
+                  </div>
+                  <div className="bg-off-white rounded-2xl p-3 text-center">
+                    <p className="text-[10px] font-black text-navy/30 uppercase tracking-widest">Streak</p>
+                    <p className="font-bold text-navy">{student.streakDays}d</p>
+                  </div>
+                  <div className="bg-off-white rounded-2xl p-3 text-center">
+                    <p className="text-[10px] font-black text-navy/30 uppercase tracking-widest">Tier</p>
+                    <p className="font-bold text-navy text-xs">{student.tier}</p>
+                  </div>
+                </div>
                   <button 
                     className="w-12 h-12 bg-off-white rounded-2xl flex items-center justify-center text-navy/20 hover:bg-navy hover:text-white transition-all shadow-sm flex-shrink-0"
                     aria-label={`Message ${student.name}`}
@@ -580,6 +946,48 @@ const MentorDashboard: React.FC = () => {
                     )}
                   </AnimatePresence>
                 </div>
+
+                {/* ── Daily Nudge ── */}
+                {hasPair && (
+                  <div className="px-6 pb-6">
+                    <div className="bg-navy/5 rounded-2xl p-4 border border-navy/10 space-y-3">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-navy/40">Send Today's Nudge</h4>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          maxLength={80}
+                          value={nudgeDrafts[student.id] || ''}
+                          onChange={e => setNudgeDrafts(p => ({ ...p, [student.id]: e.target.value }))}
+                          disabled={todaysNudges[student.id] || state.isOffline}
+                          placeholder={NUDGE_PROMPTS[students.findIndex(s => s.id === student.id) % NUDGE_PROMPTS.length]}
+                          className="flex-1 bg-white border border-navy/10 rounded-xl px-4 py-2 text-sm font-nunito text-navy placeholder:text-navy/30 outline-none focus:border-yellow/60 transition-colors disabled:opacity-60"
+                        />
+                        <button
+                          onClick={() => handleSendNudge(student.id, studentPairs[student.id].pairId)}
+                          disabled={todaysNudges[student.id] || !nudgeDrafts[student.id]?.trim() || nudgeStatus[student.id] === 'sending' || state.isOffline}
+                          className={`px-4 py-2 rounded-xl flex items-center justify-center transition-all ${
+                            todaysNudges[student.id] 
+                              ? 'bg-green-500 text-white cursor-default' 
+                              : nudgeDrafts[student.id]?.trim() && !state.isOffline
+                                ? 'bg-yellow text-navy hover:brightness-105 active:scale-95 shadow-sm'
+                                : 'bg-navy/10 text-navy/30 cursor-not-allowed'
+                          }`}
+                        >
+                          {todaysNudges[student.id] ? (
+                            <span className="text-xs font-bold flex items-center gap-1"><Check size={14} /> Sent</span>
+                          ) : nudgeStatus[student.id] === 'sending' ? (
+                            <RefreshCw size={18} className="animate-spin" />
+                          ) : (
+                            <span className="text-xs font-bold flex items-center gap-1">Send <Send size={12} /></span>
+                          )}
+                        </button>
+                      </div>
+                      {!todaysNudges[student.id] && (
+                        <p className="text-[10px] text-navy/30 text-right">{nudgeDrafts[student.id]?.length || 0}/80</p>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
               );
             })}

@@ -125,3 +125,14 @@ export const CHAT_TREE = [
   { prompt: "I feel discouraged.", response: "It's okay to feel that way. Resilience is about acknowledging the feeling and then finding one small step forward. What's one thing you're grateful for today?" },
   { prompt: "How can I save money?", response: "The best way to save is to start small. Even 10 shillings a day adds up! Do you have a specific goal you're saving for?" },
 ];
+
+export const MENTOR_FIELDS = [
+  { id: 'technology',       label: 'Technology',       emoji: '💻', color: 'from-blue-500/20 to-blue-500/5',    border: 'border-blue-200'    },
+  { id: 'business',         label: 'Business',         emoji: '📊', color: 'from-yellow/30 to-yellow/10',       border: 'border-yellow/40'   },
+  { id: 'health',           label: 'Health & Wellness', emoji: '🏥', color: 'from-green-500/20 to-green-500/5', border: 'border-green-200'   },
+  { id: 'finance',          label: 'Finance',           emoji: '💰', color: 'from-emerald-500/20 to-emerald-500/5', border: 'border-emerald-200' },
+  { id: 'creative',         label: 'Creative Arts',    emoji: '🎨', color: 'from-pink-500/20 to-pink-500/5',   border: 'border-pink-200'    },
+  { id: 'law',              label: 'Law & Rights',     emoji: '⚖️', color: 'from-purple-500/20 to-purple-500/5', border: 'border-purple-200' },
+  { id: 'education',        label: 'Education',        emoji: '📚', color: 'from-orange-500/20 to-orange-500/5', border: 'border-orange-200' },
+  { id: 'entrepreneurship', label: 'Entrepreneurship', emoji: '🚀', color: 'from-red-500/20 to-red-500/5',     border: 'border-red-200'     },
+];

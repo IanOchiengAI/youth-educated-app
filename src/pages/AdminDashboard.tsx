@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Shield, GraduationCap, Clock, CheckCircle } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { Users, Shield, GraduationCap, Clock, CheckCircle, Star } from 'lucide-react';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAppContext } from '../AppContext';
 
 interface Profile {
@@ -18,18 +18,28 @@ interface PendingMentor {
   joined_at: string;
 }
 
+interface VerifiedMentor {
+  id: string;
+  name: string;
+  expertise: string[];
+  is_featured: boolean;
+}
+
 const AdminDashboard: React.FC = () => {
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [pendingMentors, setPendingMentors] = useState<PendingMentor[]>([]);
   const [loading, setLoading] = useState(true);
   const [approving, setApproving] = useState<string | null>(null);
+  const [verifiedMentors, setVerifiedMentors] = useState<VerifiedMentor[]>([]);
+  const [selectedFeaturedId, setSelectedFeaturedId] = useState<string>('');
+  const [settingFeatured, setSettingFeatured] = useState(false);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 50;
   const { state } = useAppContext();
 
   useEffect(() => {
     const fetchData = async () => {
-      if (state.isOffline) {
+      if (state.isOffline || !isSupabaseConfigured) {
         setLoading(false);
         return;
       }
@@ -60,6 +70,27 @@ const AdminDashboard: React.FC = () => {
           }));
           setPendingMentors(pending);
         }
+
+        // Fetch verified mentors (for Featured Mentor selector)
+        if (state.user?.role === 'admin') {
+          const { data: verifiedData, error: verifiedError } = await supabase
+            .from('mentor_profiles')
+            .select('id, expertise, is_featured, profiles(name)')
+            .eq('is_verified', true);
+
+          if (!verifiedError && verifiedData) {
+            const mapped = verifiedData.map((m: any) => ({
+              id: m.id,
+              name: m.profiles?.name || 'Mentor',
+              expertise: m.expertise || [],
+              is_featured: m.is_featured || false,
+            }));
+            setVerifiedMentors(mapped);
+            // Pre-select the currently featured mentor
+            const current = mapped.find((m: VerifiedMentor) => m.is_featured);
+            if (current) setSelectedFeaturedId(current.id);
+          }
+        }
       } catch (err) {
         console.error('Failed to fetch admin data', err);
       } finally {
@@ -67,7 +98,7 @@ const AdminDashboard: React.FC = () => {
       }
     };
     fetchData();
-  }, [state.isOffline, page]);
+  }, [state.isOffline, page, state.user?.role]);
 
   const handleApprove = async (id: string) => {
     if (state.isOffline) return;
@@ -85,6 +116,35 @@ const AdminDashboard: React.FC = () => {
       }
     } finally {
       setApproving(null);
+    }
+  };
+
+  const handleSetFeatured = async () => {
+    if (!selectedFeaturedId || state.isOffline || settingFeatured) return;
+    setSettingFeatured(true);
+    try {
+      // Clear featured on all others
+      await supabase
+        .from('mentor_profiles')
+        .update({ is_featured: false })
+        .neq('id', selectedFeaturedId);
+
+      // Set selected as featured
+      const { error } = await supabase
+        .from('mentor_profiles')
+        .update({ is_featured: true, featured_at: new Date().toISOString() })
+        .eq('id', selectedFeaturedId);
+
+      if (!error) {
+        setVerifiedMentors(prev => prev.map(m => ({
+          ...m,
+          is_featured: m.id === selectedFeaturedId,
+        })));
+      } else {
+        console.error('Failed to set featured mentor:', error);
+      }
+    } finally {
+      setSettingFeatured(false);
     }
   };
 
@@ -130,6 +190,41 @@ const AdminDashboard: React.FC = () => {
             </button>
           </div>
         </div>
+
+        {/* Featured Mentor Selector (Admin Only) */}
+        {state.user?.role === 'admin' && verifiedMentors.length > 0 && (
+          <div className="bg-white rounded-[32px] p-6 shadow-sm border border-navy/5">
+            <div className="flex items-center gap-2 mb-4">
+              <Star className="text-yellow" size={20} />
+              <h2 className="text-lg font-bold text-navy">Featured Mentor</h2>
+            </div>
+            <p className="text-xs text-navy/40 font-medium mb-4">Choose which mentor appears as the "Featured This Week" card on the student browse page.</p>
+            <select
+              value={selectedFeaturedId}
+              onChange={e => setSelectedFeaturedId(e.target.value)}
+              className="w-full bg-off-white border border-navy/10 rounded-xl px-4 py-3 text-sm font-medium text-navy mb-3 outline-none focus:border-yellow"
+            >
+              <option value="">Select a mentor…</option>
+              {verifiedMentors.map(m => (
+                <option key={m.id} value={m.id}>
+                  {m.name} — {m.expertise.join(', ')}{m.is_featured ? ' ⭐ (current)' : ''}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleSetFeatured}
+              disabled={!selectedFeaturedId || settingFeatured || state.isOffline}
+              className="w-full py-3 bg-yellow text-navy font-bold text-sm rounded-xl active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {settingFeatured ? (
+                <div className="w-4 h-4 border-2 border-navy border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Star size={16} />
+              )}
+              {settingFeatured ? 'Updating…' : 'Set as Featured'}
+            </button>
+          </div>
+        )}
 
         {/* Pending Mentor Approvals */}
         {(!loading || pendingMentors.length > 0) && (

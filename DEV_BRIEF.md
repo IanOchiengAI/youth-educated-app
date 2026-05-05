@@ -1,5 +1,32 @@
 # Youth Educated App — Developer Brief
-**Version:** 1.0 | **Date:** 4 May 2026 | **Prepared for:** AI/Engineering Team
+**Version:** 1.2 | **Date:** 4 May 2026 | **Prepared for:** AI/Engineering Team
+
+> **Status legend:** ✅ Resolved | 🔴 Critical open | 🟡 Medium open | 🟢 Minor open
+
+### Quick status summary
+
+| ID | Status | Description |
+|---|---|---|
+| BUILD-01 | ✅ | `Learn.tsx` TS build error fixed |
+| CRIT-01 | ✅ | Dashboard circle feed fetches real data |
+| CRIT-02 | ✅ | Continue Learning progress bar computed from `moduleProgress` |
+| CRIT-03 | ✅ | Dashboard Life Kit uses real `LIFEKIT_ARTICLES` |
+| CRIT-04 | ✅ | Leaderboard fetches from Supabase by county |
+| CRIT-05 | ✅ | Mentor "Connect" wired to `requestMentorMatch()` with loading state |
+| CRIT-06 | ✅ | Opportunities personalisation filters enabled |
+| CRIT-07 | ✅ | Circles `circle_id` uses `state.user.county` |
+| CRIT-08 | ✅ | Goals `remote_id` tracking implemented |
+| MED-01 | ✅ | Safeguarding writes to `safeguarding_flags` (DSL Dashboard now works) |
+| MED-02 | 🟡 | Admin Dashboard read-only, no mentor approval |
+| MED-03 | 🟡 | Supabase content tables may be unseeded |
+| MED-04 | 🟡 | Guardian phone not surfaced in DSL/Mentor views |
+| MED-05 | 🟡 | MentorDashboard may not fetch all mentees |
+| MED-06 | 🟡 | Opportunity deadlines stale in local fallback |
+| MIN-01 | ✅ | `supabase.ts` throws hard error in prod if env vars missing |
+| MIN-02 | 🟢 | i18n coverage incomplete |
+| MIN-03 | 🟢 | Circles safeguarding block uses `alert()` |
+| MIN-04 | 🟢 | VoiceChat not in nav |
+| MIN-05 | 🟢 | `sw.js` cache version must be bumped manually |
 
 ---
 
@@ -39,7 +66,54 @@ Issues are categorised into three severity tiers:
 
 ---
 
-### CRIT-01 — Dashboard: Circle Activity Feed is Hardcoded
+### ✅ BUILD-01 — `Learn.tsx` TypeScript Error Blocks Production Build (RESOLVED)
+
+**File:** `src/pages/Learn.tsx` (lines 31, 39)
+
+**Problem:**
+`npm run build` (and `npm run lint`) fails with two TypeScript errors:
+
+```
+src/pages/Learn.tsx(31,10): error TS2304: Cannot find name 'lang'.
+src/pages/Learn.tsx(39,31): error TS2304: Cannot find name 'lang'.
+```
+
+The `ArticleCard` sub-component (defined inside `Learn.tsx`) uses `lang` on lines 31 and 39 but never declares it. The rest of the app derives `lang` from `AppContext`.
+
+**Failing lines:**
+```tsx
+// line 31
+{lang === 'Kiswahili' ? article.title_sw : article.title}
+
+// line 39
+{t('tag.' + tag, lang)}
+```
+
+**Required fix:**
+Add `lang` as a prop to `ArticleCard`, or read it from context inside the component:
+
+```tsx
+// Option A — read from context inside ArticleCard (preferred, consistent with other pages)
+const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
+  const { state } = useAppContext();
+  const lang = (state.user?.language ?? 'English') as Language;
+  // ... rest of component
+};
+
+// Option B — pass as prop
+interface ArticleCardProps {
+  article: LifeKitArticle;
+  lang: Language;
+}
+```
+
+`Language` is already exported from `src/lib/i18n.ts`. `useAppContext` is imported from `../AppContext`. Neither import is new — both are already at the top of `Learn.tsx`.
+
+**Effort:** ~5 minutes. This must be done before any other work since the build is broken.
+
+---
+
+### ✅ CRIT-01 — Dashboard: Circle Activity Feed (RESOLVED)
 
 **File:** `src/pages/Dashboard.tsx` (approx. line 115–145)
 
@@ -73,37 +147,37 @@ LIMIT 3;
 
 ---
 
-### CRIT-02 — Dashboard: "Continue Learning" Card is Hardcoded
+### 🔴 CRIT-02 — Dashboard: "Continue Learning" Progress Bar Hardcoded to 0%
 
-**File:** `src/pages/Dashboard.tsx` (approx. line 150–175)
+**File:** `src/pages/Dashboard.tsx` (approx. line 190)
 
-**Problem:**
-The Continue Learning section always shows "Financial Literacy — Module 3 — 12 min left" regardless of the actual user's learning progress. This is completely static.
+**Partially fixed:** The module shown is now dynamic — it uses the first module not in `state.modules.completed`. However, the progress bar is still a static `w-0`:
 
 ```tsx
-// Current — FAKE
-<div onClick={() => navigate('/learn/finance')} ...>
-  <span>Module 3</span>
-  <h3>Financial Literacy</h3>
-  <div>12 min left</div>
-  <div className="w-1/3 h-full bg-yellow" /> {/* static 33% progress */}
-</div>
+// Current — still broken
+<div className="w-0 h-full bg-yellow rounded-full" />
 ```
 
 **Required fix:**
-Query `user_module_progress` from Supabase (or `db.moduleProgress` offline) to find the most recent in-progress module for the current user. Use `AppContext.state.modules.inProgress` which is already maintained by the reducer — this is the correct source of truth. If no module is in progress, show a "Start your first module" CTA instead.
+Compute the percentage from `state.modules.moduleProgress` and apply it as an inline style or Tailwind width. Also prefer `state.modules.inProgress` over `completed` exclusion, and show a "Start your first module" CTA when `inProgress` is empty.
 
-**Logic:**
 ```ts
 const inProgressId = state.modules.inProgress[state.modules.inProgress.length - 1];
 const moduleData = MODULES.find(m => m.id === inProgressId);
 const progress = state.modules.moduleProgress[inProgressId];
-// calculate percent: progress.completedLessons.length / moduleData.lessons.length
+// Note: Module.lessons is a count (number), Module.content is the lesson array
+const percent = progress
+  ? Math.round((progress.completedLessons.length / (moduleData?.content.length || 1)) * 100)
+  : 0;
+```
+
+```tsx
+<div className="h-full bg-yellow rounded-full" style={{ width: `${percent}%` }} />
 ```
 
 ---
 
-### CRIT-03 — Dashboard: Life Kit Article Previews are Hardcoded
+### ✅ CRIT-03 — Dashboard: Life Kit Article Previews (RESOLVED)
 
 **File:** `src/pages/Dashboard.tsx` (approx. line 180–215)
 
@@ -124,7 +198,7 @@ Import `LIFEKIT_ARTICLES` from `src/data/lifekit.ts` (already used in `Learn.tsx
 
 ---
 
-### CRIT-04 — Leaderboard is Entirely Simulated
+### ✅ CRIT-04 — Leaderboard (RESOLVED)
 
 **File:** `src/components/Leaderboard.tsx`
 
@@ -156,39 +230,33 @@ LIMIT 10;
 
 ---
 
-### CRIT-05 — Mentor Page Uses MOCK_MENTORS; Matching is Not Connected
+### 🔴 CRIT-05 — Mentor Page: Browse Fixed, Connect Button Still Broken
 
 **File:** `src/pages/Mentor.tsx`
 
-**Problem:**
-The "Browse Mentors" view renders a hardcoded `MOCK_MENTORS` array. The search input has no `onChange` handler and is non-functional. The `isMatched` state is a local toggle (`useState(false)`) with a comment reading "Toggle for demo". The endorsements section also uses a hardcoded `ENDORSEMENTS` array.
+**Partially fixed:** Browse view now fetches from `mentor_profiles` and match status is queried from `mentor_matches`. Search input has `onChange` wired.
+
+**Remaining problem (`src/pages/Mentor.tsx` line 222–224):**
+The "Connect" button still calls `alert()` and does **not** write to `mentor_matches`:
 
 ```tsx
-const [isMatched, setIsMatched] = useState(false); // Toggle for demo
-
-const MOCK_MENTORS = [
-  { id: '1', name: 'Dr. Jane G.', field: 'Medicine / Health', ... },
-  { id: '2', name: 'Eng. Kevin O.', field: 'Software / STEM', ... },
-  { id: '3', name: 'Sarah W.', field: 'Finance / Business', ... },
-];
-
-const ENDORSEMENTS = [
-  { title: 'Critical Thinker', date: 'Oct 2025', from: 'Amara AI', ... },
-  ...
-];
+onClick={() => {
+  // In a real flow, this would create a 'pending' mentor_matches request
+  alert(`Connection request sent to ${m.name}!`);
+}}
 ```
 
-**Required fix — three parts:**
+**Required fix:**
+Replace with a real Supabase insert. Use `lib/mentoring.ts` → `requestMentorMatch(studentId, mentorId)` which already exists. On success, set `isMatched = true` and refresh the match data.
 
-1. **Browse Mentors:** Fetch approved mentors from Supabase `mentor_profiles` table (or `profiles` where `role = 'mentor'` and `mentor_approved = true`). Connect the search input to filter by `field_of_expertise`.
-
-2. **Matching state:** Query `mentor_matches` where `student_id = state.user.id` and `status = 'active'`. If a record exists, set `isMatched = true` and show the matched mentor's details. This query is already done in `Chat.tsx` — reuse the same pattern.
-
-3. **Endorsements:** Fetch from a `endorsements` table (create if not exists) or remove the section until that data pipeline is built. Do not ship fake endorsements.
+```ts
+await requestMentorMatch(state.user.id, m.id);
+// then re-fetch active match to update UI
+```
 
 ---
 
-### CRIT-06 — Opportunities Personalisation Filter is Commented Out
+### ✅ CRIT-06 — Opportunities Personalisation Filter (RESOLVED)
 
 **File:** `src/pages/Opportunities.tsx` (line 41)
 
@@ -204,7 +272,7 @@ Re-enable the personalisation filters. Verify the filter logic against the `Oppo
 
 ---
 
-### CRIT-07 — Circles: All Posts Write to a Hardcoded `circle_id`
+### ✅ CRIT-07 — Circles: `circle_id` (RESOLVED)
 
 **File:** `src/pages/Circles.tsx` (line 90)
 
@@ -224,7 +292,7 @@ Determine the correct circle assignment logic. The likely intent is that circles
 
 ---
 
-### CRIT-08 — Goals: Remote ID Tracking is Incomplete (Sync Can Silently Break)
+### ✅ CRIT-08 — Goals: Remote ID Tracking (RESOLVED)
 
 **File:** `src/pages/Goals.tsx` (approx. line 84)
 
@@ -246,7 +314,7 @@ Add a `remote_id: string | null` column to the Dexie `goals` table schema and in
 
 ---
 
-### MED-01 — Safeguarding Writes to Wrong Table
+### ✅ MED-01 — Safeguarding Table Mismatch (RESOLVED)
 
 **Files:** `src/lib/safeguarding.ts`, `src/pages/Circles.tsx`, `src/pages/DSLDashboard.tsx`
 
@@ -428,22 +496,22 @@ this.version(2).stores({
 
 ---
 
-## Implementation Priority Order
+## Implementation Priority Order (updated 4 May 2026)
 
-For a team picking this up cold, the recommended order is:
+Items BUILD-01, CRIT-01, CRIT-03–08, and MED-01 are resolved. Remaining work:
 
-1. **CRIT-07** (Circles circle_id) — foundational, everything built on circles depends on this
-2. **MED-01** (Safeguarding writes to wrong table) — this is a safety issue, not just a product issue
-3. **CRIT-08 + MIN-05** (Goals remote_id + Dexie version) — do together, low effort
-4. **CRIT-01** (Dashboard circle feed) — depends on CRIT-07 being done first
-5. **CRIT-02** (Dashboard continue learning) — pure frontend, self-contained
-6. **CRIT-03** (Dashboard life kit) — trivial, import from existing data
-7. **CRIT-04** (Leaderboard) — new Supabase query, straightforward
-8. **CRIT-05** (Mentor page) — most complex, requires mentor_profiles table to be populated
-9. **CRIT-06** (Opportunities filters) — uncomment + test filter logic
-10. **MED-02** (Admin dashboard) — low urgency unless client needs admin access soon
-11. **MED-03 to MED-06** — parallelisable
-12. **MIN-01 to MIN-05** — clean-up pass at the end
+1. **CRIT-02** — Dashboard Continue Learning progress bar (`Dashboard.tsx` ~line 190): add `style={{ width: \`${percent}%\` }}` using `state.modules.moduleProgress`
+2. **CRIT-05** — Mentor Connect button (`Mentor.tsx` ~line 222): replace `alert()` with `requestMentorMatch(state.user.id, m.id)` from `lib/mentoring.ts`
+3. **MED-02** — Admin Dashboard: add pagination + mentor approval action
+4. **MED-03** — Run `scripts/seed.ts` to populate Supabase content tables
+5. **MED-04** — Surface `guardian_phone` in DSL and Mentor dashboards
+6. **MED-05** — MentorDashboard: ensure all mentees fetched for mentors with multiple students
+7. **MED-06** — Expire or move opportunity deadlines to Supabase
+8. **MIN-01** — `supabase.ts`: throw hard error in prod build if env vars missing
+9. **MIN-02** — Audit JSX for hardcoded English strings; move to `i18n.ts`
+10. **MIN-03** — Circles: replace `alert()` safeguarding block with `<SafeguardingCard>`
+11. **MIN-04** — Add mic button on Chat page linking to `/chat/voice`
+12. **MIN-05** — Bump `CACHE_VERSION` in `sw.js` before first production deploy
 
 ---
 

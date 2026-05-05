@@ -2,10 +2,10 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   ChevronLeft, ChevronRight, Plus, Calendar, Clock,
-  User, CheckCircle, XCircle, AlertCircle, RefreshCw, X
+  User, CheckCircle, XCircle, AlertCircle, RefreshCw, X, Sparkles
 } from 'lucide-react';
 import { useAppContext } from '../AppContext';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 interface Session {
   id: string;
@@ -58,9 +58,10 @@ const SessionCalendar: React.FC = () => {
   });
 
   const [students, setStudents] = useState<{ id: string; name: string }[]>([]);
+  const [canDeepDive, setCanDeepDive] = useState(false);
 
   const fetchSessions = useCallback(async () => {
-    if (!state.user) return;
+    if (!state.user || !isSupabaseConfigured) { setLoading(false); return; }
     setLoading(true);
 
     const start = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).toISOString();
@@ -93,7 +94,7 @@ const SessionCalendar: React.FC = () => {
       if (error.code === '42P01' || error.message?.includes('does not exist')) {
         setSessions([]);
       } else {
-        setStatusError(`Could not load sessions: ${error.message}`);
+        setStatusError(`Could not load sessions: ${error.message ?? error.code ?? 'Unknown error'}`);
         setSessions([]);
       }
     } else {
@@ -102,7 +103,21 @@ const SessionCalendar: React.FC = () => {
     setLoading(false);
   }, [state.user, viewDate, isMentor]);
 
-  useEffect(() => { fetchSessions(); }, [fetchSessions]);
+  useEffect(() => { 
+    fetchSessions(); 
+    
+    if (!state.user?.id) return;
+    const channel = supabase
+      .channel('calendar_sessions')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'mentor_sessions' }, () => {
+        fetchSessions();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchSessions, state.user?.id]);
 
   useEffect(() => {
     if (isMentor && state.user) {
@@ -115,6 +130,35 @@ const SessionCalendar: React.FC = () => {
         });
     }
   }, [isMentor, state.user]);
+
+  useEffect(() => {
+    const checkDeepDiveEligibility = async () => {
+      if (!state.user?.id) return;
+      const roleField = isMentor ? 'mentor_id' : 'mentee_id';
+      
+      const { data: sessions } = await supabase
+        .from('mentor_sessions')
+        .select('id')
+        .eq(roleField, state.user.id)
+        .eq('status', 'completed');
+      
+      if (!sessions || sessions.length < 3) return;
+      
+      const sessionIds = sessions.map(s => s.id);
+      const { data: ratings } = await supabase
+        .from('session_ratings')
+        .select('score')
+        .in('session_id', sessionIds);
+
+      if (!ratings || ratings.length < 3) return;
+
+      const avg = ratings.reduce((sum, r) => sum + r.score, 0) / ratings.length;
+      if (avg >= 4) {
+        setCanDeepDive(true);
+      }
+    };
+    checkDeepDiveEligibility();
+  }, [state.user?.id, isMentor]);
 
   // Calendar grid
   const year = viewDate.getFullYear();
@@ -192,13 +236,21 @@ const SessionCalendar: React.FC = () => {
             </p>
             <h1 className="text-white text-2xl font-poppins font-bold">Session Calendar</h1>
           </div>
+          
           <button
             onClick={() => setShowForm(true)}
-            className="w-11 h-11 bg-yellow rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform"
+            disabled={state.isOffline}
+            className="w-11 h-11 bg-yellow rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform disabled:opacity-50 disabled:active:scale-100"
+            title={state.isOffline ? 'You are offline' : ''}
           >
             <Plus size={22} className="text-navy" />
           </button>
         </div>
+        {state.isOffline && (
+          <div className="mt-2 text-[10px] font-bold text-yellow/80 uppercase tracking-widest flex items-center gap-1">
+            <AlertCircle size={12} /> Offline Mode - Viewing cached calendar
+          </div>
+        )}
       </div>
 
       <div className="px-4 -mt-2">
@@ -417,14 +469,21 @@ const SessionCalendar: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-[12px] font-bold text-navy/60 uppercase tracking-wider block mb-1.5">Duration</label>
-                <div className="flex gap-2">
-                  {[15, 30, 45, 60].map(d => (
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[12px] font-bold text-navy/60 uppercase tracking-wider block">Duration</label>
+                  {canDeepDive && (
+                    <span className="text-[10px] bg-yellow/20 text-yellow-800 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest flex items-center gap-1">
+                      <Sparkles size={10} /> Deep Dive Unlocked
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {[15, 30, 45, 60, ...(canDeepDive ? [90] : [])].map(d => (
                     <button
                       key={d}
                       type="button"
                       onClick={() => setForm(f => ({ ...f, duration: d }))}
-                      className={`flex-1 py-2.5 rounded-xl font-bold text-[13px] transition-all ${form.duration === d ? 'bg-navy text-white' : 'bg-navy/5 text-navy'}`}
+                      className={`flex-1 min-w-[60px] py-2.5 rounded-xl font-bold text-[13px] transition-all ${form.duration === d ? 'bg-navy text-white' : 'bg-navy/5 text-navy'}`}
                     >
                       {d}m
                     </button>

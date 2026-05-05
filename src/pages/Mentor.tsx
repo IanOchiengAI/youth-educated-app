@@ -17,6 +17,38 @@ import { requestMentorMatch } from '../lib/mentoring';
 import { MENTOR_FIELDS } from '../constants';
 import { FALLBACK_MENTORS } from '../data/mentors';
 
+const QUIZ_GOALS = [
+  { id: 'learn_skill', label: 'Learn a skill', emoji: '💡' },
+  { id: 'start_something', label: 'Start something', emoji: '📈' },
+  { id: 'build_confidence', label: 'Build confidence', emoji: '💪' },
+  { id: 'improve_school', label: 'Improve at school', emoji: '🎓' },
+  { id: 'understand_money', label: 'Understand money', emoji: '💰' },
+  { id: 'health_wellbeing', label: 'Health & wellbeing', emoji: '🏥' },
+];
+
+const QUIZ_STYLES = [
+  { id: 'clear_plan', label: 'Give me a clear plan and structure', emoji: '🎯' },
+  { id: 'listen_figure', label: 'Listen to me and help me figure it out', emoji: '👂' },
+  { id: 'challenge_me', label: 'Challenge me and push me harder', emoji: '🔥' },
+  { id: 'regular_checkins', label: 'Check in on me regularly', emoji: '🤝' },
+];
+
+const QUIZ_AVAILABILITY = [
+  { id: 'once_a_week', label: 'Once a week (30 min)', emoji: '📅' },
+  { id: 'every_two_weeks', label: 'Every two weeks (45 min)', emoji: '📅' },
+  { id: 'once_a_month', label: 'Once a month (60 min)', emoji: '📅' },
+  { id: 'flexible', label: 'Flexible — just when I need it', emoji: '💬' },
+];
+
+const goalReasonMap: Record<string, string> = {
+  'learn_skill': 'learn new skills',
+  'start_something': 'start their own projects',
+  'build_confidence': 'build self-confidence',
+  'improve_school': 'improve academically',
+  'understand_money': 'understand personal finance',
+  'health_wellbeing': 'improve their wellbeing'
+};
+
 interface MentorProfile {
   id: string;
   name: string;
@@ -42,6 +74,18 @@ interface MatchData {
   mentor: MentorProfile;
 }
 
+const quizVariants = {
+  hidden: { opacity: 0, x: 20 },
+  visible: { opacity: 1, x: 0 },
+  exit: { opacity: 0, x: -20 }
+};
+
+const quizVariantsResults = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1 },
+  exit: { opacity: 0 }
+};
+
 const Mentor: React.FC = () => {
   const { state } = useAppContext();
   const navigate = useNavigate();
@@ -52,6 +96,12 @@ const Mentor: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [connectingId, setConnectingId] = useState<string | null>(null);
   const [featuredMentor, setFeaturedMentor] = useState<FeaturedMentorData | null>(null);
+
+  const [matchStep, setMatchStep] = useState(0);
+  const [matchAnswers, setMatchAnswers] = useState({ goal: '', style: '', availability: '' });
+  const [topMatches, setTopMatches] = useState<(MentorProfile & { score: number })[]>([]);
+  const [loadingMatches, setLoadingMatches] = useState(false);
+  const [showRematch, setShowRematch] = useState(false);
 
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -173,6 +223,53 @@ const Mentor: React.FC = () => {
     fetchData();
   }, [state.user?.id, state.isOffline]);
 
+  useEffect(() => {
+    const checkRematch = async () => {
+      if (!myMatch?.id || !state.user?.id) return;
+      const { data: sessions } = await supabase
+        .from('mentor_sessions')
+        .select('id')
+        .eq('mentee_id', state.user.id)
+        .eq('status', 'completed');
+      
+      if (!sessions || sessions.length < 2) return;
+
+      const sessionIds = sessions.map(s => s.id);
+      const { data: ratings } = await supabase
+        .from('session_ratings')
+        .select('session_id, rater_id, score')
+        .in('session_id', sessionIds);
+
+      if (!ratings) return;
+
+      const ratingsBySession = ratings.reduce((acc: any, r: any) => {
+        if (!acc[r.session_id]) acc[r.session_id] = [];
+        acc[r.session_id].push(r.score);
+        return acc;
+      }, {});
+
+      let poorCount = 0;
+      for (const sid in ratingsBySession) {
+        if (ratingsBySession[sid].length === 2 && ratingsBySession[sid].every((score: number) => score <= 2)) {
+          poorCount++;
+        }
+      }
+
+      if (poorCount >= 2) {
+        setShowRematch(true);
+      }
+    };
+    checkRematch();
+  }, [myMatch?.id, state.user?.id]);
+
+  const handleRematch = async () => {
+    if (!myMatch) return;
+    await supabase.from('mentor_matches').update({ status: 'ended' }).eq('id', myMatch.id);
+    setIsMatched(false);
+    setMyMatch(null);
+    setShowRematch(false);
+  };
+
   // Count mentors per field category
   const countByField = (fieldId: string) =>
     mentors.filter(m =>
@@ -191,6 +288,32 @@ const Mentor: React.FC = () => {
     setTimeout(() => {
       listRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
+  };
+
+  const scoreMatch = (mentor: MentorProfile, answers: {goal: string, style: string, availability: string}) => {
+    let score = 0;
+    const exp = mentor.expertise.map(e => e.toLowerCase());
+    
+    if (answers.goal === 'learn_skill' && exp.some(e => ['technology','creative','education'].includes(e))) score += 3;
+    if (answers.goal === 'start_something' && exp.some(e => ['entrepreneurship','business'].includes(e))) score += 3;
+    if (answers.goal === 'health_wellbeing' && exp.some(e => ['health'].includes(e))) score += 3;
+    if (answers.goal === 'understand_money' && exp.some(e => ['finance'].includes(e))) score += 3;
+    if (answers.goal === 'build_confidence' && exp.some(e => ['creative', 'health'].includes(e))) score += 3;
+    if (answers.goal === 'improve_school' && exp.some(e => ['education', 'technology'].includes(e))) score += 3;
+    
+    if (mentor.county?.toLowerCase() === state.user?.county?.toLowerCase()) score += 2;
+    return score;
+  };
+
+  const handleQuizSubmit = (answers: {goal: string, style: string, availability: string}) => {
+    setMatchStep(4);
+    setLoadingMatches(true);
+    setTimeout(() => {
+      const scored = mentors.map(m => ({ ...m, score: scoreMatch(m, answers) }));
+      scored.sort((a, b) => b.score - a.score);
+      setTopMatches(scored.slice(0, 3));
+      setLoadingMatches(false);
+    }, 1500);
   };
 
   // Check if a mentor is the current match
@@ -263,8 +386,24 @@ const Mentor: React.FC = () => {
                 All mentors are vetted and safeguarding-trained
               </p>
 
-              {/* ─── 1. CATEGORY GRID (2×N) ─── */}
-              <div className="grid grid-cols-2 gap-3">
+              {matchStep === 0 ? (
+                <div className="space-y-6">
+                  {/* Jabari Quiz Trigger */}
+                  <button 
+                    onClick={() => setMatchStep(1)}
+                    className="w-full bg-navy text-white rounded-2xl p-4 flex items-center gap-4 active:scale-95 transition-transform"
+                  >
+                    <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-2xl animate-pulse flex-shrink-0">
+                      🤖
+                    </div>
+                    <div className="text-left">
+                      <h3 className="font-bold text-lg">Help me find the right mentor</h3>
+                      <p className="text-white/60 text-sm mt-0.5 font-nunito">Jabari will guide you to your best match</p>
+                    </div>
+                  </button>
+
+                  {/* ─── 1. CATEGORY GRID (2×N) ─── */}
+                  <div className="grid grid-cols-2 gap-3">
                 {MENTOR_FIELDS.map(f => {
                   const count = countByField(f.id);
                   const isSelected = selectedField === f.id;
@@ -339,7 +478,7 @@ const Mentor: React.FC = () => {
                     </div>
                   ) : (
                     <button
-                      disabled={connectingId === featuredMentor.id}
+                      disabled={connectingId === featuredMentor.id || state.isOffline}
                       onClick={() => handleConnect({
                         id: featuredMentor.id,
                         name: featuredMentor.name,
@@ -351,7 +490,7 @@ const Mentor: React.FC = () => {
                       })}
                       className="w-full py-3.5 bg-yellow text-navy rounded-2xl font-bold text-sm active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {connectingId === featuredMentor.id ? 'Sending…' : 'Connect with this mentor'}
+                      {state.isOffline ? 'Offline' : connectingId === featuredMentor.id ? 'Sending…' : 'Connect with this mentor'}
                     </button>
                   )}
                 </motion.div>
@@ -426,11 +565,11 @@ const Mentor: React.FC = () => {
                             </span>
                           ) : (
                             <button
-                              disabled={connectingId === m.id}
+                              disabled={connectingId === m.id || state.isOffline}
                               onClick={(e) => { e.stopPropagation(); handleConnect(m); }}
                               className="px-5 py-2.5 bg-navy text-white rounded-full font-bold text-xs active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              {connectingId === m.id ? 'Sending…' : 'Connect'}
+                              {state.isOffline ? 'Offline' : connectingId === m.id ? 'Sending…' : 'Connect'}
                             </button>
                           )}
                         </div>
@@ -450,6 +589,165 @@ const Mentor: React.FC = () => {
                     <p className="text-green-700/60 text-xs font-medium leading-relaxed">All mentors undergo strict vetting and safeguarding training.</p>
                  </div>
               </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Skip Option */}
+                  <button 
+                    onClick={() => setMatchStep(0)}
+                    className="text-navy/50 font-bold text-sm w-full text-center hover:text-navy transition-colors flex items-center justify-center gap-2"
+                  >
+                    I know what I'm looking for &rarr; Browse all mentors
+                  </button>
+                  
+                  {/* Quiz Screens */}
+                  <div className="bg-white rounded-[32px] p-6 shadow-sm border border-navy/5 relative min-h-[300px]">
+                      {matchStep === 1 && (
+                        <div key="step1">
+                          <div className="flex items-center gap-3 mb-6">
+                             <div className="text-3xl animate-pulse">🤖</div>
+                             <h3 className="text-xl font-bold text-navy leading-tight">What's the one thing you most want to change in the next 3 months?</h3>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                             {QUIZ_GOALS.map(g => (
+                               <button 
+                                  key={g.id}
+                                  onClick={() => {
+                                    setMatchAnswers(prev => ({...prev, goal: g.id}));
+                                    setMatchStep(2);
+                                  }}
+                                  className="p-4 bg-off-white border border-navy/5 rounded-2xl text-left active:scale-95 transition-transform"
+                               >
+                                 <span className="text-2xl block mb-2">{g.emoji}</span>
+                                 <span className="font-bold text-navy text-[13px] leading-tight">{g.label}</span>
+                               </button>
+                             ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {matchStep === 2 && (
+                        <div key="step2">
+                          <div className="flex items-center gap-3 mb-6">
+                             <div className="text-3xl animate-pulse">🤖</div>
+                             <h3 className="text-xl font-bold text-navy leading-tight">How do you prefer to get guidance?</h3>
+                          </div>
+                          <div className="flex flex-col gap-3">
+                             {QUIZ_STYLES.map(s => (
+                               <button 
+                                  key={s.id}
+                                  onClick={() => {
+                                    setMatchAnswers(prev => ({...prev, style: s.id}));
+                                    setMatchStep(3);
+                                  }}
+                                  className="p-4 bg-off-white border border-navy/5 rounded-2xl text-left active:scale-95 transition-transform flex items-center gap-4"
+                               >
+                                 <span className="text-2xl">{s.emoji}</span>
+                                 <span className="font-bold text-navy text-sm">{s.label}</span>
+                               </button>
+                             ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {matchStep === 3 && (
+                        <div key="step3">
+                          <div className="flex items-center gap-3 mb-6">
+                             <div className="text-3xl animate-pulse">🤖</div>
+                             <h3 className="text-xl font-bold text-navy leading-tight">How often can you commit to meeting?</h3>
+                          </div>
+                          <div className="flex flex-col gap-3">
+                             {QUIZ_AVAILABILITY.map(a => (
+                               <button 
+                                  key={a.id}
+                                  onClick={() => {
+                                    const answers = { ...matchAnswers, availability: a.id };
+                                    setMatchAnswers(answers);
+                                    handleQuizSubmit(answers);
+                                  }}
+                                  className="p-4 bg-off-white border border-navy/5 rounded-2xl text-left active:scale-95 transition-transform flex items-center gap-4"
+                               >
+                                 <span className="text-2xl">{a.emoji}</span>
+                                 <span className="font-bold text-navy text-sm">{a.label}</span>
+                               </button>
+                             ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {matchStep === 4 && (
+                        <div key="step4">
+                          {loadingMatches ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-center space-y-5">
+                              <div className="text-5xl animate-bounce">🤖</div>
+                              <div className="font-bold text-navy text-lg">Jabari is finding your matches...</div>
+                              <div className="flex gap-1.5 mt-2 justify-center">
+                                <div className="w-2.5 h-2.5 bg-yellow rounded-full animate-pulse"></div>
+                                <div className="w-2.5 h-2.5 bg-yellow rounded-full animate-pulse delay-150"></div>
+                                <div className="w-2.5 h-2.5 bg-yellow rounded-full animate-pulse delay-300"></div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-6">
+                              <div className="flex items-center gap-3 mb-2">
+                                 <div className="text-3xl">🎉</div>
+                                 <h3 className="text-xl font-bold text-navy">Your Top Matches</h3>
+                              </div>
+                              {topMatches.length === 0 ? (
+                                <p className="text-center text-navy/50 py-8 text-sm font-medium">No matches found right now. Try browsing all mentors!</p>
+                              ) : (
+                                topMatches.map((m, idx) => (
+                                  <div key={m.id} className="bg-off-white p-5 rounded-3xl border border-navy/5 relative overflow-hidden">
+                                    {idx === 0 && <div className="absolute top-0 right-0 bg-yellow text-navy text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-xl z-10">Top Match</div>}
+                                    
+                                    <div className="flex gap-4">
+                                      <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-2xl shadow-sm flex-shrink-0">
+                                        {m.icon.length < 5 ? m.icon : <User size={22} className="text-navy/40" />}
+                                      </div>
+                                      <div className="flex-1 min-w-0">
+                                        <h4 className="font-bold text-navy truncate">{m.name}</h4>
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                          {m.expertise.slice(0, 2).map(tag => (
+                                            <span key={tag} className="bg-navy/5 text-navy/50 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest">
+                                              {tag}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="mt-4 p-4 bg-white rounded-2xl border border-navy/5 relative">
+                                      <div className="absolute -top-2 -left-2 text-2xl bg-white rounded-full leading-none shadow-sm p-0.5">🤖</div>
+                                      <p className="text-xs text-navy/70 font-medium leading-relaxed pl-4">
+                                         <span className="font-bold text-navy">{m.name}</span> specialises in <span className="font-bold text-navy">{m.expertise[0] || 'general mentoring'}</span> and has helped students <span className="font-bold text-navy">{goalReasonMap[matchAnswers.goal] || 'achieve their goals'}</span>.
+                                      </p>
+                                    </div>
+                                    
+                                    <div className="mt-4">
+                                      {isCurrentMatch(m.id) ? (
+                                        <div className="w-full py-3.5 bg-navy/5 text-navy/40 rounded-xl font-bold text-sm text-center">
+                                          Connected ✓
+                                        </div>
+                                      ) : (
+                                        <button
+                                          disabled={connectingId === m.id}
+                                          onClick={(e) => { e.stopPropagation(); handleConnect(m); }}
+                                          className="w-full py-3.5 bg-navy text-white rounded-xl font-bold text-sm active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                          {connectingId === m.id ? 'Sending Request…' : 'Connect'}
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                  </div>
+                </div>
+              )}
             </motion.div>
           ) : (
             <motion.div 
@@ -460,6 +758,22 @@ const Mentor: React.FC = () => {
               className="space-y-8"
             >
               {/* My Mentor Hero Card */}
+              {showRematch && (
+                <div className="bg-red-50 rounded-[32px] p-6 border border-red-100 shadow-sm relative z-10 mb-6">
+                  <h4 className="text-red-900 font-bold mb-2">Finding the right fit</h4>
+                  <p className="text-red-700/80 text-sm mb-4">
+                    Sometimes it takes a few tries to find the right mentor. Would you like to explore other mentors?
+                  </p>
+                  <div className="flex gap-3">
+                    <button onClick={handleRematch} className="bg-red-100 text-red-800 px-4 py-2 rounded-xl text-xs font-bold active:scale-95 transition-transform">
+                      Browse Again
+                    </button>
+                    <button onClick={() => setShowRematch(false)} className="bg-white text-navy/60 px-4 py-2 rounded-xl text-xs font-bold active:scale-95 transition-transform border border-navy/10">
+                      Stay with {myMatch?.mentor.name}
+                    </button>
+                  </div>
+                </div>
+              )}
               {myMatch && (
                 <div className="bg-white rounded-[40px] overflow-hidden border border-navy/5 shadow-xl shadow-navy/5 group">
                    <div className="bg-navy p-8 text-white flex justify-between items-start">

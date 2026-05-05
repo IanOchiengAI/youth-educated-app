@@ -88,7 +88,7 @@ export async function fetchAvailableMentors(): Promise<AvailableMentor[]> {
       avatar_url,
       profiles!inner ( name )
     `)
-    .eq('is_available', true);
+    .eq('is_verified', true);
 
   if (error) {
     console.error('[mentoring] fetchAvailableMentors failed:', error.message);
@@ -113,6 +113,20 @@ export async function requestMentorMatch(
   studentId: string,
   mentorId: string
 ): Promise<{ id: string } | null> {
+  // Idempotency guard — prevent duplicate pending/active matches
+  const { data: existing } = await supabase
+    .from('mentor_matches')
+    .select('id, status')
+    .eq('student_id', studentId)
+    .eq('mentor_id', mentorId)
+    .in('status', ['pending', 'active'])
+    .maybeSingle();
+
+  if (existing) {
+    console.log('[mentoring] requestMentorMatch: match already exists, returning existing id');
+    return { id: existing.id };
+  }
+
   const { data, error } = await supabase
     .from('mentor_matches')
     .insert({
@@ -124,7 +138,7 @@ export async function requestMentorMatch(
     .single();
 
   if (error) {
-    console.error('[mentoring] requestMentorMatch failed:', error.message);
+    console.error('[mentoring] requestMentorMatch:', error.message);
     return null;
   }
 

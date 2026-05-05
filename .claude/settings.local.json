@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "PowerShell(cd \"F:\\\\Work\\\\App\\\\YE\\\\youth-educated-app\"; Start-Process -FilePath \"cmd.exe\" -ArgumentList \"/c npm run dev\" -WindowStyle Normal; Start-Sleep -Seconds 5; $port = 3000; $tcp = Test-NetConnection -ComputerName localhost -Port $port -InformationLevel Quiet; Write-Output \"Port 3000 listening: $tcp\")",
+      "mcp__Claude_Preview__preview_start"
+    ]
+  }
+}
