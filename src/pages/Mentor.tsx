@@ -1,39 +1,212 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Users, 
   MessageCircle, 
   Search, 
-  Star, 
   ShieldCheck, 
   Calendar, 
-  Award,
-  BookOpen,
-  Briefcase,
-  CheckCircle2,
-  Lock,
   Sparkles,
-  Target,
-  WifiOff
+  WifiOff,
+  User
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { requestMentorMatch } from '../lib/mentoring';
+import { MENTOR_FIELDS } from '../constants';
+import { FALLBACK_MENTORS } from '../data/mentors';
+
+interface MentorProfile {
+  id: string;
+  name: string;
+  field: string;
+  expertise: string[];
+  bio: string;
+  icon: string;
+  county: string | null;
+}
+
+interface FeaturedMentorData {
+  id: string;
+  name: string;
+  expertise: string[];
+  bio: string;
+  icon: string;
+  county: string | null;
+  featured_quote: string | null;
+}
+
+interface MatchData {
+  id: string;
+  mentor: MentorProfile;
+}
 
 const Mentor: React.FC = () => {
   const { state } = useAppContext();
   const navigate = useNavigate();
-  const [isMatched, setIsMatched] = useState(false); // Toggle for demo
+  const [isMatched, setIsMatched] = useState(false);
+  const [mentors, setMentors] = useState<MentorProfile[]>([]);
+  const [myMatch, setMyMatch] = useState<MatchData | null>(null);
+  const [selectedField, setSelectedField] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [connectingId, setConnectingId] = useState<string | null>(null);
+  const [featuredMentor, setFeaturedMentor] = useState<FeaturedMentorData | null>(null);
 
-  const MOCK_MENTORS = [
-    { id: '1', name: 'Dr. Jane G.', field: 'Medicine / Health', exp: '12 years', rating: 4.9, icon: '👩‍⚕️', bio: "Passionate about youth health and SRH education." },
-    { id: '2', name: 'Eng. Kevin O.', field: 'Software / STEM', exp: '8 years', rating: 4.8, icon: '👨‍💻', bio: "Building the next generation of Kenyan tech leaders." },
-    { id: '3', name: 'Sarah W.', field: 'Finance / Business', exp: '15 years', rating: 5.0, icon: '👩‍💼', bio: "Helping youth master their money and start businesses." },
-  ];
+  const listRef = useRef<HTMLDivElement>(null);
 
-  const ENDORSEMENTS = [
-    { title: 'Critical Thinker', date: 'Oct 2025', from: 'Amara AI', icon: <Sparkles size={16} /> },
-    { title: 'Goal Crusher', date: 'Sept 2025', from: 'Dr. Jane G.', icon: <Target size={16} /> },
-  ];
+  // Fetch mentors, featured mentor, and match status
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!state.user?.id || state.isOffline || !isSupabaseConfigured) {
+        setMentors(FALLBACK_MENTORS.map(m => ({
+          ...m,
+          field: m.expertise[0] || 'General',
+        })));
+        setFeaturedMentor(null);
+        setLoading(false);
+        return;
+      }
+      
+      try {
+        // 1. Fetch available mentors
+        const { data: mentorData, error: mentorError } = await supabase
+          .from('mentor_profiles')
+          .select(`
+            id,
+            bio,
+            expertise,
+            avatar_url,
+            county,
+            profiles:id (
+              name
+            )
+          `)
+          .eq('is_verified', true);
+
+        if (!mentorError && mentorData) {
+          const formatted = mentorData.map((m: any) => ({
+            id: m.id,
+            name: m.profiles?.name || 'Mentor',
+            field: m.expertise?.[0] || 'General',
+            expertise: m.expertise || [],
+            bio: m.bio || 'Ready to help you succeed.',
+            icon: m.avatar_url || '👩‍🏫',
+            county: m.county || null,
+          }));
+          setMentors(formatted);
+        }
+
+        // 2. Fetch featured mentor
+        const { data: featuredData, error: featuredError } = await supabase
+          .from('mentor_profiles')
+          .select(`
+            id,
+            bio,
+            expertise,
+            avatar_url,
+            county,
+            featured_quote,
+            profiles:id (
+              name
+            )
+          `)
+          .eq('is_featured', true)
+          .eq('is_verified', true)
+          .order('featured_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (!featuredError && featuredData) {
+          setFeaturedMentor({
+            id: featuredData.id,
+            name: (featuredData as any).profiles?.name || 'Mentor',
+            expertise: featuredData.expertise || [],
+            bio: featuredData.bio || '',
+            icon: featuredData.avatar_url || '👩‍🏫',
+            county: featuredData.county || null,
+            featured_quote: featuredData.featured_quote || null,
+          });
+        }
+
+        // 3. Fetch active match for current user
+        const { data: matchData, error: matchError } = await supabase
+          .from('mentor_matches')
+          .select(`
+            id,
+            mentor_id,
+            profiles!mentor_matches_mentor_id_fkey (
+              name
+            ),
+            mentor_profiles!mentor_matches_mentor_id_fkey (
+              bio,
+              expertise,
+              avatar_url
+            )
+          `)
+          .eq('student_id', state.user.id)
+          .eq('status', 'active')
+          .maybeSingle();
+
+        if (!matchError && matchData && matchData.profiles) {
+          setMyMatch({
+            id: matchData.id,
+            mentor: {
+              id: matchData.mentor_id,
+              name: (matchData.profiles as any)?.name || 'Mentor',
+              field: (matchData.mentor_profiles as any)?.expertise?.[0] || 'General',
+              expertise: (matchData.mentor_profiles as any)?.expertise || [],
+              bio: (matchData.mentor_profiles as any)?.bio || '',
+              icon: (matchData.mentor_profiles as any)?.avatar_url || '👩‍🏫',
+              county: null,
+            }
+          });
+          setIsMatched(true);
+        }
+      } catch (err) {
+        console.error('Failed to fetch mentor data', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [state.user?.id, state.isOffline]);
+
+  // Count mentors per field category
+  const countByField = (fieldId: string) =>
+    mentors.filter(m =>
+      m.expertise.some(e => e.toLowerCase().includes(fieldId))
+    ).length;
+
+  // Filter mentors by selected category
+  const filteredMentors = mentors.filter(m => {
+    if (!selectedField) return true;
+    return m.expertise.some(e => e.toLowerCase().includes(selectedField));
+  });
+
+  // Handle category tile tap
+  const handleFieldSelect = (fieldId: string) => {
+    setSelectedField(fieldId);
+    setTimeout(() => {
+      listRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
+  // Check if a mentor is the current match
+  const isCurrentMatch = (mentorId: string) => myMatch?.mentor.id === mentorId;
+
+  // Handle connect
+  const handleConnect = async (mentor: MentorProfile) => {
+    if (!state.user?.id || connectingId) return;
+    setConnectingId(mentor.id);
+    const result = await requestMentorMatch(state.user.id, mentor.id);
+    setConnectingId(null);
+    if (result) {
+      setMyMatch({ id: result.id, mentor });
+      setIsMatched(true);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-off-white pb-32">
@@ -49,31 +222,32 @@ const Mentor: React.FC = () => {
           </div>
         </div>
 
-        {/* Toggle just for demonstration of the two states */}
-        <div className="flex bg-white/5 rounded-full p-1 border border-white/10 max-w-xs mx-auto mb-8 relative z-10">
-          <button 
-            onClick={() => setIsMatched(false)}
-            className={`flex-1 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${!isMatched ? 'bg-yellow text-navy' : 'text-white/40'}`}
-          >
-            Browse Mentors
-          </button>
-          <button 
-            onClick={() => setIsMatched(true)}
-            className={`flex-1 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${isMatched ? 'bg-yellow text-navy' : 'text-white/40'}`}
-          >
-            My Mentor
-          </button>
-        </div>
+        {myMatch && (
+          <div className="flex bg-white/5 rounded-full p-1 border border-white/10 max-w-xs mx-auto mb-8 relative z-10">
+            <button 
+              onClick={() => setIsMatched(false)}
+              className={`flex-1 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${!isMatched ? 'bg-yellow text-navy' : 'text-white/40'}`}
+            >
+              Browse Mentors
+            </button>
+            <button 
+              onClick={() => setIsMatched(true)}
+              className={`flex-1 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${isMatched ? 'bg-yellow text-navy' : 'text-white/40'}`}
+            >
+              My Mentor
+            </button>
+          </div>
+        )}
       </header>
 
       {state.isOffline && (
         <div className="mx-6 -mt-4 mb-2 relative z-30 bg-yellow/90 px-4 py-2.5 rounded-2xl flex items-center justify-center gap-2 text-navy text-[11px] font-bold uppercase tracking-widest shadow-sm">
           <WifiOff size={14} />
-          Offline — Showing saved mentors
+          Offline — Displaying cached data
         </div>
       )}
 
-      <main className="px-6 -mt-8 space-y-8 relative z-20">
+      <main className="px-6 -mt-8 space-y-8 relative z-20 max-w-md mx-auto">
         <AnimatePresence mode="wait">
           {!isMatched ? (
             <motion.div 
@@ -83,49 +257,187 @@ const Mentor: React.FC = () => {
               exit={{ opacity: 0, y: -10 }}
               className="space-y-6"
             >
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-navy/20" size={20} />
-                <input 
-                  type="text"
-                  placeholder="Search by field (e.g. Medicine)..."
-                  className="w-full bg-white border border-navy/5 rounded-[32px] pl-12 pr-4 py-5 text-navy outline-none focus:border-yellow shadow-xl shadow-navy/5 font-medium placeholder:text-navy/20"
-                />
-              </div>
+              {/* Safeguarding Badge */}
               <p className="text-center text-navy/40 text-xs font-medium py-2 flex items-center justify-center gap-1.5">
-                <CheckCircle2 size={14} className="text-green-600" />
+                <ShieldCheck size={14} className="text-green-600" />
                 All mentors are vetted and safeguarding-trained
               </p>
 
-              {/* Recommended Mentors */}
-              <div className="space-y-4">
-                <h2 className="text-xl font-bold text-navy">Recommended for You</h2>
-                <div className="space-y-4">
-                  {MOCK_MENTORS.map((m) => (
-                    <div key={m.id} className="bg-white p-6 rounded-[32px] border border-navy/5 shadow-sm flex items-center gap-5 group active:scale-[0.98] transition-all">
-                      <div className="w-16 h-16 bg-off-white rounded-3xl flex items-center justify-center text-3xl shadow-inner">
-                        {m.icon}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-bold text-navy">{m.name}</h3>
-                          <div className="flex items-center gap-0.5 text-yellow-600">
-                             <Star size={12} className="fill-current" />
-                             <span className="text-[10px] font-black">{m.rating}</span>
+              {/* ─── 1. CATEGORY GRID (2×N) ─── */}
+              <div className="grid grid-cols-2 gap-3">
+                {MENTOR_FIELDS.map(f => {
+                  const count = countByField(f.id);
+                  const isSelected = selectedField === f.id;
+                  return (
+                    <button
+                      key={f.id}
+                      onClick={() => handleFieldSelect(f.id)}
+                      className={`bg-gradient-to-br ${f.color} border ${f.border} rounded-[28px] p-5 text-left transition-transform active:scale-95
+                        ${isSelected ? 'ring-2 ring-yellow ring-offset-2 shadow-lg' : ''}
+                        ${count === 0 ? 'opacity-50' : ''}`}
+                    >
+                      <span className="text-[32px] leading-none block mb-2">{f.emoji}</span>
+                      <span className="text-sm font-bold text-navy block">{f.label}</span>
+                      <span className="text-[11px] text-navy/40 font-medium block mt-0.5">
+                        {count === 0 ? 'Coming soon' : `${count} mentor${count !== 1 ? 's' : ''}`}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* ─── 2. FEATURED MENTOR CARD ─── */}
+              {!state.isOffline && featuredMentor && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-navy rounded-[32px] p-6 text-white relative overflow-hidden"
+                >
+                  {/* Featured badge */}
+                  <div className="flex items-center justify-between mb-5">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Featured This Week</span>
+                    <span className="bg-yellow text-navy px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
+                      ⭐ Featured
+                    </span>
+                  </div>
+
+                  {/* Avatar + Info */}
+                  <div className="flex flex-col items-center text-center mb-4">
+                    <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center text-4xl border-2 border-white/20 mb-3">
+                      {featuredMentor.icon.length < 5 ? featuredMentor.icon : <User size={36} className="text-white/60" />}
+                    </div>
+                    <h3 className="text-2xl font-bold">{featuredMentor.name}</h3>
+                    <div className="flex flex-wrap justify-center gap-1.5 mt-2">
+                      {featuredMentor.expertise.slice(0, 2).map(tag => (
+                        <span key={tag} className="bg-white/10 text-white/70 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest">
+                          {tag}
+                        </span>
+                      ))}
+                      {featuredMentor.county && (
+                        <span className="bg-yellow/10 text-yellow px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest">
+                          📍 {featuredMentor.county}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Bio */}
+                  <p className="text-sm text-white/60 line-clamp-2 text-center mb-4 font-nunito">{featuredMentor.bio}</p>
+
+                  {/* Featured Quote */}
+                  {featuredMentor.featured_quote && (
+                    <div className="border-t border-white/10 pt-4 mb-4">
+                      <p className="text-[11px] text-white/30 font-medium mb-1">One thing I wish I knew at your age…</p>
+                      <p className="text-sm text-white/80 italic font-nunito leading-relaxed">"{featuredMentor.featured_quote}"</p>
+                    </div>
+                  )}
+
+                  {/* Connect Button */}
+                  {isCurrentMatch(featuredMentor.id) ? (
+                    <div className="w-full py-3.5 bg-white/10 text-white/60 rounded-2xl font-bold text-sm text-center">
+                      Your Mentor ✓
+                    </div>
+                  ) : (
+                    <button
+                      disabled={connectingId === featuredMentor.id}
+                      onClick={() => handleConnect({
+                        id: featuredMentor.id,
+                        name: featuredMentor.name,
+                        field: featuredMentor.expertise[0] || 'General',
+                        expertise: featuredMentor.expertise,
+                        bio: featuredMentor.bio,
+                        icon: featuredMentor.icon,
+                        county: featuredMentor.county,
+                      })}
+                      className="w-full py-3.5 bg-yellow text-navy rounded-2xl font-bold text-sm active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {connectingId === featuredMentor.id ? 'Sending…' : 'Connect with this mentor'}
+                    </button>
+                  )}
+                </motion.div>
+              )}
+
+              {/* ─── 3. FILTERED MENTOR LIST ─── */}
+              <div ref={listRef} className="space-y-4">
+                {/* Heading + "All Fields" reset */}
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-navy">
+                    {selectedField
+                      ? `${MENTOR_FIELDS.find(f => f.id === selectedField)?.label || ''} Mentors`
+                      : 'All Mentors'}
+                  </h2>
+                  {selectedField && (
+                    <button
+                      onClick={() => setSelectedField(null)}
+                      className="px-3 py-1.5 bg-navy/5 text-navy/50 rounded-full text-[11px] font-bold uppercase tracking-widest hover:bg-navy/10 transition-colors"
+                    >
+                      All Fields
+                    </button>
+                  )}
+                </div>
+                
+                {loading ? (
+                  <div className="flex justify-center p-8">
+                    <div className="w-8 h-8 border-4 border-yellow border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                ) : filteredMentors.length === 0 ? (
+                  <div className="bg-white p-8 rounded-[32px] border border-navy/5 text-center shadow-sm">
+                    <p className="text-sm font-medium text-navy/40">No mentors available in this category yet.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredMentors.map((m, index) => (
+                      <motion.div
+                        key={m.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.06, duration: 0.3 }}
+                        onClick={() => navigate(`/mentor/${m.id}`)}
+                        className="bg-white p-5 rounded-[28px] border border-navy/5 shadow-sm cursor-pointer active:scale-[0.98] hover:border-navy/10 transition-all"
+                      >
+                        <div className="flex items-start gap-4">
+                          {/* Avatar */}
+                          <div className="w-14 h-14 bg-off-white rounded-2xl flex items-center justify-center text-2xl shadow-inner flex-shrink-0">
+                            {m.icon.length < 5 ? m.icon : <User size={22} className="text-navy/40" />}
+                          </div>
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-navy truncate">{m.name}</h3>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {m.expertise.slice(0, 3).map(tag => (
+                                <span key={tag} className="bg-navy/5 text-navy/50 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest">
+                                  {tag}
+                                </span>
+                              ))}
+                            </div>
+                            {m.county && (
+                              <p className="text-[11px] text-navy/30 font-medium mt-1">📍 {m.county}</p>
+                            )}
+                            <p className="text-xs text-navy/50 line-clamp-2 mt-1.5 font-nunito">{m.bio}</p>
                           </div>
                         </div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-navy/30 mb-1">{m.field}</p>
-                        <p className="text-xs text-navy/60 line-clamp-1">{m.bio}</p>
-                      </div>
-                      <button 
-                        onClick={() => setIsMatched(true)}
-                        className="bg-navy text-white rounded-full px-6 py-3 font-bold text-sm active:scale-95 transition"
-                      >
-                         Connect
-                      </button>
-                    </div>
-                  ))}
-                </div>
+
+                        {/* Connect Button */}
+                        <div className="flex justify-end mt-3">
+                          {isCurrentMatch(m.id) ? (
+                            <span className="px-5 py-2.5 bg-navy/5 text-navy/40 rounded-full font-bold text-xs">
+                              Connected ✓
+                            </span>
+                          ) : (
+                            <button
+                              disabled={connectingId === m.id}
+                              onClick={(e) => { e.stopPropagation(); handleConnect(m); }}
+                              className="px-5 py-2.5 bg-navy text-white rounded-full font-bold text-xs active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {connectingId === m.id ? 'Sending…' : 'Connect'}
+                            </button>
+                          )}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Verified Badge Section */}
@@ -148,75 +460,45 @@ const Mentor: React.FC = () => {
               className="space-y-8"
             >
               {/* My Mentor Hero Card */}
-              <div className="bg-white rounded-[40px] overflow-hidden border border-navy/5 shadow-xl shadow-navy/5 group">
-                 <div className="bg-navy p-8 text-white flex justify-between items-start">
-                    <div className="space-y-1">
-                       <span className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-600">Your Mentor</span>
-                       <h3 className="text-2xl font-bold">Dr. Jane G.</h3>
-                       <p className="text-white/40 text-xs font-bold uppercase tracking-widest">Medicine / Health</p>
-                    </div>
-                    <div className="w-16 h-16 bg-white/10 rounded-3xl flex items-center justify-center text-4xl border border-white/10 group-hover:scale-110 transition-transform">
-                       👩‍⚕️
-                    </div>
-                 </div>
-                 <div className="p-8 space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                       <div className="bg-off-white p-4 rounded-3xl text-center space-y-1">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-navy/30">Sessions</p>
-                          <p className="text-lg font-bold text-navy">4 / 10</p>
-                       </div>
-                       <div className="bg-off-white p-4 rounded-3xl text-center space-y-1">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-navy/30">Next Sync</p>
-                          <p className="text-lg font-bold text-navy">Tomorrow</p>
-                       </div>
-                    </div>
-                    
-                    <div className="flex gap-3">
-                       <button 
-                         onClick={() => navigate('/chat')}
-                         className="flex-1 py-4 bg-navy text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-navy/20"
-                       >
-                          <MessageCircle size={20} />
-                          Message
-                       </button>
-                       <button onClick={() => navigate('/calendar')} className="w-14 h-14 bg-off-white border border-navy/5 rounded-2xl flex items-center justify-center text-navy hover:bg-navy hover:text-white transition-all">
-                          <Calendar size={20} />
-                       </button>
-                    </div>
-                 </div>
-              </div>
-
-              {/* Endorsement Cards */}
-              <section className="space-y-4">
-                 <div className="flex justify-between items-center px-1">
-                    <h2 className="text-xl font-bold text-navy">Endorsements</h2>
-                    <div className="flex items-center gap-1.5 bg-yellow/20 px-3 py-1 rounded-full text-[9px] font-black text-yellow-700 uppercase tracking-widest">
-                       Earned Rewards
-                    </div>
-                 </div>
-                 <div className="grid grid-cols-2 gap-4">
-                    {ENDORSEMENTS.map((e, i) => (
-                       <div key={i} className="bg-white p-5 rounded-[32px] border border-navy/5 shadow-sm space-y-3 relative overflow-hidden group hover:border-yellow transition-colors">
-                          <div className="absolute -top-4 -right-4 w-12 h-12 bg-yellow/10 rounded-full opacity-50 group-hover:scale-150 transition-transform" />
-                          <div className="w-10 h-10 bg-off-white rounded-2xl flex items-center justify-center text-navy">
-                             {e.icon}
-                          </div>
-                          <div>
-                             <h4 className="font-bold text-navy text-sm">{e.title}</h4>
-                             <p className="text-[9px] text-navy/30 font-bold uppercase mt-0.5">By {e.from}</p>
-                          </div>
-                          <div className="pt-2 flex items-center gap-1.5 text-[9px] font-black text-green-600 uppercase">
-                             <CheckCircle2 size={12} /> Verified
-                          </div>
-                       </div>
-                    ))}
-                    {/* Locked Endorsement Slot */}
-                    <div className="bg-off-white p-5 rounded-[32px] border border-dashed border-navy/10 flex flex-col items-center justify-center gap-3 opacity-40">
-                       <Lock size={20} className="text-navy/20" />
-                       <span className="text-[9px] font-black uppercase tracking-widest text-navy/20">Next Slot Locked</span>
-                    </div>
-                 </div>
-              </section>
+              {myMatch && (
+                <div className="bg-white rounded-[40px] overflow-hidden border border-navy/5 shadow-xl shadow-navy/5 group">
+                   <div className="bg-navy p-8 text-white flex justify-between items-start">
+                      <div className="space-y-1">
+                         <span className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-600">Your Mentor</span>
+                         <h3 className="text-2xl font-bold">{myMatch.mentor.name}</h3>
+                         <p className="text-white/40 text-xs font-bold uppercase tracking-widest">{myMatch.mentor.field}</p>
+                      </div>
+                      <div className="w-16 h-16 bg-white/10 rounded-3xl flex items-center justify-center text-4xl border border-white/10 group-hover:scale-110 transition-transform">
+                         {myMatch.mentor.icon.length < 5 ? myMatch.mentor.icon : <User size={32} />}
+                      </div>
+                   </div>
+                   <div className="p-8 space-y-6">
+                      <div className="grid grid-cols-2 gap-4">
+                         <div className="bg-off-white p-4 rounded-3xl text-center space-y-1">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-navy/30">Sessions</p>
+                            <p className="text-lg font-bold text-navy">Active</p>
+                         </div>
+                         <div className="bg-off-white p-4 rounded-3xl text-center space-y-1">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-navy/30">Next Sync</p>
+                            <p className="text-lg font-bold text-navy">Scheduled</p>
+                         </div>
+                      </div>
+                      
+                      <div className="flex gap-3">
+                         <button 
+                           onClick={() => navigate('/chat')}
+                           className="flex-1 py-4 bg-navy text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-navy/20"
+                         >
+                            <MessageCircle size={20} />
+                            Message
+                         </button>
+                         <button onClick={() => navigate('/calendar')} className="w-14 h-14 bg-off-white border border-navy/5 rounded-2xl flex items-center justify-center text-navy hover:bg-navy hover:text-white transition-all">
+                            <Calendar size={20} />
+                         </button>
+                      </div>
+                   </div>
+                </div>
+              )}
 
               {/* Quick Wisdom */}
               <div className="bg-yellow rounded-[40px] p-8 text-navy space-y-4 shadow-xl shadow-yellow/20">

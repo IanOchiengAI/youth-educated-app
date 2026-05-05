@@ -1,5 +1,5 @@
-import React, { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import React, { lazy, Suspense, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AppProvider, useAppContext } from './AppContext';
 import Layout from './components/Layout';
 import RoleRoute from './components/RoleRoute';
@@ -29,6 +29,7 @@ const DSLDashboard    = lazy(() => import('./pages/DSLDashboard'));
 const MentorDashboard = lazy(() => import('./pages/MentorDashboard'));
 const ArticleDetail   = lazy(() => import('./pages/ArticleDetail'));
 const PrivacyPolicy   = lazy(() => import('./pages/PrivacyPolicy'));
+const MentorProfile   = lazy(() => import('./pages/MentorProfile'));
 
 const PageLoader: React.FC = () => (
   <div className="flex items-center justify-center w-full h-full min-h-screen bg-off-white">
@@ -52,6 +53,22 @@ const PageWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   </motion.div>
 );
 
+// Reads role AFTER React flushes all batched state updates (dispatch + navigate race-condition safe)
+const PostLoginRedirect: React.FC = () => {
+  const { state } = useAppContext();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!state.user) { navigate('/signin', { replace: true }); return; }
+    if (state.user.role === 'mentor') navigate('/mentor-dashboard', { replace: true });
+    else if (state.user.role === 'admin')  navigate('/admin',            { replace: true });
+    else if (state.user.role === 'dsl')    navigate('/dsl',              { replace: true });
+    else                                   navigate('/dashboard',         { replace: true });
+  }, [state.user?.role]);
+
+  return <PageLoader />;
+};
+
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { state } = useAppContext();
   const location = useLocation();
@@ -70,7 +87,8 @@ const AnimatedRoutes = () => {
       <div key={location.pathname} className="w-full h-full">
         <Suspense fallback={<PageLoader />}>
           <Routes location={location}>
-            <Route path="/" element={state.user ? <Navigate to="/dashboard" replace /> : <Navigate to="/signin" replace />} />
+            <Route path="/" element={<PostLoginRedirect />} />
+            <Route path="/redirect" element={<PostLoginRedirect />} />
             <Route path="/onboarding" element={<PageWrapper><Onboarding /></PageWrapper>} />
             <Route path="/signin"     element={<PageWrapper><SignIn /></PageWrapper>} />
 
@@ -84,6 +102,7 @@ const AnimatedRoutes = () => {
             <Route path="/career-mapper"   element={<ProtectedRoute><PageWrapper><CareerMapper /></PageWrapper></ProtectedRoute>} />
             <Route path="/opportunities"   element={<ProtectedRoute><PageWrapper><Opportunities /></PageWrapper></ProtectedRoute>} />
             <Route path="/mentor"          element={<ProtectedRoute><PageWrapper><Mentor /></PageWrapper></ProtectedRoute>} />
+            <Route path="/mentor/:mentorId" element={<ProtectedRoute><PageWrapper><MentorProfile /></PageWrapper></ProtectedRoute>} />
             <Route path="/goals"           element={<ProtectedRoute><PageWrapper><Goals /></PageWrapper></ProtectedRoute>} />
             <Route path="/profile"         element={<ProtectedRoute><PageWrapper><Profile /></PageWrapper></ProtectedRoute>} />
             <Route path="/calendar"        element={<ProtectedRoute><PageWrapper><SessionCalendar /></PageWrapper></ProtectedRoute>} />
