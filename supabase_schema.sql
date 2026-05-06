@@ -326,8 +326,11 @@ ALTER TABLE circle_reactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE opportunities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE saved_opportunities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE safeguarding_cases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE safeguarding_flags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE offline_sync_queue ENABLE ROW LEVEL SECURITY;
 ALTER TABLE analytics_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE lifekit_articles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE career_questions ENABLE ROW LEVEL SECURITY;
 
 -- POLICIES
 
@@ -364,6 +367,10 @@ CREATE POLICY "DSL can view flagged conversations" ON ai_conversations FOR SELEC
 CREATE POLICY "DSL and Admin only view cases" ON safeguarding_cases FOR SELECT
   USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'dsl')));
 CREATE POLICY "Users cannot view safeguarding cases" ON safeguarding_cases FOR ALL TO PUBLIC USING (FALSE);
+
+CREATE POLICY "DSL and Admin only view flags" ON safeguarding_flags FOR SELECT
+  USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'dsl')));
+CREATE POLICY "Users cannot view safeguarding flags" ON safeguarding_flags FOR ALL TO PUBLIC USING (FALSE);
 
 -- Offline Sync Queue
 CREATE POLICY "Users can manage own sync queue" ON offline_sync_queue FOR ALL USING (auth.uid() = user_id);
