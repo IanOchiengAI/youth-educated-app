@@ -294,9 +294,9 @@ RETURNS TRIGGER AS $$
 BEGIN
   INSERT INTO public.profiles (id, joined_at)
   VALUES (NEW.id, NOW());
-  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+REVOKE EXECUTE ON FUNCTION handle_new_user() FROM PUBLIC;
 
 CREATE TRIGGER tr_handle_new_user
 AFTER INSERT ON auth.users
@@ -403,6 +403,15 @@ CREATE POLICY "Users can view their mentor matches" ON mentor_matches FOR SELECT
 CREATE POLICY "Users can view their mentor sessions" ON mentor_sessions FOR SELECT
   USING (EXISTS (SELECT 1 FROM mentor_matches mm WHERE mm.id = mentor_sessions.match_id AND auth.uid() IN (mm.student_id, mm.mentor_id)));
 
+-- Mentoring Extensions: Nudges & Ratings
+CREATE POLICY "Users can manage their nudges" ON mentor_nudges FOR ALL 
+  USING (EXISTS (SELECT 1 FROM mentor_matches mm WHERE mm.id = mentor_nudges.pair_id AND auth.uid() IN (mm.student_id, mm.mentor_id)));
+  
+CREATE POLICY "Users can view session ratings" ON session_ratings FOR SELECT
+  USING (EXISTS (SELECT 1 FROM mentor_sessions ms JOIN mentor_matches mm ON ms.match_id = mm.id WHERE ms.id = session_ratings.session_id AND auth.uid() IN (mm.student_id, mm.mentor_id)));
+CREATE POLICY "Users can insert session ratings" ON session_ratings FOR INSERT
+  WITH CHECK (auth.uid() = rater_id);
+
 -- Push Notification Webhook Triggers
 CREATE OR REPLACE FUNCTION notify_push_message()
 RETURNS TRIGGER AS $$
@@ -422,9 +431,9 @@ BEGIN
   );
   RETURN NEW;
 EXCEPTION WHEN OTHERS THEN
-  RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+REVOKE EXECUTE ON FUNCTION notify_push_message() FROM PUBLIC;
 
 CREATE TRIGGER tr_notify_push_message
 AFTER INSERT ON messages
@@ -451,7 +460,8 @@ BEGIN
 EXCEPTION WHEN OTHERS THEN
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+REVOKE EXECUTE ON FUNCTION notify_push_tier() FROM PUBLIC;
 
 CREATE TRIGGER tr_notify_push_tier
 AFTER UPDATE OF current_tier ON profiles
