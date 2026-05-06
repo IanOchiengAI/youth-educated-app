@@ -1,6 +1,6 @@
--- Enable the pg_cron and pg_net extensions if not already enabled
-CREATE EXTENSION IF NOT EXISTS pg_cron;
-CREATE EXTENSION IF NOT EXISTS pg_net;
+CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE EXTENSION IF NOT EXISTS pg_cron SCHEMA extensions;
+CREATE EXTENSION IF NOT EXISTS pg_net SCHEMA extensions;
 
 -- Create a scheduled job to invoke the check-session-followup Edge Function
 -- This runs every day at 8:00 AM UTC.
