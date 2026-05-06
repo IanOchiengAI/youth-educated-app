@@ -4,7 +4,7 @@
 CREATE TYPE role_type AS ENUM ('student', 'mentor', 'admin', 'dsl');
 CREATE TYPE gender_type AS ENUM ('male', 'female', 'prefer_not_to_say', 'All', 'Female', 'Male');
 CREATE TYPE match_status AS ENUM ('active', 'ended');
-CREATE TYPE opportunity_type AS ENUM ('Job', 'Internship', 'Training', 'Scholarship', 'Mentorship');
+CREATE TYPE opportunity_type AS ENUM ('Job', 'Internship', 'Training', 'Scholarship', 'Mentorship', 'scholarship', 'internship', 'mentorship', 'grant', 'TVET');
 CREATE TYPE risk_level_type AS ENUM ('low', 'medium', 'high');
 CREATE TYPE case_status AS ENUM ('open', 'resolved');
 CREATE TYPE circle_type AS ENUM ('mixed', 'brothers_keepers');
@@ -44,10 +44,17 @@ CREATE TABLE modules (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
   description TEXT,
+  icon TEXT,
   points INTEGER DEFAULT 0,
   duration TEXT,
+  lessons INTEGER DEFAULT 0,
+  competency TEXT,
+  difficulty TEXT,
   category TEXT,
   tier_requirement TEXT,
+  min_age INTEGER DEFAULT 10,
+  is_sensitive BOOLEAN DEFAULT FALSE,
+  brothers_keepers_variant BOOLEAN DEFAULT FALSE,
   premium BOOLEAN DEFAULT FALSE,
   is_published BOOLEAN DEFAULT TRUE,
   last_updated TIMESTAMPTZ DEFAULT NOW()
@@ -57,9 +64,10 @@ CREATE TABLE lessons (
   id TEXT PRIMARY KEY,
   module_id TEXT REFERENCES modules(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
-  type TEXT NOT NULL,
+  type TEXT,
   duration TEXT,
   content TEXT,
+  sections JSONB,
   quiz_data JSONB,
   sort_order INTEGER NOT NULL
 );
@@ -223,12 +231,17 @@ CREATE TABLE saved_opportunities (
 CREATE TABLE lifekit_articles (
   id TEXT PRIMARY KEY,
   title TEXT NOT NULL,
+  title_sw TEXT,
   category TEXT NOT NULL,
   min_age INTEGER DEFAULT 13,
   max_age INTEGER DEFAULT 25,
   read_time TEXT,
+  emoji TEXT,
+  body TEXT,
+  body_sw TEXT,
   content TEXT NOT NULL,
   tags TEXT[] DEFAULT '{}',
+  month TEXT,
   is_premium BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -351,6 +364,9 @@ CREATE POLICY "Anyone can view published modules" ON modules FOR SELECT USING (i
 CREATE POLICY "Anyone can view lessons" ON lessons FOR SELECT USING (TRUE);
 CREATE POLICY "Anyone can view lifekit articles" ON lifekit_articles FOR SELECT USING (TRUE);
 CREATE POLICY "Anyone can view career questions" ON career_questions FOR SELECT USING (TRUE);
+CREATE POLICY "Anyone can view circles" ON circles FOR SELECT USING (TRUE);
+CREATE POLICY "Anyone can view circle members" ON circle_members FOR SELECT USING (TRUE);
+CREATE POLICY "Anyone can view circle reactions" ON circle_reactions FOR SELECT USING (TRUE);
 
 -- User Progress: Own rows, Mentors SELECT students
 CREATE POLICY "Users can manage own progress" ON user_module_progress FOR ALL USING (auth.uid() = user_id);
