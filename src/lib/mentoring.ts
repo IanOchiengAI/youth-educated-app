@@ -123,7 +123,6 @@ export async function requestMentorMatch(
     .maybeSingle();
 
   if (existing) {
-    console.log('[mentoring] requestMentorMatch: match already exists, returning existing id');
     return { id: existing.id };
   }
 

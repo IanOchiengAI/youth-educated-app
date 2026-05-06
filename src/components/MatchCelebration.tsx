@@ -142,9 +142,11 @@ const MatchCelebration: React.FC<MatchCelebrationProps> = ({
             className="px-8 -mt-5 relative z-20"
           >
             <div className="bg-off-white border border-navy/5 rounded-[28px] p-5 flex items-center gap-4 shadow-sm">
-              <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-3xl shadow-inner flex-shrink-0 border border-navy/5">
+              <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-3xl shadow-inner flex-shrink-0 border border-navy/5 overflow-hidden">
                 {mentorIcon && mentorIcon.length < 5 ? (
                   mentorIcon
+                ) : mentorIcon ? (
+                  <img src={mentorIcon} alt={mentorName} className="w-full h-full object-cover" />
                 ) : (
                   <UserIcon size={24} className="text-navy/40" />
                 )}

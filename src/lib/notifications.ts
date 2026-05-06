@@ -22,7 +22,6 @@ export async function initPushNotifications() {
 
   // On success, we should be able to receive notifications
   PushNotifications.addListener('registration', async (token) => {
-    console.log('Push registration success, token: ' + token.value);
     
     // Get current user and upsert token to profile
     const { data: { user } } = await supabase.auth.getUser();
@@ -38,12 +37,12 @@ export async function initPushNotifications() {
     console.error('Error on registration: ' + JSON.stringify(error));
   });
 
-  PushNotifications.addListener('pushNotificationReceived', (notification) => {
-    console.log('Push received: ' + JSON.stringify(notification));
+  PushNotifications.addListener('pushNotificationReceived', (_notification) => {
+    // Notification received while app is in foreground — handled by system tray
   });
 
-  PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-    console.log('Push action performed: ' + JSON.stringify(notification));
+  PushNotifications.addListener('pushNotificationActionPerformed', (_notification) => {
+    // User tapped notification — could route to relevant screen in future
   });
 }
 

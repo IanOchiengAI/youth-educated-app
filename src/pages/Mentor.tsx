@@ -8,7 +8,21 @@ import {
   Calendar, 
   Sparkles,
   WifiOff,
-  User
+  User,
+  Lightbulb,
+  TrendingUp,
+  Dumbbell,
+  GraduationCap,
+  Coins,
+  HeartPulse,
+  Map,
+  Ear,
+  Flame,
+  Handshake,
+  CalendarDays,
+  CalendarRange,
+  Clock,
+  MessageSquare
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
@@ -18,26 +32,26 @@ import { MENTOR_FIELDS } from '../constants';
 import { FALLBACK_MENTORS } from '../data/mentors';
 
 const QUIZ_GOALS = [
-  { id: 'learn_skill', label: 'Learn a skill', emoji: '💡' },
-  { id: 'start_something', label: 'Start something', emoji: '📈' },
-  { id: 'build_confidence', label: 'Build confidence', emoji: '💪' },
-  { id: 'improve_school', label: 'Improve at school', emoji: '🎓' },
-  { id: 'understand_money', label: 'Understand money', emoji: '💰' },
-  { id: 'health_wellbeing', label: 'Health & wellbeing', emoji: '🏥' },
+  { id: 'learn_skill', label: 'Learn a skill', emoji: <Lightbulb size={32} className="text-yellow" /> },
+  { id: 'start_something', label: 'Start something', emoji: <TrendingUp size={32} className="text-yellow" /> },
+  { id: 'build_confidence', label: 'Build confidence', emoji: <Dumbbell size={32} className="text-yellow" /> },
+  { id: 'improve_school', label: 'Improve at school', emoji: <GraduationCap size={32} className="text-yellow" /> },
+  { id: 'understand_money', label: 'Understand money', emoji: <Coins size={32} className="text-yellow" /> },
+  { id: 'health_wellbeing', label: 'Health & wellbeing', emoji: <HeartPulse size={32} className="text-yellow" /> },
 ];
 
 const QUIZ_STYLES = [
-  { id: 'clear_plan', label: 'Give me a clear plan and structure', emoji: '🎯' },
-  { id: 'listen_figure', label: 'Listen to me and help me figure it out', emoji: '👂' },
-  { id: 'challenge_me', label: 'Challenge me and push me harder', emoji: '🔥' },
-  { id: 'regular_checkins', label: 'Check in on me regularly', emoji: '🤝' },
+  { id: 'clear_plan', label: 'Give me a clear plan and structure', emoji: <Map size={24} className="text-navy/60" /> },
+  { id: 'listen_figure', label: 'Listen to me and help me figure it out', emoji: <Ear size={24} className="text-navy/60" /> },
+  { id: 'challenge_me', label: 'Challenge me and push me harder', emoji: <Flame size={24} className="text-navy/60" /> },
+  { id: 'regular_checkins', label: 'Check in on me regularly', emoji: <Handshake size={24} className="text-navy/60" /> },
 ];
 
 const QUIZ_AVAILABILITY = [
-  { id: 'once_a_week', label: 'Once a week (30 min)', emoji: '📅' },
-  { id: 'every_two_weeks', label: 'Every two weeks (45 min)', emoji: '📅' },
-  { id: 'once_a_month', label: 'Once a month (60 min)', emoji: '📅' },
-  { id: 'flexible', label: 'Flexible — just when I need it', emoji: '💬' },
+  { id: 'once_a_week', label: 'Once a week (30 min)', emoji: <CalendarDays size={24} className="text-navy/60" /> },
+  { id: 'every_two_weeks', label: 'Every two weeks (45 min)', emoji: <CalendarRange size={24} className="text-navy/60" /> },
+  { id: 'once_a_month', label: 'Once a month (60 min)', emoji: <Clock size={24} className="text-navy/60" /> },
+  { id: 'flexible', label: 'Flexible — just when I need it', emoji: <MessageSquare size={24} className="text-navy/60" /> },
 ];
 
 const goalReasonMap: Record<string, string> = {
@@ -112,6 +126,7 @@ const Mentor: React.FC = () => {
         setMentors(FALLBACK_MENTORS.map(m => ({
           ...m,
           field: m.expertise[0] || 'General',
+          icon: m.avatarUrl || m.icon,
         })));
         setFeaturedMentor(null);
         setLoading(false);
@@ -134,7 +149,7 @@ const Mentor: React.FC = () => {
           `)
           .eq('is_verified', true);
 
-        if (!mentorError && mentorData) {
+        if (!mentorError && mentorData && mentorData.length > 0) {
           const formatted = mentorData.map((m: any) => ({
             id: m.id,
             name: m.profiles?.name || 'Mentor',
@@ -145,6 +160,13 @@ const Mentor: React.FC = () => {
             county: m.county || null,
           }));
           setMentors(formatted);
+        } else {
+          // No verified mentors in DB yet — use fallback data so categories aren't empty
+          setMentors(FALLBACK_MENTORS.map(m => ({
+            ...m,
+            field: m.expertise[0] || 'General',
+            icon: m.avatarUrl || m.icon,
+          })));
         }
 
         // 2. Fetch featured mentor
@@ -442,8 +464,8 @@ const Mentor: React.FC = () => {
 
                   {/* Avatar + Info */}
                   <div className="flex flex-col items-center text-center mb-4">
-                    <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center text-4xl border-2 border-white/20 mb-3">
-                      {featuredMentor.icon.length < 5 ? featuredMentor.icon : <User size={36} className="text-white/60" />}
+                    <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center text-4xl border-2 border-white/20 mb-3 overflow-hidden">
+                      {featuredMentor.icon.length < 5 ? featuredMentor.icon : <img src={featuredMentor.icon} alt={featuredMentor.name} className="w-full h-full object-cover" />}
                     </div>
                     <h3 className="text-2xl font-bold">{featuredMentor.name}</h3>
                     <div className="flex flex-wrap justify-center gap-1.5 mt-2">
@@ -536,8 +558,8 @@ const Mentor: React.FC = () => {
                       >
                         <div className="flex items-start gap-4">
                           {/* Avatar */}
-                          <div className="w-14 h-14 bg-off-white rounded-2xl flex items-center justify-center text-2xl shadow-inner flex-shrink-0">
-                            {m.icon.length < 5 ? m.icon : <User size={22} className="text-navy/40" />}
+                          <div className="w-14 h-14 bg-off-white rounded-2xl flex items-center justify-center text-2xl shadow-inner flex-shrink-0 overflow-hidden">
+                            {m.icon.length < 5 ? m.icon : <img src={m.icon} alt={m.name} className="w-full h-full object-cover" />}
                           </div>
 
                           {/* Info */}
@@ -701,8 +723,8 @@ const Mentor: React.FC = () => {
                                     {idx === 0 && <div className="absolute top-0 right-0 bg-yellow text-navy text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-xl z-10">Top Match</div>}
                                     
                                     <div className="flex gap-4">
-                                      <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-2xl shadow-sm flex-shrink-0">
-                                        {m.icon.length < 5 ? m.icon : <User size={22} className="text-navy/40" />}
+                                      <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-2xl shadow-sm flex-shrink-0 overflow-hidden">
+                                        {m.icon.length < 5 ? m.icon : <img src={m.icon} alt={m.name} className="w-full h-full object-cover" />}
                                       </div>
                                       <div className="flex-1 min-w-0">
                                         <h4 className="font-bold text-navy truncate">{m.name}</h4>
@@ -782,8 +804,8 @@ const Mentor: React.FC = () => {
                          <h3 className="text-2xl font-bold">{myMatch.mentor.name}</h3>
                          <p className="text-white/40 text-xs font-bold uppercase tracking-widest">{myMatch.mentor.field}</p>
                       </div>
-                      <div className="w-16 h-16 bg-white/10 rounded-3xl flex items-center justify-center text-4xl border border-white/10 group-hover:scale-110 transition-transform">
-                         {myMatch.mentor.icon.length < 5 ? myMatch.mentor.icon : <User size={32} />}
+                      <div className="w-16 h-16 bg-white/10 rounded-3xl flex items-center justify-center text-4xl border border-white/10 group-hover:scale-110 transition-transform overflow-hidden">
+                         {myMatch.mentor.icon.length < 5 ? myMatch.mentor.icon : <img src={myMatch.mentor.icon} alt={myMatch.mentor.name} className="w-full h-full object-cover" />}
                       </div>
                    </div>
                    <div className="p-8 space-y-6">

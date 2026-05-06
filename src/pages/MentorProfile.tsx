@@ -219,10 +219,10 @@ const MentorProfile: React.FC = () => {
 
         <div className="relative z-10 flex flex-col items-center text-center">
           {/* Avatar */}
-          <div className="w-24 h-24 bg-navy border-2 border-white/20 rounded-full flex items-center justify-center text-5xl shadow-lg shadow-navy/30 mb-4">
+          <div className="w-24 h-24 bg-navy border-2 border-white/20 rounded-full flex items-center justify-center text-5xl shadow-lg shadow-navy/30 mb-4 overflow-hidden">
             {mentor.icon.length < 5
               ? mentor.icon
-              : <User size={40} className="text-white/40" />
+              : <img src={mentor.icon} alt={mentor.name} className="w-full h-full object-cover" />
             }
           </div>
 

@@ -14,7 +14,8 @@ import {
   X,
   ThumbsUp,
   Send,
-  RefreshCw
+  RefreshCw,
+  BrainCircuit
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
@@ -291,14 +292,13 @@ const Dashboard: React.FC = () => {
     ? Math.round((moduleProgress.completedLessons.length / nextModule.content.length) * 100)
     : 0;
 
-  // Use the first 3 LifeKit articles as featured
   const featuredArticles = LIFEKIT_ARTICLES.slice(0, 3);
 
   const QUICK_ACTIONS = [
-    { id: 'chat', label: t('action.ask_amara', lang), icon: <MessageCircle size={24} />, color: 'bg-blue-500', path: '/chat' },
-    { id: 'career', label: t('action.career', lang), icon: <Compass size={24} />, color: 'bg-purple-500', path: '/career-mapper' },
-    { id: 'opps', label: t('action.opps', lang), icon: <Briefcase size={24} />, color: 'bg-orange-500', path: '/opportunities' },
-    { id: 'goals', label: t('action.goals', lang), icon: <Target size={24} />, color: 'bg-green-500', path: '/goals' },
+    { id: 'mentor', icon: <Users size={24} />, label: t('action.mentor', lang), path: '/mentor', color: 'bg-yellow', text: 'text-navy' },
+    { id: 'goals', icon: <Target size={24} />, label: t('action.goals', lang), path: '/goals', color: 'bg-navy/10', text: 'text-navy' },
+    { id: 'learn', icon: <BrainCircuit size={24} />, label: t('action.learn', lang), path: '/learn', color: 'bg-navy/10', text: 'text-navy' },
+    { id: 'community', icon: <MessageCircle size={24} />, label: t('action.community', lang), path: '/community', color: 'bg-navy/10', text: 'text-navy' },
   ];
 
   return (
@@ -404,8 +404,10 @@ const Dashboard: React.FC = () => {
             >
               <div className="absolute top-[-20px] right-[-20px] w-32 h-32 bg-blue-500/20 rounded-full blur-2xl opacity-40 pointer-events-none" />
               <div className="flex gap-4 relative z-10">
-                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0">
-                  {unreadNudge.profiles?.avatar || '👤'}
+                <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden">
+                  {unreadNudge.profiles?.avatar && unreadNudge.profiles.avatar.length >= 5 
+                    ? <img src={unreadNudge.profiles.avatar} alt="Mentor" className="w-full h-full object-cover" />
+                    : unreadNudge.profiles?.avatar || '👤'}
                 </div>
                 <div className="flex-1 space-y-2">
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow/80">
@@ -635,7 +637,7 @@ const Dashboard: React.FC = () => {
             {featuredArticles.map((article, idx) => (
               <div
                 key={article.id || idx}
-                onClick={() => navigate(`/learn/lifekit/${article.id}`)}
+                onClick={() => navigate(`/learn/article/${article.id}`)}
                 className="flex items-center gap-4 bg-white rounded-2xl p-4 shadow-sm border border-navy/5 cursor-pointer hover:border-yellow active:scale-[0.98] transition-all duration-120 group"
               >
                 <span className="text-2xl flex-shrink-0 leading-none">{article.emoji}</span>

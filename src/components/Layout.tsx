@@ -14,10 +14,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   useEffect(() => {
     if (state.user) {
-      const result = checkAndUpdateStreak();
-      if (result?.milestoneMessage) {
-        console.log(result.milestoneMessage);
-      }
+      checkAndUpdateStreak();
     }
   }, [state.user, checkAndUpdateStreak]);
 
@@ -29,10 +26,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   if (state.user?.role === 'mentor') {
     navItems = [
-      { path: '/mentor-dashboard', label: t('nav.mypanel', lang), icon: LayoutDashboard },
-      { path: '/calendar',         label: t('nav.calendar', lang), icon: CalendarDays },
-      { path: '/mentor',           label: t('nav.mentor', lang),   icon: Users },
-      { path: '/profile',          label: 'Profile',               icon: User },
+      { path: '/mentor-dashboard', label: t('nav.mentor', lang),    icon: Users },
+      { path: '/calendar',         label: t('nav.calendar', lang),  icon: CalendarDays },
+      { path: '/profile',          label: 'Profile',                icon: User },
     ];
   } else {
     // Student nav

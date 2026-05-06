@@ -1,6 +1,6 @@
 // Youth Educated Service Worker
 // Bump CACHE_VERSION on every deploy to invalidate old caches.
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const CACHE_NAME = `youth-educated-${CACHE_VERSION}`;
 
 const PRECACHE_ASSETS = [

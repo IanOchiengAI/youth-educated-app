@@ -12,7 +12,6 @@ export const useOnlineStatus = () => {
       dispatch({ type: 'SET_OFFLINE', payload: false })
       
       if (state.user) {
-        console.log('Reconnecting... processing offline queue')
         await processOfflineQueue(state.user.id)
       }
     }

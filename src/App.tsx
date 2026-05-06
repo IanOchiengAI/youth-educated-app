@@ -101,7 +101,14 @@ const AnimatedRoutes = () => {
             <Route path="/circles"         element={<ProtectedRoute><PageWrapper><Circles /></PageWrapper></ProtectedRoute>} />
             <Route path="/career-mapper"   element={<ProtectedRoute><PageWrapper><CareerMapper /></PageWrapper></ProtectedRoute>} />
             <Route path="/opportunities"   element={<ProtectedRoute><PageWrapper><Opportunities /></PageWrapper></ProtectedRoute>} />
-            <Route path="/mentor"          element={<ProtectedRoute><PageWrapper><Mentor /></PageWrapper></ProtectedRoute>} />
+            <Route path="/mentor"          element={
+              <ProtectedRoute>
+                <PageWrapper>
+                  {/* Mentors should see their dashboard, not the student browse view */}
+                  {state.user?.role === 'mentor' ? <Navigate to="/mentor-dashboard" replace /> : <Mentor />}
+                </PageWrapper>
+              </ProtectedRoute>
+            } />
             <Route path="/mentor/:mentorId" element={<ProtectedRoute><PageWrapper><MentorProfile /></PageWrapper></ProtectedRoute>} />
             <Route path="/goals"           element={<ProtectedRoute><PageWrapper><Goals /></PageWrapper></ProtectedRoute>} />
             <Route path="/profile"         element={<ProtectedRoute><PageWrapper><Profile /></PageWrapper></ProtectedRoute>} />
