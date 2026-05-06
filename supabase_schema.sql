@@ -296,7 +296,7 @@ BEGIN
   VALUES (NEW.id, NOW());
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
-REVOKE EXECUTE ON FUNCTION handle_new_user() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION handle_new_user() FROM PUBLIC, authenticated, anon;
 
 CREATE TRIGGER tr_handle_new_user
 AFTER INSERT ON auth.users
@@ -323,6 +323,10 @@ ALTER TABLE circles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE circle_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE circle_responses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE circle_reactions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Anyone can view circles" ON circles FOR SELECT USING (true);
+CREATE POLICY "Users can manage circle members" ON circle_members FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Users can manage circle reactions" ON circle_reactions FOR ALL USING (auth.uid() = user_id);
 ALTER TABLE opportunities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE saved_opportunities ENABLE ROW LEVEL SECURITY;
 ALTER TABLE safeguarding_cases ENABLE ROW LEVEL SECURITY;
@@ -433,7 +437,7 @@ BEGIN
 EXCEPTION WHEN OTHERS THEN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
-REVOKE EXECUTE ON FUNCTION notify_push_message() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION notify_push_message() FROM PUBLIC, authenticated, anon;
 
 CREATE TRIGGER tr_notify_push_message
 AFTER INSERT ON messages
@@ -461,7 +465,7 @@ EXCEPTION WHEN OTHERS THEN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
-REVOKE EXECUTE ON FUNCTION notify_push_tier() FROM PUBLIC;
+REVOKE EXECUTE ON FUNCTION notify_push_tier() FROM PUBLIC, authenticated, anon;
 
 CREATE TRIGGER tr_notify_push_tier
 AFTER UPDATE OF current_tier ON profiles
