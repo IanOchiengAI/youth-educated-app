@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ShieldCheck, MapPin, User, Sparkles, Calendar } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, MapPin, User, Sparkles, Calendar, Flag, X } from 'lucide-react';
 import { useAppContext } from '../AppContext';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { requestMentorMatch } from '../lib/mentoring';
@@ -75,6 +75,11 @@ const MentorProfile: React.FC = () => {
   const [error, setError] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [showReport, setShowReport] = useState(false);
+  const [reportReason, setReportReason] = useState('');
+  const [reportDetails, setReportDetails] = useState('');
+  const [submittingReport, setSubmittingReport] = useState(false);
+  const [reportSent, setReportSent] = useState(false);
 
   useEffect(() => {
     const fetchMentor = async () => {
@@ -165,6 +170,20 @@ const MentorProfile: React.FC = () => {
 
     fetchMentor();
   }, [mentorId, state.user?.id, state.isOffline]);
+
+  const handleReport = async () => {
+    if (!reportReason || !state.user?.id || !mentor) return;
+    setSubmittingReport(true);
+    await supabase.from('mentor_reports').insert({
+      reporter_id: state.user.id,
+      reported_user_id: mentor.id,
+      reason: reportReason,
+      details: reportDetails,
+    });
+    setSubmittingReport(false);
+    setReportSent(true);
+    setTimeout(() => { setShowReport(false); setReportSent(false); setReportReason(''); setReportDetails(''); }, 2000);
+  };
 
   const handleConnect = async () => {
     if (!state.user?.id || !mentor || connecting || isConnected) return;
@@ -369,7 +388,73 @@ const MentorProfile: React.FC = () => {
             }
           </button>
         </motion.div>
+
+        {/* Discreet report link */}
+        <div className="text-center pb-4">
+          <button
+            onClick={() => setShowReport(true)}
+            className="text-[10px] font-bold text-navy/25 uppercase tracking-widest hover:text-red-400 transition-colors flex items-center gap-1 mx-auto"
+          >
+            <Flag size={10} /> Report this mentor
+          </button>
+        </div>
       </main>
+
+      {/* Report dialog */}
+      <AnimatePresence>
+        {showReport && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowReport(false)}
+              className="fixed inset-0 z-[100] bg-navy/50 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+              className="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-[110] bg-white rounded-t-[32px] px-6 pt-5 pb-8 space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-navy">Report a concern</h3>
+                <button onClick={() => setShowReport(false)}><X size={20} className="text-navy/40" /></button>
+              </div>
+              {reportSent ? (
+                <div className="text-center py-6">
+                  <p className="text-2xl mb-2">✓</p>
+                  <p className="font-bold text-navy">Report submitted</p>
+                  <p className="text-sm text-navy/50 mt-1">Our safeguarding team will review this.</p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-xs text-navy/50">Your report is confidential and will go directly to the safeguarding team.</p>
+                  <div className="space-y-2">
+                    {['Inappropriate messages', 'Requests for personal info', 'Made me uncomfortable', 'Doesn\'t seem legitimate', 'Other'].map(r => (
+                      <button key={r} onClick={() => setReportReason(r)}
+                        className={`w-full text-left px-4 py-3 rounded-2xl text-sm font-bold border-2 transition-all ${
+                          reportReason === r ? 'border-navy bg-navy/5 text-navy' : 'border-navy/5 text-navy/50'
+                        }`}
+                      >{r}</button>
+                    ))}
+                  </div>
+                  <textarea
+                    value={reportDetails}
+                    onChange={e => setReportDetails(e.target.value)}
+                    placeholder="Any additional details (optional)"
+                    rows={3}
+                    className="w-full bg-off-white rounded-2xl px-4 py-3 text-sm text-navy outline-none border border-navy/10 focus:border-yellow transition-all resize-none"
+                  />
+                  <button
+                    onClick={handleReport}
+                    disabled={!reportReason || submittingReport}
+                    className="w-full py-4 bg-red-500 text-white rounded-full font-bold disabled:opacity-40"
+                  >
+                    {submittingReport ? 'Submitting…' : 'Submit Report'}
+                  </button>
+                </>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

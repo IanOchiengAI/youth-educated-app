@@ -17,6 +17,7 @@ import {
 import confetti from 'canvas-confetti';
 import { useAppContext } from '../AppContext';
 import { addPoints } from '../lib/gamification';
+import AIAvatar from '../components/AIAvatar';
 import { db } from '../lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { supabase } from '../lib/supabase';
@@ -122,6 +123,19 @@ const Goals: React.FC = () => {
     setReflectionText('');
   };
 
+  const persona = state.user?.aiPersona ?? 'amara';
+  const aiName = persona === 'jabari' ? 'Jabari' : 'Amara';
+
+  const handleAskAIGoal = () => {
+    navigate('/chat', {
+      state: {
+        articleContext: lang === 'Kiswahili'
+          ? `Nisaidie kuweka lengo zuri la wiki hii. Niulize maswali ili niweze kufikiria vizuri.`
+          : `Help me set a meaningful goal for this week. Ask me questions to help me think it through.`
+      }
+    });
+  };
+
   const completedCount = goals?.filter(g => g.isCompleted).length || 0;
   const totalCount = goals?.length || 0;
   const progressPercent = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
@@ -189,6 +203,23 @@ const Goals: React.FC = () => {
             <Plus size={24} />
           </button>
         </div>
+
+        {/* AI goal helper */}
+        <button
+          onClick={handleAskAIGoal}
+          className="w-full bg-navy rounded-[28px] p-4 flex items-center gap-3 shadow-lg shadow-navy/20 active:scale-[0.98] transition-all"
+        >
+          <AIAvatar persona={persona} size={40} />
+          <div className="flex-1 text-left">
+            <p className="text-[10px] font-black uppercase tracking-widest text-white/40">
+              {lang === 'Kiswahili' ? 'Una wasiwasi?' : 'Not sure what to aim for?'}
+            </p>
+            <p className="text-white font-bold text-sm">
+              {lang === 'Kiswahili' ? `${aiName} anaweza kukusaidia` : `Let ${aiName} help you set one`}
+            </p>
+          </div>
+          <Sparkles size={18} className="text-yellow flex-shrink-0" />
+        </button>
 
         <div className="space-y-3">
           <AnimatePresence initial={false}>

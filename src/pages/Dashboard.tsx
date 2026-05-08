@@ -297,6 +297,16 @@ const Dashboard: React.FC = () => {
   const featuredArticles = LIFEKIT_ARTICLES.slice(0, 3);
 
   const aiName = state.user?.aiPersona === 'jabari' ? 'Jabari' : 'Amara';
+
+  const hour = new Date().getHours();
+  const timeGreeting = lang === 'Kiswahili'
+    ? hour < 12 ? 'Habari za asubuhi' : hour < 17 ? 'Habari za mchana' : 'Habari za jioni'
+    : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+
+  const aiSubGreeting = lang === 'Kiswahili'
+    ? `${aiName} yuko hapa kukusaidia leo.`
+    : `${aiName} is here to guide you today.`;
+
   const QUICK_ACTIONS = [
     { id: 'chat', icon: <MessageCircle size={24} />, label: `Ask ${aiName}`, path: '/chat', color: 'bg-yellow', text: 'text-navy' },
     { id: 'mentor', icon: <Users size={24} />, label: t('action.mentor', lang), path: '/mentor', color: 'bg-navy/10', text: 'text-navy' },
@@ -326,8 +336,9 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
         <div className="mb-8 relative z-10">
-          <h1 className="text-3xl font-bold">{t('dashboard.greeting', lang)}, {state.user?.name}!</h1>
-          <p className="text-white/60 font-medium">{t('dashboard.ready', lang)}</p>
+          <p className="text-white/50 text-sm font-medium mb-1">{timeGreeting},</p>
+          <h1 className="text-3xl font-bold">{state.user?.name}!</h1>
+          <p className="text-white/60 font-medium mt-1">{aiSubGreeting}</p>
         </div>
 
         <div className="bg-white/10 rounded-[32px] p-6 border border-white/10 backdrop-blur-md relative z-10">

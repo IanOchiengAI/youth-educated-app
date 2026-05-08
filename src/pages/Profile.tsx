@@ -17,7 +17,12 @@ import {
   ChevronDown,
   Users,
   UserCheck,
+  Lock,
+  Trash2,
+  Delete,
+  X,
 } from 'lucide-react';
+import { isPinSet, savePin, clearPin } from '../lib/pin';
 import AIAvatar from '../components/AIAvatar';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -46,6 +51,18 @@ const Profile: React.FC = () => {
   const [systemVoices, setSystemVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [showSystemVoices, setShowSystemVoices] = useState(false);
   const [canSwitchRole, setCanSwitchRole] = useState(false);
+
+  // PIN lock
+  const [pinEnabled, setPinEnabled] = useState(isPinSet);
+  const [showPinSetup, setShowPinSetup] = useState(false);
+  const [pinStep, setPinStep] = useState<'enter' | 'confirm'>('enter');
+  const [pinDraft, setPinDraft] = useState('');
+  const [pinFirst, setPinFirst] = useState('');
+  const [pinError, setPinError] = useState('');
+
+  // Delete AI history
+  const [deletingHistory, setDeletingHistory] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Check if user has an approved mentor profile — only vetted mentors may switch roles
   useEffect(() => {
@@ -136,6 +153,47 @@ const Profile: React.FC = () => {
   const handleSignOut = async () => {
     await signOut();
     navigate('/signin');
+  };
+
+  const handlePinDigit = async (d: string) => {
+    setPinError('');
+    const next = pinDraft + d;
+    if (next.length > 4) return;
+    setPinDraft(next);
+    if (next.length === 4) {
+      if (pinStep === 'enter') {
+        setPinFirst(next);
+        setPinStep('confirm');
+        setPinDraft('');
+      } else {
+        if (next === pinFirst) {
+          await savePin(next);
+          setPinEnabled(true);
+          setShowPinSetup(false);
+          setPinDraft('');
+          setPinFirst('');
+          setPinStep('enter');
+        } else {
+          setPinError('PINs do not match. Try again.');
+          setPinDraft('');
+          setPinStep('enter');
+          setPinFirst('');
+        }
+      }
+    }
+  };
+
+  const handleDisablePin = () => {
+    clearPin();
+    setPinEnabled(false);
+  };
+
+  const handleDeleteHistory = async () => {
+    if (!state.user?.id) return;
+    setDeletingHistory(true);
+    await supabase.from('ai_conversations').delete().eq('user_id', state.user.id);
+    setDeletingHistory(false);
+    setConfirmDelete(false);
   };
 
   const TABS = [
@@ -540,15 +598,36 @@ const Profile: React.FC = () => {
                       </div>
                       <ChevronRight size={18} className="text-navy/20" />
                     </button>
-                    <button className="w-full flex items-center justify-between p-6 hover:bg-off-white transition-colors text-left">
+                    <button
+                      onClick={() => pinEnabled ? handleDisablePin() : setShowPinSetup(true)}
+                      className="w-full flex items-center justify-between p-6 hover:bg-off-white transition-colors text-left"
+                    >
                       <div className="flex items-center gap-4">
-                        <div className="p-2.5 bg-green-50 text-green-600 rounded-xl"><Smartphone size={18} /></div>
+                        <div className={`p-2.5 rounded-xl ${pinEnabled ? 'bg-green-50 text-green-600' : 'bg-navy/5 text-navy/40'}`}>
+                          <Lock size={18} />
+                        </div>
                         <div>
-                          <p className="font-bold text-sm text-navy">Security</p>
-                          <p className="text-[10px] text-navy/40 font-bold uppercase">Phone Auth Active</p>
+                          <p className="font-bold text-sm text-navy">PIN Lock</p>
+                          <p className="text-[10px] text-navy/40 font-bold uppercase">
+                            {pinEnabled ? 'Enabled — tap to disable' : 'Off — tap to set up'}
+                          </p>
                         </div>
                       </div>
-                      <ChevronRight size={18} className="text-navy/20" />
+                      <div className={`w-10 h-6 rounded-full transition-colors ${pinEnabled ? 'bg-green-400' : 'bg-navy/10'} flex items-center`}>
+                        <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform mx-0.5 ${pinEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => setConfirmDelete(true)}
+                      className="w-full flex items-center justify-between p-6 hover:bg-red-50 group transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="p-2.5 bg-red-50 text-red-400 rounded-xl group-hover:bg-red-100"><Trash2 size={18} /></div>
+                        <div>
+                          <p className="font-bold text-sm text-navy group-hover:text-red-600">Delete AI Chat History</p>
+                          <p className="text-[10px] text-navy/40 font-bold uppercase">Clears all conversations with Amara/Jabari</p>
+                        </div>
+                      </div>
                     </button>
                     <button 
                       onClick={handleSignOut}
@@ -582,6 +661,92 @@ const Profile: React.FC = () => {
           </motion.div>
         </AnimatePresence>
       </main>
+
+      {/* PIN setup sheet */}
+      <AnimatePresence>
+        {showPinSetup && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => { setShowPinSetup(false); setPinDraft(''); setPinFirst(''); setPinStep('enter'); }}
+              className="fixed inset-0 z-[100] bg-navy/50 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+              className="fixed bottom-0 left-0 right-0 max-w-md mx-auto z-[110] bg-white rounded-t-[32px] px-6 pt-5 pb-8"
+            >
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-bold text-navy text-lg">
+                  {pinStep === 'enter' ? 'Set your PIN' : 'Confirm your PIN'}
+                </h3>
+                <button onClick={() => { setShowPinSetup(false); setPinDraft(''); setPinFirst(''); setPinStep('enter'); }}>
+                  <X size={20} className="text-navy/40" />
+                </button>
+              </div>
+              <p className="text-xs text-navy/40 font-bold uppercase tracking-widest mb-4 text-center">
+                {pinStep === 'enter' ? 'Enter a 4-digit PIN' : 'Enter the same PIN again'}
+              </p>
+              <div className="flex justify-center gap-4 mb-4">
+                {[0,1,2,3].map(i => (
+                  <div key={i} className={`w-4 h-4 rounded-full border-2 ${i < pinDraft.length ? 'bg-navy border-navy' : 'border-navy/20'}`} />
+                ))}
+              </div>
+              {pinError && <p className="text-red-500 text-xs font-bold text-center mb-3">{pinError}</p>}
+              <div className="grid grid-cols-3 gap-3 mt-4">
+                {['1','2','3','4','5','6','7','8','9','','0','del'].map((k, i) => {
+                  if (k === '') return <div key={i} />;
+                  if (k === 'del') return (
+                    <button key="del" onClick={() => setPinDraft(p => p.slice(0,-1))}
+                      className="h-14 rounded-2xl bg-navy/5 text-navy flex items-center justify-center font-bold active:scale-95 transition-all">
+                      <Delete size={20} />
+                    </button>
+                  );
+                  return (
+                    <button key={k} onClick={() => handlePinDigit(k)}
+                      className="h-14 rounded-2xl bg-navy/5 text-navy text-xl font-bold active:scale-95 transition-all hover:bg-navy/10">
+                      {k}
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Confirm delete history */}
+      <AnimatePresence>
+        {confirmDelete && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setConfirmDelete(false)}
+              className="fixed inset-0 z-[100] bg-navy/50 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="fixed inset-x-6 top-1/2 -translate-y-1/2 z-[110] bg-white rounded-[28px] p-6 shadow-2xl max-w-sm mx-auto space-y-4"
+            >
+              <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center mx-auto">
+                <Trash2 size={24} className="text-red-500" />
+              </div>
+              <div className="text-center">
+                <h3 className="font-bold text-navy text-lg">Delete chat history?</h3>
+                <p className="text-navy/50 text-sm mt-1">All conversations with Amara and Jabari will be permanently deleted. This cannot be undone.</p>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setConfirmDelete(false)}
+                  className="flex-1 py-3 rounded-full border border-navy/10 text-navy font-bold text-sm">
+                  Cancel
+                </button>
+                <button onClick={handleDeleteHistory} disabled={deletingHistory}
+                  className="flex-1 py-3 rounded-full bg-red-500 text-white font-bold text-sm disabled:opacity-50">
+                  {deletingHistory ? 'Deleting…' : 'Delete'}
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

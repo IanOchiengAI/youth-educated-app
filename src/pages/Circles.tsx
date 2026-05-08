@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  ChevronLeft, 
-  MessageCircle, 
-  Heart, 
-  Users, 
-  Sparkles, 
+import {
+  ChevronLeft,
+  MessageCircle,
+  Heart,
+  Users,
+  Sparkles,
   Send,
   Shield,
   Clock,
-  MoreVertical
+  Flag,
+  CheckCircle2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
@@ -27,6 +28,7 @@ const Circles: React.FC = () => {
   const [activePrompt, setActivePrompt] = useState<CirclePrompt | null>(null);
   const [responseText, setResponseText] = useState('');
   const [safeguardingEscalation, setSafeguardingEscalation] = useState<string | null>(null);
+  const [reportedIds, setReportedIds] = useState<Set<number>>(new Set());
 
   const weekNumber = Math.ceil(new Date().getDate() / 7);
 
@@ -108,6 +110,16 @@ const Circles: React.FC = () => {
     // 4. Award points
     dispatch({ type: 'ADD_POINTS', payload: { points: 25, reason: 'Circle Participation' } });
     setResponseText('');
+  };
+
+  const handleReportPost = async (respId: number) => {
+    if (!state.user?.id || reportedIds.has(respId)) return;
+    setReportedIds(prev => new Set(prev).add(respId));
+    await supabase.from('circle_reports').insert({
+      reporter_id: state.user.id,
+      response_id: respId,
+      reason: 'Inappropriate content',
+    });
   };
 
   const hasSubmittedThisWeek = responses?.some(r => r.userId === state.user?.id);
@@ -207,9 +219,15 @@ const Circles: React.FC = () => {
                       <p className="text-[9px] text-navy/30 font-black uppercase tracking-wider">{!resp.synced ? 'Pending Sync' : 'Shared'}</p>
                     </div>
                   </div>
-                  <button className="text-navy/10 hover:text-navy transition-colors">
-                    <MoreVertical size={18} />
-                  </button>
+                  {resp.userId !== state.user?.id && (
+                    <button
+                      onClick={() => resp.id && handleReportPost(resp.id)}
+                      className={`transition-colors ${reportedIds.has(resp.id!) ? 'text-green-400 cursor-default' : 'text-navy/10 hover:text-red-400'}`}
+                      title={reportedIds.has(resp.id!) ? 'Reported' : 'Report post'}
+                    >
+                      {reportedIds.has(resp.id!) ? <CheckCircle2 size={16} /> : <Flag size={16} />}
+                    </button>
+                  )}
                 </div>
                 
                 <p className="text-[15px] text-navy/80 leading-relaxed font-nunito font-medium">

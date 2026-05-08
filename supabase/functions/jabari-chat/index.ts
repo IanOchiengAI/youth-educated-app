@@ -1,34 +1,71 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "https://esm.sh/@google/generative-ai@0.24.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+const MODEL = "llama-3.3-70b-versatile";
 
-const safetySettings = [
-  { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH },
-  { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-  { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-  { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-];
+console.log("[jabari-chat] GROQ_API_KEY set:", GROQ_API_KEY.length > 0);
 
-const model = genAI.getGenerativeModel({
-  model: "gemini-2.0-flash",
-  generationConfig: { maxOutputTokens: 600, temperature: 0.8 },
-  safetySettings,
-});
+// Convert Gemini-style history to OpenAI-style messages.
+// preparedHistory[0] is the system prompt embedded as a fake user turn.
+// preparedHistory[1] is the initial model greeting.
+// preparedHistory[2+] is the real conversation.
+function toOpenAIMessages(preparedHistory: { role: string; parts: { text: string }[] }[]) {
+  const system = preparedHistory[0]?.parts[0]?.text ?? "";
+  const messages = preparedHistory.slice(1).map((m) => ({
+    role: m.role === "model" ? "assistant" : "user",
+    content: m.parts[0]?.text ?? "",
+  }));
+  return { system, messages };
+}
+
+async function groqChat(
+  system: string,
+  messages: { role: string; content: string }[],
+  userMessage: string
+): Promise<string> {
+  const body = {
+    model: MODEL,
+    max_tokens: 600,
+    temperature: 0.8,
+    messages: [
+      { role: "system", content: system },
+      ...messages,
+      { role: "user", content: userMessage },
+    ],
+  };
+
+  const res = await fetch(GROQ_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${GROQ_API_KEY}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    const errMsg = data?.error?.message ?? `Groq HTTP ${res.status}`;
+    console.error("[jabari-chat] Groq error:", errMsg);
+    throw new Error(errMsg);
+  }
+
+  return data.choices?.[0]?.message?.content ?? "";
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  // Require an authorization header — anon key is accepted (dev/test)
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -43,23 +80,22 @@ serve(async (req) => {
     { global: { headers: { Authorization: authHeader } } }
   );
 
-  // Try to get authenticated user — null is allowed (anon / dev bypass)
   const { data: { user } } = await supabaseClient.auth.getUser();
 
-  // Rate limit authenticated users only (2 seconds between requests)
+  // Rate-limit authenticated users: 2 s between messages
   if (user) {
     const { data: lastMsg } = await supabaseClient
-      .from('ai_conversations')
-      .select('updated_at')
-      .eq('user_id', user.id)
+      .from("ai_conversations")
+      .select("updated_at")
+      .eq("user_id", user.id)
       .maybeSingle();
 
     if (lastMsg?.updated_at) {
-      const msSinceLastMsg = Date.now() - new Date(lastMsg.updated_at).getTime();
-      if (msSinceLastMsg < 2000) {
-        return new Response(JSON.stringify({ error: 'TOO_FAST' }), {
+      const elapsed = Date.now() - new Date(lastMsg.updated_at).getTime();
+      if (elapsed < 2000) {
+        return new Response(JSON.stringify({ error: "TOO_FAST" }), {
           status: 429,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
     }
@@ -69,48 +105,46 @@ serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
+    // ── Chat ──────────────────────────────────────────────────
     if (action === "chat") {
       const { message, preparedHistory } = body as {
         message: string;
-        preparedHistory: { role: "user" | "model"; parts: { text: string }[] }[];
+        preparedHistory: { role: string; parts: { text: string }[] }[];
       };
 
-      const chat = model.startChat({ history: preparedHistory });
-      const result = await chat.sendMessage(message);
-      const text = result.response.text();
+      console.log("[jabari-chat] chat | message length:", message?.length);
+      const { system, messages } = toOpenAIMessages(preparedHistory);
+      const text = await groqChat(system, messages, message);
+      console.log("[jabari-chat] success | response length:", text.length);
 
       return new Response(JSON.stringify({ text }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    // ── Mentor briefing ───────────────────────────────────────
     if (action === "mentor-briefing") {
-      const { studentName, activityData } = body as { studentName: string; activityData: string };
+      const { studentName, activityData } = body as {
+        studentName: string;
+        activityData: string;
+      };
 
-      const prompt = `You are a Mentor's Assistant at 'Youth Educated'.
-Your job is to provide a concise, professional briefing for a human mentor about their student, ${studentName}.
+      const system = `You are a Mentor's Assistant at 'Youth Educated'.
+Provide a concise, professional briefing for a human mentor about their student.
+Keep the entire summary under 60 words with exactly 3 bullet points.
+Focus on: Recent Mood Trends, Key Topics discussed with AI, and Progress towards Goals.`;
 
-DATA PROVIDED:
-${activityData}
-
-INSTRUCTIONS:
-1. Summarize the student's recent status into exactly 3 bullet points.
-2. Focus on: Recent Mood Trends, Key Topics discussed with AI, and Progress towards Goals.
-3. Be objective, professional, and helpful.
-4. Keep the entire summary under 60 words.
-5. If the data is sparse, provide the best summary possible.`;
-
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
+      const text = await groqChat(system, [], `Student: ${studentName}\n\nData:\n${activityData}`);
 
       return new Response(JSON.stringify({ text }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    // ── Check-in summary ──────────────────────────────────────
     if (action === "checkin-summary") {
       const { history } = body as {
-        history: { role: "user" | "model"; parts: { text: string }[] }[];
+        history: { role: string; parts: { text: string }[] }[];
       };
 
       if (history.length < 3) {
@@ -119,11 +153,17 @@ INSTRUCTIONS:
         });
       }
 
-      const chat = model.startChat({ history });
-      const result = await chat.sendMessage(
-        "Based on our conversation, give a 1-sentence summary, list which goals came up, and rate the mood as positive, neutral, or concerning. Format exactly as: SUMMARY: ... | GOALS: ... | MOOD: ..."
+      const system = "You analyse youth mentoring conversations and return structured summaries.";
+      const messages = history.map((m) => ({
+        role: m.role === "model" ? "assistant" : "user",
+        content: m.parts[0]?.text ?? "",
+      }));
+
+      const text = await groqChat(
+        system,
+        messages,
+        "Give a 1-sentence summary, list which goals came up, and rate the mood as positive, neutral, or concerning. Format exactly as: SUMMARY: ... | GOALS: ... | MOOD: ..."
       );
-      const text = result.response.text();
 
       return new Response(JSON.stringify({ text }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -134,16 +174,22 @@ INSTRUCTIONS:
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const isSafety = message.includes("SAFETY") || message.includes("HarmCategory");
+    console.error("[jabari-chat] ERROR:", message);
 
-    return new Response(
-      JSON.stringify({ error: isSafety ? "SAFETY_BLOCK" : message }),
-      {
-        status: isSafety ? 200 : 500,
+    // Rate-limit passthrough
+    if (message.includes("429") || message.includes("rate_limit") || message.includes("Too Many Requests")) {
+      return new Response(JSON.stringify({ error: "TOO_FAST" }), {
+        status: 429,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
-    );
+      });
+    }
+
+    return new Response(JSON.stringify({ error: message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });

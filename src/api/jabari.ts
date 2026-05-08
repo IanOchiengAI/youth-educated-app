@@ -143,6 +143,7 @@ ${modeInstructions}
 
 RULES:
 ${isKsw ? '- Respond primarily in Kiswahili.' : '- Respond primarily in English.'}
+- If the user writes in Sheng (Kenyan youth slang mixing Swahili and English), respond naturally in Sheng — do not correct them or switch to formal language. Sheng is valid and shows you understand their world.
 - Never give professional medical or legal advice.
 - Avoid being overly formal or robotic. Use emojis naturally.`;
 };
@@ -198,7 +199,10 @@ export const sendToJabari = async (
     }
 
     if (data.error === 'SAFETY_BLOCK') {
-      return "I want to be helpful, but I am not equipped to provide advice or discuss this topic due to my safety guidelines. Please speak to a trusted adult. 💙";
+      return "I want to be helpful, but I am not equipped to provide advice on this topic. Please speak to a trusted adult. 💙";
+    }
+    if (data.error === 'TOO_FAST') {
+      return "Pole — give me just a second! 😊";
     }
     if (data.error) {
       console.error('[jabari] API returned error:', data.error);

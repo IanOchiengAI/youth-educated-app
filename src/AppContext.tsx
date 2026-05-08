@@ -112,6 +112,7 @@ type Action =
   | { type: 'SET_MENTOR_PAIR'; payload: string | null }
   | { type: 'SET_JABARI_VOICE'; payload: string }
   | { type: 'SET_AI_PERSONA'; payload: 'amara' | 'jabari' }
+  | { type: 'SET_LANGUAGE'; payload: 'English' | 'Kiswahili' }
   | { type: 'HYDRATE'; payload: AppState }
   | { type: 'SYNC_FROM_SUPABASE'; payload: Partial<AppState> };
 
@@ -245,6 +246,9 @@ function appReducer(state: AppState, action: Action): AppState {
     case 'SET_AI_PERSONA':
       if (!state.user) return state;
       return { ...state, user: { ...state.user, aiPersona: action.payload } };
+    case 'SET_LANGUAGE':
+      if (!state.user) return state;
+      return { ...state, user: { ...state.user, language: action.payload } };
     case 'HYDRATE': {
       const hydrated = action.payload;
       if (hydrated.user) {
@@ -330,6 +334,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         .eq('id', currentState.user.id)
         .then(({ error }) => {
           if (error) console.error('[AppContext] Failed to persist ai_persona:', error.message);
+        });
+    }
+
+    if (action.type === 'SET_LANGUAGE' && currentState.user) {
+      supabase
+        .from('profiles')
+        .update({ language: action.payload })
+        .eq('id', currentState.user.id)
+        .then(({ error }) => {
+          if (error) console.error('[AppContext] Failed to persist language:', error.message);
         });
     }
 

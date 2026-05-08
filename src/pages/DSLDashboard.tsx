@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Clock, ShieldAlert, CheckCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { AlertTriangle, Clock, ShieldAlert, CheckCircle, Bell } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAppContext } from '../AppContext';
 
@@ -19,7 +19,9 @@ const DSLDashboard: React.FC = () => {
   const [flags, setFlags] = useState<SafeguardingFlag[]>([]);
   const [lowRatings, setLowRatings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [newAlertCount, setNewAlertCount] = useState(0);
   const { state } = useAppContext();
+  const audioRef = useRef<AudioContext | null>(null);
 
   useEffect(() => {
     const fetchFlags = async () => {
@@ -56,6 +58,24 @@ const DSLDashboard: React.FC = () => {
     fetchFlags();
   }, [state.isOffline]);
 
+  // Real-time subscription for new safeguarding flags
+  useEffect(() => {
+    if (state.isOffline || !isSupabaseConfigured) return;
+
+    const channel = supabase
+      .channel('dsl-safeguarding-alerts')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'safeguarding_flags' }, (payload) => {
+        const newFlag = payload.new as SafeguardingFlag;
+        setFlags(prev => [newFlag, ...prev]);
+        setNewAlertCount(n => n + 1);
+        // Brief vibration on mobile
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [state.isOffline]);
+
   const updateStatus = async (id: string, newStatus: string) => {
     try {
       if (!state.isOffline) {
@@ -82,6 +102,18 @@ const DSLDashboard: React.FC = () => {
       </header>
 
       <main className="px-6 -mt-8 space-y-6">
+        {/* Live alert banner */}
+        {newAlertCount > 0 && (
+          <div className="bg-red-600 text-white rounded-[24px] p-4 flex items-center gap-3 shadow-lg shadow-red-900/30 animate-pulse">
+            <Bell size={20} className="flex-shrink-0" />
+            <p className="font-bold text-sm flex-1">
+              {newAlertCount} new safeguarding alert{newAlertCount > 1 ? 's' : ''} received
+            </p>
+            <button onClick={() => setNewAlertCount(0)} className="text-white/70 hover:text-white text-xs font-bold">
+              Dismiss
+            </button>
+          </div>
+        )}
         <div className="bg-white p-6 rounded-[32px] shadow-sm border border-navy/5 flex items-center justify-between">
           <div>
              <p className="text-[10px] font-black uppercase tracking-widest text-navy/40 mb-1">Pending Actions</p>

@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from
 import { AppProvider, useAppContext } from './AppContext';
 import Layout from './components/Layout';
 import RoleRoute from './components/RoleRoute';
+import PinLock from './components/PinLock';
 import { AnimatePresence, motion } from 'motion/react';
 import { initPushNotifications, setAppStatusBar } from './lib/notifications';
 
@@ -139,6 +140,7 @@ export default function App() {
         <Layout>
           <AnimatedRoutes />
         </Layout>
+        <PinLock />
       </BrowserRouter>
     </AppProvider>
   );

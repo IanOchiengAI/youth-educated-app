@@ -12,7 +12,7 @@ import {
   BookOpen,
   X
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
 import { 
   sendToJabari, 
@@ -41,6 +41,7 @@ interface Message {
 const Chat: React.FC = () => {
   const { state, dispatch } = useAppContext();
   const navigate = useNavigate();
+  const location = useLocation();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -136,6 +137,11 @@ const Chat: React.FC = () => {
           text: greeting,
           timestamp: new Date().toISOString()
         }]);
+      }
+
+      // Pre-fill input from article "Ask AI" button
+      if (location.state?.articleContext) {
+        setInputText(location.state.articleContext);
       }
     };
 

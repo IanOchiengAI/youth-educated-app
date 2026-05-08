@@ -19,6 +19,7 @@ import { useModules } from '../hooks/useContent';
 import { addPoints, checkAchievements, getCurrentTier } from '../lib/gamification';
 import TierUpgradeModal from '../components/TierUpgradeModal';
 import PremiumGate from '../components/PremiumGate';
+import AIAvatar from '../components/AIAvatar';
 
 const ModuleView: React.FC = () => {
   const { moduleId } = useParams<{ moduleId: string }>();
@@ -34,6 +35,25 @@ const ModuleView: React.FC = () => {
   const [quizAnswer, setQuizAnswer] = useState<number | null>(null);
   const [quizFeedback, setQuizFeedback] = useState<'correct' | 'wrong' | null>(null);
   const [insight, setInsight] = useState('');
+  const [pendingAdvance, setPendingAdvance] = useState(false);
+
+  const persona = state.user?.aiPersona ?? 'amara';
+  const aiName = persona === 'jabari' ? 'Jabari' : 'Amara';
+  const LESSON_TIPS = [
+    `Real growth happens one step at a time. You're doing this!`,
+    `Every concept you understand is a tool in your kit. Keep building.`,
+    `Take a moment — where can you apply what you just learned today?`,
+    `Knowledge without action is just potential. You have what it takes.`,
+    `You're not just learning facts — you're building your future.`,
+  ];
+
+  // ── useEffect MUST be before any conditional return ───────────
+  useEffect(() => {
+    if (!module) return;
+    if (!state.modules.inProgress.includes(module.id)) {
+      dispatch({ type: 'START_MODULE', payload: module.id });
+    }
+  }, [module?.id]);
 
   if (loading) {
     return (
@@ -60,37 +80,31 @@ const ModuleView: React.FC = () => {
   const currentLesson = module.content[currentLessonIndex] || module.content[0];
   const isLastLesson = currentLessonIndex === module.content.length - 1;
 
-  useEffect(() => {
-    // Start module if not already in progress
-    if (!state.modules.inProgress.includes(module.id)) {
-      dispatch({ type: 'START_MODULE', payload: module.id });
-    }
-  }, [module.id]);
+  const advanceLesson = () => {
+    setPendingAdvance(false);
+    const result = addPoints(
+      'COMPLETE_LESSON',
+      state.progress.points,
+      state.progress.weeklyPoints,
+      state.progress.lastWeeklyReset
+    );
+    dispatch({
+      type: 'UPDATE_PROGRESS',
+      payload: { points: result.newTotal, weeklyPoints: result.newWeeklyPoints }
+    });
+    if (result.upgraded) setShowTierUpgrade(true);
+    setCurrentLessonIndex(prev => prev + 1);
+    setQuizAnswer(null);
+    setQuizFeedback(null);
+    setInsight('');
+    window.scrollTo(0, 0);
+  };
 
   const handleNext = () => {
     if (isLastLesson) {
       handleCompleteModule();
     } else {
-      // Award points for lesson completion
-      const result = addPoints(
-        'COMPLETE_LESSON',
-        state.progress.points,
-        state.progress.weeklyPoints,
-        state.progress.lastWeeklyReset
-      );
-      
-      dispatch({ 
-        type: 'UPDATE_PROGRESS', 
-        payload: { points: result.newTotal, weeklyPoints: result.newWeeklyPoints } 
-      });
-
-      if (result.upgraded) setShowTierUpgrade(true);
-
-      setCurrentLessonIndex(currentLessonIndex + 1);
-      setQuizAnswer(null);
-      setQuizFeedback(null);
-      setInsight('');
-      window.scrollTo(0, 0);
+      setPendingAdvance(true);
     }
   };
 
@@ -280,13 +294,50 @@ const ModuleView: React.FC = () => {
       </AnimatePresence>
 
       {showTierUpgrade && (
-        <TierUpgradeModal 
+        <TierUpgradeModal
           tier={getCurrentTier(state.progress.points)}
           userName={state.user?.name || 'Student'}
-          points={state.progress.points} 
-          onClose={() => setShowTierUpgrade(false)} 
+          points={state.progress.points}
+          onClose={() => setShowTierUpgrade(false)}
         />
       )}
+
+      {/* Lesson reflection card */}
+      <AnimatePresence>
+        {pendingAdvance && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 bg-navy/80 backdrop-blur-sm flex items-end p-5"
+          >
+            <motion.div
+              initial={{ y: 60, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 60, opacity: 0 }}
+              transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+              className="w-full bg-white rounded-[32px] p-6 space-y-5"
+            >
+              <div className="flex items-center gap-3">
+                <AIAvatar persona={persona} size={44} />
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-navy/40">{aiName} says</p>
+                  <p className="font-bold text-navy text-base">Lesson {currentLessonIndex + 1} complete!</p>
+                </div>
+              </div>
+              <p className="text-navy/70 font-nunito text-sm leading-relaxed">
+                {LESSON_TIPS[currentLessonIndex % LESSON_TIPS.length]}
+              </p>
+              <button
+                onClick={advanceLesson}
+                className="w-full py-4 bg-navy text-white rounded-full font-bold text-base flex items-center justify-center gap-2 active:scale-95 transition-all"
+              >
+                Next Lesson <ArrowRight size={20} />
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

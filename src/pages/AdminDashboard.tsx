@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Shield, GraduationCap, Clock, CheckCircle, Star } from 'lucide-react';
+import { Users, Shield, GraduationCap, Clock, CheckCircle, Star, Flag, XCircle } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAppContext } from '../AppContext';
 
@@ -34,6 +34,8 @@ const AdminDashboard: React.FC = () => {
   const [selectedFeaturedId, setSelectedFeaturedId] = useState<string>('');
   const [settingFeatured, setSettingFeatured] = useState(false);
   const [page, setPage] = useState(1);
+  const [mentorReports, setMentorReports] = useState<any[]>([]);
+  const [rejecting, setRejecting] = useState<string | null>(null);
   const PAGE_SIZE = 50;
   const { state } = useAppContext();
 
@@ -91,6 +93,14 @@ const AdminDashboard: React.FC = () => {
             if (current) setSelectedFeaturedId(current.id);
           }
         }
+        // Fetch mentor reports
+        const { data: reportsData } = await supabase
+          .from('mentor_reports')
+          .select('id, reason, details, status, created_at, reporter:reporter_id(name), reported:reported_user_id(name)')
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false })
+          .limit(20);
+        if (reportsData) setMentorReports(reportsData);
       } catch (err) {
         console.error('Failed to fetch admin data', err);
       } finally {
@@ -99,6 +109,22 @@ const AdminDashboard: React.FC = () => {
     };
     fetchData();
   }, [state.isOffline, page, state.user?.role]);
+
+  const handleReject = async (id: string) => {
+    if (state.isOffline) return;
+    setRejecting(id);
+    try {
+      const { error } = await supabase.from('mentor_profiles').update({ is_verified: false }).eq('id', id);
+      if (!error) setPendingMentors(prev => prev.filter(m => m.id !== id));
+    } finally {
+      setRejecting(null);
+    }
+  };
+
+  const handleResolveReport = async (id: number) => {
+    await supabase.from('mentor_reports').update({ status: 'reviewed' }).eq('id', id);
+    setMentorReports(prev => prev.filter(r => r.id !== id));
+  };
 
   const handleApprove = async (id: string) => {
     if (state.isOffline) return;
@@ -252,22 +278,60 @@ const AdminDashboard: React.FC = () => {
                         Joined {new Date(m.joined_at).toLocaleDateString()}
                       </div>
                     </div>
-                    <button 
-                      onClick={() => handleApprove(m.id)}
-                      disabled={approving === m.id || state.isOffline}
-                      className="ml-4 px-4 py-2 bg-green-500 text-white font-bold text-xs rounded-xl hover:bg-green-600 transition-colors disabled:opacity-50 flex items-center gap-1"
-                    >
-                      {approving === m.id ? (
-                        <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      ) : (
-                        <CheckCircle size={14} />
-                      )}
-                      Approve
-                    </button>
+                    <div className="flex gap-2 ml-4">
+                      <button
+                        onClick={() => handleReject(m.id)}
+                        disabled={rejecting === m.id || state.isOffline}
+                        className="px-3 py-2 bg-red-100 text-red-600 font-bold text-xs rounded-xl hover:bg-red-200 transition-colors disabled:opacity-50 flex items-center gap-1"
+                      >
+                        {rejecting === m.id ? <div className="w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full animate-spin" /> : <XCircle size={14} />}
+                        Reject
+                      </button>
+                      <button
+                        onClick={() => handleApprove(m.id)}
+                        disabled={approving === m.id || state.isOffline}
+                        className="px-3 py-2 bg-green-500 text-white font-bold text-xs rounded-xl hover:bg-green-600 transition-colors disabled:opacity-50 flex items-center gap-1"
+                      >
+                        {approving === m.id ? <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <CheckCircle size={14} />}
+                        Approve
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Mentor Reports */}
+        {mentorReports.length > 0 && (
+          <div className="bg-white rounded-[32px] p-6 shadow-sm border border-red-100">
+            <div className="flex items-center gap-2 mb-4">
+              <Flag size={18} className="text-red-500" />
+              <h2 className="text-lg font-bold text-navy">Mentor Reports</h2>
+              <span className="bg-red-100 text-red-600 px-2 py-1 rounded-full text-xs font-bold ml-auto">{mentorReports.length}</span>
+            </div>
+            <div className="space-y-4">
+              {mentorReports.map((r: any) => (
+                <div key={r.id} className="border border-red-50 rounded-2xl p-4 space-y-2">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="text-sm font-bold text-navy">{r.reported?.name || 'Unknown mentor'}</p>
+                      <p className="text-[10px] text-navy/40 font-bold uppercase">reported by {r.reporter?.name || 'Anonymous'}</p>
+                    </div>
+                    <button
+                      onClick={() => handleResolveReport(r.id)}
+                      className="text-xs font-bold text-green-600 hover:text-green-700 bg-green-50 px-2 py-1 rounded-lg"
+                    >
+                      Mark reviewed
+                    </button>
+                  </div>
+                  <p className="text-sm font-bold text-red-600">{r.reason}</p>
+                  {r.details && <p className="text-xs text-navy/50 font-nunito">{r.details}</p>}
+                  <p className="text-[10px] text-navy/30">{new Date(r.created_at).toLocaleDateString()}</p>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
