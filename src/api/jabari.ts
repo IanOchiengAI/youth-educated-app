@@ -188,17 +188,30 @@ export const sendToJabari = async (
     if (response.status === 429) {
       return "Pole — give me just a second to think! 😊";
     }
-    if (!response.ok) throw new Error(`Edge function error: ${response.status}`);
 
     const data = await response.json();
+
+    if (!response.ok) {
+      const errMsg = data?.error ?? `HTTP ${response.status}`;
+      console.error('[jabari] Edge function error:', response.status, errMsg);
+      throw new Error(errMsg);
+    }
+
     if (data.error === 'SAFETY_BLOCK') {
       return "I want to be helpful, but I am not equipped to provide advice or discuss this topic due to my safety guidelines. Please speak to a trusted adult. 💙";
     }
-    if (data.error) throw new Error(data.error);
+    if (data.error) {
+      console.error('[jabari] API returned error:', data.error);
+      throw new Error(data.error);
+    }
 
     return data.text ?? '';
   } catch (error) {
-    console.error("Jabari API Error:", error);
+    console.error('[jabari] Unexpected error:', error);
+    const msg = error instanceof Error ? error.message : String(error);
+    if (msg.includes('429') || msg.includes('quota') || msg.includes('Too Many Requests')) {
+      return "Pole sana — I'm getting a lot of messages right now. Give me a moment and try again! 🙏";
+    }
     return "Pole sana, I'm having a bit of trouble connecting right now. Let's try again in a moment! 🙏";
   }
 };
