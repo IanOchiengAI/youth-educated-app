@@ -5,6 +5,10 @@ import {defineConfig} from 'vite';
 export default defineConfig(({mode}) => {
   return {
     plugins: [react(), tailwindcss()],
+    test: {
+      environment: 'node',
+      include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    },
     server: {
       port: 3000,
       host: '0.0.0.0',
@@ -20,7 +24,6 @@ export default defineConfig(({mode}) => {
             'vendor-supabase': ['@supabase/supabase-js'],
             'vendor-motion': ['motion'],
             'vendor-charts': ['recharts'],
-            'vendor-gemini': ['@google/generative-ai'],
             'vendor-db': ['dexie', 'dexie-react-hooks'],
           },
         },

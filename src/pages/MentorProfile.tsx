@@ -117,7 +117,7 @@ const MentorProfile: React.FC = () => {
             availability_days,
             today_wisdom,
             wisdom_updated_at,
-            profiles:id (
+            profiles (
               name
             )
           `)

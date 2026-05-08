@@ -188,6 +188,8 @@ const Onboarding: React.FC = () => {
       joinedAt: new Date().toISOString(),
       role: 'student' as const,
       jabariVoice: 'default_male',
+      aiPersona: 'amara' as const,
+      isPremium: false,
       mentorPairId: null,
     };
 

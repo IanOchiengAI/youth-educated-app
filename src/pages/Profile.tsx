@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Settings, 
-  Award, 
-  User as UserIcon, 
-  ChevronRight, 
-  LogOut, 
-  Languages, 
+import {
+  Settings,
+  Award,
+  User as UserIcon,
+  ChevronRight,
+  LogOut,
+  Languages,
   Heart,
   TrendingUp,
   Smartphone,
@@ -15,8 +15,10 @@ import {
   Shield,
   Volume2,
   ChevronDown,
-  Users
+  Users,
+  UserCheck,
 } from 'lucide-react';
+import AIAvatar from '../components/AIAvatar';
 import { useNavigate } from 'react-router-dom';
 import { 
   XAxis, 
@@ -151,7 +153,7 @@ const Profile: React.FC = () => {
         <div className="flex flex-col items-center text-center space-y-4">
           <div className="relative">
             <div className="w-24 h-24 bg-yellow rounded-[36px] flex items-center justify-center text-navy text-4xl shadow-xl shadow-yellow/20">
-              {state.user?.gender === 'female' ? '👩‍🎓' : state.user?.gender === 'male' ? '👨‍🎓' : '🧑‍🎓'}
+              {state.user?.gender === 'female' ? '👩🏿‍🎓' : state.user?.gender === 'male' ? '👨🏿‍🎓' : '🧑🏿‍🎓'}
             </div>
             <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-2xl flex items-center justify-center text-xl shadow-lg border border-navy/5">
               {currentTier.icon}
@@ -329,6 +331,52 @@ const Profile: React.FC = () => {
 
             {activeTab === 'settings' && (
               <div className="space-y-6 mb-12">
+
+                {/* ── AI Companion ── */}
+                <div className="bg-white rounded-[40px] overflow-hidden border border-navy/5 shadow-sm">
+                  <div className="p-6 border-b border-navy/5 flex items-center gap-3">
+                    <div className="p-2.5 bg-navy/5 text-navy rounded-xl">
+                      <UserCheck size={18} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-navy">Your AI Companion</h3>
+                      <p className="text-[10px] text-navy/40 font-bold uppercase tracking-widest">Who guides you in chat</p>
+                    </div>
+                  </div>
+                  <div className="p-4 grid grid-cols-2 gap-3">
+                    {[
+                      { id: 'amara' as const, name: 'Amara', tagline: 'Trusted older sister', desc: 'Warm, wise, and nurturing. Guides you like family.' },
+                      { id: 'jabari' as const, name: 'Jabari', tagline: 'Trusted older brother', desc: 'Bold, direct, and encouraging. Pushes you to grow.' },
+                    ].map((opt) => {
+                      const isSelected = (state.user?.aiPersona ?? 'amara') === opt.id;
+                      return (
+                        <motion.button
+                          key={opt.id}
+                          whileTap={{ scale: 0.97 }}
+                          onClick={() => dispatch({ type: 'SET_AI_PERSONA', payload: opt.id })}
+                          className={`p-4 rounded-3xl border-2 text-left transition-all flex flex-col gap-3 ${
+                            isSelected
+                              ? 'border-yellow bg-yellow/10 shadow-sm'
+                              : 'border-navy/5 bg-off-white hover:bg-white'
+                          }`}
+                        >
+                          <AIAvatar persona={opt.id} size={52} />
+                          <div>
+                            <p className={`font-bold text-sm ${isSelected ? 'text-navy' : 'text-navy/70'}`}>{opt.name}</p>
+                            <p className="text-[10px] text-navy/40 font-bold uppercase tracking-widest leading-tight">{opt.tagline}</p>
+                          </div>
+                          <p className="text-[11px] text-navy/50 leading-snug font-nunito">{opt.desc}</p>
+                          {isSelected && (
+                            <span className="text-[9px] font-black uppercase tracking-widest text-yellow-700 bg-yellow/20 px-2 py-0.5 rounded-full self-start">
+                              Active
+                            </span>
+                          )}
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {/* ── Jabari's Voice ── */}
                 <div className="bg-white rounded-[40px] overflow-hidden border border-navy/5 shadow-sm">
                   <div className="p-6 border-b border-navy/5 flex items-center gap-3">
@@ -341,47 +389,61 @@ const Profile: React.FC = () => {
                     </div>
                   </div>
                   <div className="p-4 space-y-3">
-                    {JABARI_VOICE_OPTIONS.map((voice) => (
-                      <motion.button
-                        key={voice.id}
-                        whileTap={{ scale: 0.97 }}
-                        onClick={() => handleVoiceSelect(voice.id)}
-                        className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left ${
-                          selectedVoice === voice.id
-                            ? 'border-yellow bg-yellow/10 shadow-sm'
-                            : 'border-navy/5 bg-white hover:bg-off-white'
-                        }`}
-                      >
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl ${
-                          selectedVoice === voice.id ? 'bg-yellow/20' : 'bg-off-white'
-                        }`}>
-                          {voice.gender === 'male' ? '👨' : '👩'}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className={`font-bold text-sm ${
-                            selectedVoice === voice.id ? 'text-navy' : 'text-navy/70'
+                    {JABARI_VOICE_OPTIONS.map((voice) => {
+                      const isLocked = voice.isPremium && !state.user?.isPremium;
+                      return (
+                        <motion.button
+                          key={voice.id}
+                          whileTap={isLocked ? {} : { scale: 0.97 }}
+                          onClick={() => !isLocked && handleVoiceSelect(voice.id)}
+                          className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left ${
+                            isLocked
+                              ? 'border-navy/5 bg-off-white opacity-60 cursor-not-allowed'
+                              : selectedVoice === voice.id
+                                ? 'border-yellow bg-yellow/10 shadow-sm'
+                                : 'border-navy/5 bg-white hover:bg-off-white'
+                          }`}
+                        >
+                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl ${
+                            selectedVoice === voice.id ? 'bg-yellow/20' : 'bg-off-white'
                           }`}>
-                            {voice.label}
-                          </p>
-                          <p className="text-[10px] text-navy/40 font-bold uppercase tracking-widest">
-                            {voice.description}
-                          </p>
-                        </div>
-                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
-                          selectedVoice === voice.id
-                            ? 'border-yellow bg-yellow'
-                            : 'border-navy/15 bg-white'
-                        }`}>
-                          {selectedVoice === voice.id && (
-                            <motion.div
-                              initial={{ scale: 0 }}
-                              animate={{ scale: 1 }}
-                              className="w-2 h-2 bg-white rounded-full"
-                            />
+                            {isLocked ? '🔒' : voice.gender === 'male' ? '👨' : '👩'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className={`font-bold text-sm ${
+                                selectedVoice === voice.id ? 'text-navy' : 'text-navy/70'
+                              }`}>
+                                {voice.label}
+                              </p>
+                              {voice.isPremium && (
+                                <span className="text-[9px] font-black uppercase tracking-widest text-yellow-700 bg-yellow/20 px-1.5 py-0.5 rounded-full">
+                                  YE+
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] text-navy/40 font-bold uppercase tracking-widest">
+                              {voice.description}
+                            </p>
+                          </div>
+                          {!isLocked && (
+                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all ${
+                              selectedVoice === voice.id
+                                ? 'border-yellow bg-yellow'
+                                : 'border-navy/15 bg-white'
+                            }`}>
+                              {selectedVoice === voice.id && (
+                                <motion.div
+                                  initial={{ scale: 0 }}
+                                  animate={{ scale: 1 }}
+                                  className="w-2 h-2 bg-white rounded-full"
+                                />
+                              )}
+                            </div>
                           )}
-                        </div>
-                      </motion.button>
-                    ))}
+                        </motion.button>
+                      );
+                    })}
                   </div>
 
                   {/* Collapsible System Voices */}

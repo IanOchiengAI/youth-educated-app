@@ -28,6 +28,7 @@ import { addPoints } from '../lib/gamification';
 import { supabase } from '../lib/supabase';
 import { t, type Language } from '../lib/i18n';
 import SafeguardingCard from '../components/SafeguardingCard';
+import AIAvatar from '../components/AIAvatar';
 
 interface Message {
   id: string;
@@ -117,15 +118,16 @@ const Chat: React.FC = () => {
         const goalsText = goals.join(', ');
         const hasMentorGoals = state.user?.mentorPairId && state.jabariGoals.length > 0;
 
+        const aiName = state.user?.aiPersona === 'jabari' ? 'Jabari' : 'Amara';
         let greeting: string;
         if (language === 'Kiswahili') {
-          greeting = `Jambo ${state.user?.name}! Mimi ni Amara. Niko hapa kukusaidia. Unafikiria nini leo?`;
+          greeting = `Jambo ${state.user?.name}! Mimi ni ${aiName}. Niko hapa kukusaidia. Unafikiria nini leo?`;
         } else if (hasMentorGoals && goalsText) {
           greeting = `Habari ${state.user?.name}! I see your mentor wants us to focus on: ${goalsText}. How are things going?`;
         } else if (goalsText) {
           greeting = `Jambo ${state.user?.name}! I know you're working on: ${goalsText}. What's on your mind today?`;
         } else {
-          greeting = `Jambo ${state.user?.name}! I'm Amara. I'm here to support you. What's on your mind?`;
+          greeting = `Jambo ${state.user?.name}! I'm ${aiName}. I'm here to support you. What's on your mind?`;
         }
         
         setMessages([{
@@ -245,12 +247,13 @@ const Chat: React.FC = () => {
       : baseHistory;
 
     const responseText = await sendToJabari(
-      userMessage.text, 
-      history, 
-      state.user, 
+      userMessage.text,
+      history,
+      state.user,
       state.isOffline,
       activeMode,
-      activeScenario || undefined
+      activeScenario || undefined,
+      state.user?.aiPersona ?? 'amara'
     );
     
     setIsTyping(false);
@@ -293,11 +296,9 @@ const Chat: React.FC = () => {
             <ChevronLeft size={24} />
           </button>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-yellow rounded-full flex items-center justify-center text-navy text-xl font-bold">
-              🌸
-            </div>
+            <AIAvatar persona={state.user?.aiPersona ?? 'amara'} size={40} />
             <div>
-              <h2 className="font-bold">Amara</h2>
+              <h2 className="font-bold">{state.user?.aiPersona === 'jabari' ? 'Jabari' : 'Amara'}</h2>
               <div className="flex items-center gap-1.5">
                 <div className={`w-2 h-2 rounded-full ${state.isOffline ? 'bg-grey' : 'bg-green-400'}`} />
                 <span className="text-[10px] text-white/60 font-medium uppercase tracking-widest">

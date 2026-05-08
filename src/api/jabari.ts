@@ -1,4 +1,3 @@
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 import { User } from '../AppContext';
 import { supabase } from '../lib/supabase';
 import offlineResponses from '../data/jabariOffline.json';
@@ -19,34 +18,14 @@ export const ROLEPLAY_SCENARIOS: RoleplayScenario[] = [
   { id: 'friend', name: 'Peer Pressure', persona: 'Jakes (Cool Friend)', description: 'Refuse an offer to skip school.', goal: 'Build assertiveness.' },
 ];
 
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
-const genAI = new GoogleGenerativeAI(API_KEY);
+const JABARI_CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/jabari-chat`;
 
-const model = genAI.getGenerativeModel({
-  model: 'gemini-2.0-flash',
-  generationConfig: {
-    maxOutputTokens: 600,
-    temperature: 0.8,
-  },
-  safetySettings: [
-    {
-      category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-      threshold: HarmBlockThreshold.BLOCK_ONLY_HIGH,
-    },
-    {
-      category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-    },
-    {
-      category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-    },
-    {
-      category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-      threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-    },
-  ],
-});
+async function getAuthHeader(): Promise<string> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token
+    ? `Bearer ${session.access_token}`
+    : `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`;
+}
 
 export const fetchAIConversations = async (userId: string) => {
   const { data, error } = await supabase
@@ -54,7 +33,7 @@ export const fetchAIConversations = async (userId: string) => {
     .select('message_history')
     .eq('user_id', userId)
     .single();
-  
+
   if (error && error.code !== 'PGRST116') {
     console.error('Error fetching AI history:', error);
   }
@@ -64,8 +43,8 @@ export const fetchAIConversations = async (userId: string) => {
 export const updateAIConversations = async (userId: string, history: any[]) => {
   const { error } = await supabase
     .from('ai_conversations')
-    .upsert({ 
-      user_id: userId, 
+    .upsert({
+      user_id: userId,
       message_history: history,
       updated_at: new Date().toISOString()
     }, { onConflict: 'user_id' });
@@ -75,8 +54,33 @@ export const updateAIConversations = async (userId: string, history: any[]) => {
   }
 };
 
-export const buildJabariPrompt = (user: User | null, mode: InteractionMode = 'default', scenario?: RoleplayScenario) => {
-  if (!user) return "You are Amara, a supportive life-skills companion for Kenyan youth.";
+const PERSONA_PROMPTS = {
+  amara: {
+    name: 'Amara',
+    meaning: 'grace',
+    gender: 'female',
+    archetype: 'a trusted older sister, auntie, or community mother figure',
+    pronoun: 'She',
+    greeting: 'Safi! I am Amara. How can I support you today?',
+  },
+  jabari: {
+    name: 'Jabari',
+    meaning: 'brave one',
+    gender: 'male',
+    archetype: 'a trusted older brother, uncle, or community elder figure',
+    pronoun: 'He',
+    greeting: 'Safi! Jabari hapa — ready to walk this path with you. What\'s on your mind?',
+  },
+} as const;
+
+export const buildJabariPrompt = (
+  user: User | null,
+  mode: InteractionMode = 'default',
+  scenario?: RoleplayScenario,
+  persona: 'amara' | 'jabari' = 'amara'
+) => {
+  const p = PERSONA_PROMPTS[persona];
+  if (!user) return `You are ${p.name}, a supportive life-skills companion for Kenyan youth.`;
 
   const { name, ageBracket, county, language, goals } = user;
   const isKsw = language === 'Kiswahili';
@@ -86,10 +90,10 @@ export const buildJabariPrompt = (user: User | null, mode: InteractionMode = 'de
   if (mode === 'roleplay' && scenario) {
     modeInstructions = `
 ACTION MODE: ROLEPLAY
-You are NO LONGER Amara. You are playing the character: ${scenario.persona}.
+You are NO LONGER ${p.name}. You are playing the character: ${scenario.persona}.
 Scenario: ${scenario.description}
 Goal: Help the student practice: ${scenario.goal}
-- Stay strictly in character. 
+- Stay strictly in character.
 - Be realistic (not too easy, not too hard).
 - After 3-4 exchanges, provide a brief 'Mentor Tip' in brackets [...] then exit the mode.
 `;
@@ -103,12 +107,12 @@ You are testing the student's knowledge in a fun, supportive way.
 `;
   } else {
     modeInstructions = `
-You are Amara, a wise and warm AI mentor built for African youth.
-Your name means "grace" in many African languages.
-You are female — a trusted older sister, auntie, or community mother figure.
+You are ${p.name}, a wise and warm AI mentor built for African youth.
+Your name means "${p.meaning}" in many African languages.
+You are ${p.gender} — ${p.archetype}.
 
 Your personality:
-- You speak like a trusted older sister or community elder, not a corporate chatbot.
+- You speak like ${p.archetype}, not a corporate chatbot.
 - You use warm, direct language. No fluff, no jargon.
 - You occasionally use common African/Kenyan phrases naturally like pole pole, mambo, sawa but never force it.
 - You understand the Kenyan context: county schools, KCSE exams, matatu culture, M-Pesa, village life vs city life.
@@ -130,7 +134,7 @@ You should acknowledge these goals naturally in your responses.
 `;
   }
 
-  return `You are Amara, a supportive and wise life-skills companion for a ${ageBracket} year old in ${county}, Kenya. 
+  return `You are ${p.name}, a supportive and wise life-skills companion for a ${ageBracket} year old in ${county}, Kenya.
 User Name: ${name}
 Primary Language: ${language}
 Top Goals: ${goals.join(', ')}
@@ -143,74 +147,79 @@ ${isKsw ? '- Respond primarily in Kiswahili.' : '- Respond primarily in English.
 - Avoid being overly formal or robotic. Use emojis naturally.`;
 };
 
+function getInitialModelResponse(mode: InteractionMode, persona: 'amara' | 'jabari', scenario?: RoleplayScenario): string {
+  const p = PERSONA_PROMPTS[persona];
+  if (mode === 'quiz') return "Safi! Let's test your knowledge. Ready for the first question?";
+  if (mode === 'roleplay') return `Jambo! I'm now in Roleplay mode for the '${scenario?.name}' scenario. Let's begin.`;
+  return p.greeting;
+}
+
 export const sendToJabari = async (
   message: string,
   history: { role: 'user' | 'model'; parts: { text: string }[] }[],
   user: User | null,
   isOffline: boolean,
   mode: InteractionMode = 'default',
-  scenario?: RoleplayScenario
+  scenario?: RoleplayScenario,
+  persona: 'amara' | 'jabari' = 'amara'
 ): Promise<string> => {
-  if (isOffline || !API_KEY) {
+  if (isOffline) {
     const lowerMessage = message.toLowerCase();
-    const fallback = offlineResponses.find(r => 
+    const fallback = (offlineResponses as { triggers: string[]; response: string }[]).find(r =>
       r.triggers.some(t => lowerMessage.includes(t))
     );
     return fallback ? fallback.response : "Mambo! I'm in offline mode right now, but I'm still here for you. What's on your mind? 😊";
   }
 
   try {
-    const chat = model.startChat({
-      history: [
-        { role: 'user', parts: [{ text: buildJabariPrompt(user, mode, scenario) }] },
-        { 
-          role: 'model', 
-          parts: [{ 
-            text: mode === 'default' 
-              ? "Safi! I am Amara. How can I support you today?" 
-              : mode === 'quiz' 
-                ? "Safi! Let's test your knowledge. Ready for the first question?" 
-                : `Jambo! I'm now in Roleplay mode for the '${scenario?.name}' scenario. Let's begin.`
-          }] 
-        },
-        ...history
-      ],
+    const preparedHistory = [
+      { role: 'user' as const, parts: [{ text: buildJabariPrompt(user, mode, scenario, persona) }] },
+      { role: 'model' as const, parts: [{ text: getInitialModelResponse(mode, persona, scenario) }] },
+      ...history,
+    ];
+
+    const authHeader = await getAuthHeader();
+    const response = await fetch(JABARI_CHAT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+      body: JSON.stringify({ action: 'chat', message, preparedHistory }),
     });
 
-    const result = await chat.sendMessage(message);
-    const response = await result.response;
-    return response.text();
-  } catch (error: any) {
-    console.error("Jabari API Error:", error);
-    if (error?.message?.includes('SAFETY') || error?.toString().includes('SAFETY') || error?.message?.includes('HarmCategory')) {
-       return "I want to be helpful, but I am not equipped to provide advice or discuss this topic due to my safety guidelines. Please speak to a trusted adult. 💙";
+    if (response.status === 429) {
+      return "Pole — give me just a second to think! 😊";
     }
+    if (!response.ok) throw new Error(`Edge function error: ${response.status}`);
+
+    const data = await response.json();
+    if (data.error === 'SAFETY_BLOCK') {
+      return "I want to be helpful, but I am not equipped to provide advice or discuss this topic due to my safety guidelines. Please speak to a trusted adult. 💙";
+    }
+    if (data.error) throw new Error(data.error);
+
+    return data.text ?? '';
+  } catch (error) {
+    console.error("Jabari API Error:", error);
     return "Pole sana, I'm having a bit of trouble connecting right now. Let's try again in a moment! 🙏";
   }
 };
+
 export const generateMentorBriefing = async (
   studentName: string,
   activityData: string
 ): Promise<string> => {
-  if (!API_KEY) return "AI Summary unavailable offline.";
-
   try {
-    const prompt = `You are a Mentor's Assistant at 'Youth Educated'. 
-Your job is to provide a concise, professional briefing for a human mentor about their student, ${studentName}.
+    const authHeader = await getAuthHeader();
+    const response = await fetch(JABARI_CHAT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+      body: JSON.stringify({ action: 'mentor-briefing', studentName, activityData }),
+    });
 
-DATA PROVIDED:
-${activityData}
+    if (!response.ok) throw new Error(`Edge function error: ${response.status}`);
 
-INSTRUCTIONS:
-1. Summarize the student's recent status into exactly 3 bullet points.
-2. Focus on: Recent Mood Trends, Key Topics discussed with AI, and Progress towards Goals.
-3. Be objective, professional, and helpful.
-4. Keep the entire summary under 60 words.
-5. If the data is sparse, provide the best summary possible.`;
-
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
+    const data = await response.json();
+    if (data.error) throw new Error(data.error);
+    return data.text ?? 'AI Summary unavailable.';
   } catch (error) {
     console.error("Mentor Briefing Error:", error);
     return "Could not generate briefing at this time. Please review recent activity manually.";
@@ -220,14 +229,20 @@ INSTRUCTIONS:
 export const generateCheckinSummary = async (
   history: { role: 'user' | 'model'; parts: { text: string }[] }[]
 ): Promise<string | null> => {
-  if (!API_KEY || history.length < 3) return null;
+  if (history.length < 3) return null;
 
   try {
-    const chat = model.startChat({ history });
-    const result = await chat.sendMessage(
-      "Based on our conversation, give a 1-sentence summary, list which goals came up, and rate the mood as positive, neutral, or concerning. Format exactly as: SUMMARY: ... | GOALS: ... | MOOD: ..."
-    );
-    return result.response.text();
+    const authHeader = await getAuthHeader();
+    const response = await fetch(JABARI_CHAT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': authHeader },
+      body: JSON.stringify({ action: 'checkin-summary', history }),
+    });
+
+    if (!response.ok) throw new Error(`Edge function error: ${response.status}`);
+
+    const data = await response.json();
+    return data.text ?? null;
   } catch {
     return null;
   }

@@ -145,7 +145,15 @@ const TierUpgradeModal: React.FC<TierUpgradeModalProps> = ({ tier, points, userN
           className="flex flex-col w-full gap-3 px-4"
           onClick={(e) => e.stopPropagation()}
         >
-          <button className="bg-yellow text-navy font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform">
+          <button
+            onClick={() => {
+              const text = encodeURIComponent(
+                `🏆 I just levelled up to ${tier.swahili} (${tier.name}) on Youth Educated! Growing every day. 💛 #YouthEducated`
+              );
+              window.open(`https://wa.me/?text=${text}`, '_blank', 'noopener,noreferrer');
+            }}
+            className="bg-yellow text-navy font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-transform"
+          >
             <Share2 size={18} />
             Share to WhatsApp
           </button>

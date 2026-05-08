@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Plus, 
-  CheckCircle2, 
-  Circle, 
-  Trash2, 
-  ChevronRight, 
-  Calendar, 
-  Target, 
+import {
+  Plus,
+  CheckCircle2,
+  Circle,
+  Trash2,
+  ChevronRight,
+  ChevronLeft,
+  Calendar,
+  Target,
   Sparkles,
   BarChart3,
-  MessageCircle
+  MessageCircle,
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { useAppContext } from '../AppContext';
@@ -23,6 +25,7 @@ import { t, type Language } from '../lib/i18n';
 
 const Goals: React.FC = () => {
   const { state, dispatch } = useAppContext();
+  const navigate = useNavigate();
   const [newGoalText, setNewGoalText] = useState('');
   const [showReflection, setShowReflection] = useState(false);
   const [reflectionText, setReflectionText] = useState('');
@@ -137,9 +140,17 @@ const Goals: React.FC = () => {
     <div className="min-h-screen bg-off-white pb-32">
       <header className="bg-navy text-white px-6 pt-12 pb-16 rounded-b-[40px]">
         <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold mb-1 font-poppins text-yellow">{t('goals.title', lang)}</h1>
-            <p className="text-white/60 font-nunito">{t('goals.subtitle', lang)}</p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(-1)}
+              className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white active:scale-90 transition-transform"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <div>
+              <h1 className="text-3xl font-bold mb-1 font-poppins text-yellow">{t('goals.title', lang)}</h1>
+              <p className="text-white/60 font-nunito">{t('goals.subtitle', lang)}</p>
+            </div>
           </div>
           <div className="w-14 h-14 bg-yellow rounded-2xl flex items-center justify-center text-navy shadow-lg shadow-yellow/20">
             <Target size={32} />

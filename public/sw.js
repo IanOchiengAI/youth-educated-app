@@ -1,6 +1,6 @@
 // Youth Educated Service Worker
 // Bump CACHE_VERSION on every deploy to invalidate old caches.
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const CACHE_NAME = `youth-educated-${CACHE_VERSION}`;
 
 const PRECACHE_ASSETS = [
@@ -43,10 +43,8 @@ self.addEventListener('fetch', (event) => {
   // Skip non-GET requests and browser-extension URLs
   if (request.method !== 'GET' || !url.protocol.startsWith('http')) return;
 
-  // Network-first for Supabase and Gemini API calls — always want fresh data
-  const isApiCall =
-    url.hostname.includes('supabase.co') ||
-    url.hostname.includes('generativelanguage.googleapis.com');
+  // Network-first for Supabase API calls — always want fresh data
+  const isApiCall = url.hostname.includes('supabase.co');
 
   if (isApiCall) {
     event.respondWith(

@@ -22,6 +22,7 @@ import { generateMentorBriefing } from '../api/jabari';
 import { updateMentorGoals } from '../lib/mentoring';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { checkSafeguarding } from '../lib/safeguarding';
+import SafeguardingCard from '../components/SafeguardingCard';
 import { t, type Language } from '../lib/i18n';
 
 interface Student {
@@ -117,6 +118,7 @@ const MentorDashboard: React.FC = () => {
   const [nudgeDrafts, setNudgeDrafts] = useState<Record<string, string>>({});
   const [nudgeStatus, setNudgeStatus] = useState<Record<string, 'idle' | 'sending' | 'sent'>>({});
   const [todaysNudges, setTodaysNudges] = useState<Record<string, boolean>>({});
+  const [escalationMsg, setEscalationMsg] = useState<string | null>(null);
 
   const NUDGE_PROMPTS = [
     "What's one thing you're going to do differently today?",
@@ -467,7 +469,7 @@ const MentorDashboard: React.FC = () => {
 
     const safeCheck = checkSafeguarding(draft, state.user?.ageBracket || 'adult', state.user?.id, 'mentor_nudge');
     if (safeCheck.triggered && safeCheck.escalationText) {
-      alert(safeCheck.escalationText);
+      setEscalationMsg(safeCheck.escalationText);
     }
 
     setNudgeStatus(prev => ({ ...prev, [studentId]: 'sending' }));
@@ -994,6 +996,24 @@ const MentorDashboard: React.FC = () => {
           </div>
         </section>
       </main>
+
+      <AnimatePresence>
+        {escalationMsg && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-navy/80 flex items-end p-4"
+          >
+            <div className="w-full max-w-md mx-auto">
+              <SafeguardingCard
+                message={escalationMsg}
+                onDismiss={() => setEscalationMsg(null)}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

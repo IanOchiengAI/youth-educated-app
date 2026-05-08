@@ -1,7 +1,7 @@
 {
   "name": "youth-educated-app",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "deploy:edge": "npx supabase functions deploy check-session-followup --no-verify-jwt"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "deploy:edge": "npx supabase functions deploy check-session-followup --no-verify-jwt && npx supabase functions deploy jabari-chat"
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",
@@ -20,28 +22,28 @@
     "@capacitor/push-notifications": "^8.0.2",
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.1",
-    "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.99.1",
-    "@tailwindcss/vite": "^4.1.14",
-    "@vitejs/plugin-react": "^5.0.4",
     "canvas-confetti": "^1.9.4",
     "dexie": "^4.3.0",
     "dexie-react-hooks": "^4.2.0",
-    "dotenv": "^17.2.3",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-is": "^19.2.5",
     "react-router-dom": "^7.13.1",
-    "recharts": "^3.8.0",
-    "vite": "^6.2.0"
+    "recharts": "^3.8.0"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.1.14",
     "@types/canvas-confetti": "^1.9.0",
+    "@types/node": "^22.0.0",
+    "@vitejs/plugin-react": "^5.0.4",
     "autoprefixer": "^10.4.21",
+    "dotenv": "^17.2.3",
     "tailwindcss": "^4.1.14",
     "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "vite": "^6.2.0",
+    "vitest": "^2.0.0"
   }
 }

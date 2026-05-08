@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Users, 
-  MessageCircle, 
-  Search, 
-  ShieldCheck, 
-  Calendar, 
+import {
+  Users,
+  MessageCircle,
+  ShieldCheck,
+  Calendar,
   Sparkles,
   WifiOff,
-  User,
+  ChevronLeft,
   Lightbulb,
   TrendingUp,
   Dumbbell,
@@ -28,6 +27,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { requestMentorMatch } from '../lib/mentoring';
+import AIAvatar from '../components/AIAvatar';
 import { MENTOR_FIELDS } from '../constants';
 import { FALLBACK_MENTORS } from '../data/mentors';
 
@@ -122,7 +122,7 @@ const Mentor: React.FC = () => {
   // Fetch mentors, featured mentor, and match status
   useEffect(() => {
     const fetchData = async () => {
-      if (!state.user?.id || state.isOffline || !isSupabaseConfigured) {
+      if (state.isOffline || !isSupabaseConfigured) {
         setMentors(FALLBACK_MENTORS.map(m => ({
           ...m,
           field: m.expertise[0] || 'General',
@@ -143,7 +143,7 @@ const Mentor: React.FC = () => {
             expertise,
             avatar_url,
             county,
-            profiles:id (
+            profiles (
               name
             )
           `)
@@ -201,39 +201,41 @@ const Mentor: React.FC = () => {
           });
         }
 
-        // 3. Fetch active match for current user
-        const { data: matchData, error: matchError } = await supabase
-          .from('mentor_matches')
-          .select(`
-            id,
-            mentor_id,
-            profiles!mentor_matches_mentor_id_fkey (
-              name
-            ),
-            mentor_profiles!mentor_matches_mentor_id_fkey (
-              bio,
-              expertise,
-              avatar_url
-            )
-          `)
-          .eq('student_id', state.user.id)
-          .eq('status', 'active')
-          .maybeSingle();
+        // 3. Fetch active match for current user (only if logged in)
+        if (state.user?.id) {
+          const { data: matchData, error: matchError } = await supabase
+            .from('mentor_matches')
+            .select(`
+              id,
+              mentor_id,
+              profiles!mentor_matches_mentor_id_fkey (
+                name
+              ),
+              mentor_profiles!mentor_matches_mentor_id_fkey (
+                bio,
+                expertise,
+                avatar_url
+              )
+            `)
+            .eq('student_id', state.user.id)
+            .eq('status', 'active')
+            .maybeSingle();
 
-        if (!matchError && matchData && matchData.profiles) {
-          setMyMatch({
-            id: matchData.id,
-            mentor: {
-              id: matchData.mentor_id,
-              name: (matchData.profiles as any)?.name || 'Mentor',
-              field: (matchData.mentor_profiles as any)?.expertise?.[0] || 'General',
-              expertise: (matchData.mentor_profiles as any)?.expertise || [],
-              bio: (matchData.mentor_profiles as any)?.bio || '',
-              icon: (matchData.mentor_profiles as any)?.avatar_url || '👩‍🏫',
-              county: null,
-            }
-          });
-          setIsMatched(true);
+          if (!matchError && matchData && matchData.profiles) {
+            setMyMatch({
+              id: matchData.id,
+              mentor: {
+                id: matchData.mentor_id,
+                name: (matchData.profiles as any)?.name || 'Mentor',
+                field: (matchData.mentor_profiles as any)?.expertise?.[0] || 'General',
+                expertise: (matchData.mentor_profiles as any)?.expertise || [],
+                bio: (matchData.mentor_profiles as any)?.bio || '',
+                icon: (matchData.mentor_profiles as any)?.avatar_url || '👩‍🏫',
+                county: null,
+              }
+            });
+            setIsMatched(true);
+          }
         }
       } catch (err) {
         console.error('Failed to fetch mentor data', err);
@@ -358,9 +360,17 @@ const Mentor: React.FC = () => {
       <header className="bg-navy text-white px-6 pt-12 pb-16 rounded-b-[40px] relative overflow-hidden">
         <div className="absolute top-[-40px] left-[-40px] w-60 h-60 bg-blue-500/10 rounded-full blur-3xl" />
         <div className="flex justify-between items-center mb-8 relative z-10">
-          <div>
-            <h1 className="text-3xl font-bold">Talk to a Mentor</h1>
-            <p className="text-white/40 text-xs font-bold uppercase tracking-widest mt-1">Your guide. Your pace.</p>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(-1)}
+              className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white active:scale-90 transition-transform"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <div>
+              <h1 className="text-3xl font-bold">Talk to a Mentor</h1>
+              <p className="text-white/40 text-xs font-bold uppercase tracking-widest mt-1">Your guide. Your pace.</p>
+            </div>
           </div>
           <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/10">
             <Users size={24} className="text-yellow" />
@@ -410,17 +420,17 @@ const Mentor: React.FC = () => {
 
               {matchStep === 0 ? (
                 <div className="space-y-6">
-                  {/* Jabari Quiz Trigger */}
-                  <button 
+                  {/* AI Matching Trigger */}
+                  <button
                     onClick={() => setMatchStep(1)}
-                    className="w-full bg-navy text-white rounded-2xl p-4 flex items-center gap-4 active:scale-95 transition-transform"
+                    className="w-full bg-navy border border-yellow/20 text-white rounded-2xl p-4 flex items-center gap-4 active:scale-95 transition-transform shadow-lg"
                   >
-                    <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center text-2xl animate-pulse flex-shrink-0">
-                      🤖
-                    </div>
+                    <AIAvatar persona={state.user?.aiPersona ?? 'amara'} size={48} pulse />
                     <div className="text-left">
                       <h3 className="font-bold text-lg">Help me find the right mentor</h3>
-                      <p className="text-white/60 text-sm mt-0.5 font-nunito">Jabari will guide you to your best match</p>
+                      <p className="text-white/60 text-sm mt-0.5 font-nunito">
+                        {state.user?.aiPersona === 'jabari' ? 'Jabari' : 'Amara'} will guide you to your best match
+                      </p>
                     </div>
                   </button>
 
@@ -457,8 +467,8 @@ const Mentor: React.FC = () => {
                   {/* Featured badge */}
                   <div className="flex items-center justify-between mb-5">
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Featured This Week</span>
-                    <span className="bg-yellow text-navy px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-1">
-                      ⭐ Featured
+                    <span className="bg-yellow text-navy px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                      Featured
                     </span>
                   </div>
 
@@ -627,7 +637,7 @@ const Mentor: React.FC = () => {
                       {matchStep === 1 && (
                         <div key="step1">
                           <div className="flex items-center gap-3 mb-6">
-                             <div className="text-3xl animate-pulse">🤖</div>
+                             <AIAvatar persona={state.user?.aiPersona ?? 'amara'} size={36} pulse />
                              <h3 className="text-xl font-bold text-navy leading-tight">What's the one thing you most want to change in the next 3 months?</h3>
                           </div>
                           <div className="grid grid-cols-2 gap-3">
@@ -651,7 +661,7 @@ const Mentor: React.FC = () => {
                       {matchStep === 2 && (
                         <div key="step2">
                           <div className="flex items-center gap-3 mb-6">
-                             <div className="text-3xl animate-pulse">🤖</div>
+                             <AIAvatar persona={state.user?.aiPersona ?? 'amara'} size={36} pulse />
                              <h3 className="text-xl font-bold text-navy leading-tight">How do you prefer to get guidance?</h3>
                           </div>
                           <div className="flex flex-col gap-3">
@@ -675,7 +685,7 @@ const Mentor: React.FC = () => {
                       {matchStep === 3 && (
                         <div key="step3">
                           <div className="flex items-center gap-3 mb-6">
-                             <div className="text-3xl animate-pulse">🤖</div>
+                             <AIAvatar persona={state.user?.aiPersona ?? 'amara'} size={36} pulse />
                              <h3 className="text-xl font-bold text-navy leading-tight">How often can you commit to meeting?</h3>
                           </div>
                           <div className="flex flex-col gap-3">
@@ -712,7 +722,7 @@ const Mentor: React.FC = () => {
                           ) : (
                             <div className="space-y-6">
                               <div className="flex items-center gap-3 mb-2">
-                                 <div className="text-3xl">🎉</div>
+                                 <Sparkles size={24} className="text-yellow" />
                                  <h3 className="text-xl font-bold text-navy">Your Top Matches</h3>
                               </div>
                               {topMatches.length === 0 ? (

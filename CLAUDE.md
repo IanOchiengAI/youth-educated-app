@@ -31,7 +31,7 @@ The primary market is **Kenya** (all 47 counties). UI language is **English** an
 | State | React Context + `useReducer` (`AppContext.tsx`) |
 | Offline DB | Dexie v4 (IndexedDB) |
 | Backend | Supabase JS v2 (Auth, PostgreSQL, RLS) |
-| AI | Google Generative AI SDK — `gemini-2.0-flash` |
+| AI | Google Gemini 2.0 Flash — via `jabari-chat` Supabase Edge Function (key never in frontend) |
 | TTS | Web Speech API (free) / ElevenLabs (premium, optional) |
 | Native | Capacitor 8 (Android — push notifications, haptics, status bar) |
 | Deployment | Vercel (web) + Android APK via Capacitor |
@@ -60,7 +60,13 @@ npm run preview
 npx ts-node scripts/seed.ts
 ```
 
-**There are no test scripts.** Type-checking via `npm run lint` is the CI gate — always run it before declaring work done.
+```bash
+npm run test         # Run safeguarding test suite (vitest)
+npm run test:watch   # Watch mode
+npm run deploy:edge  # Deploy jabari-chat + check-session-followup to Supabase
+```
+
+Run `npm test` before every deploy to verify the safeguarding logic. Type-checking via `npm run lint` is also a CI gate — run it before declaring work done.
 
 ---
 
@@ -71,16 +77,16 @@ Copy `.env.example` to `.env` before running locally.
 ```
 VITE_SUPABASE_URL          # Supabase project URL
 VITE_SUPABASE_ANON_KEY     # Supabase public anon key (protected by RLS)
-VITE_GEMINI_API_KEY        # Google AI Studio key (Gemini 2.0 Flash)
 VITE_ELEVENLABS_API_KEY    # Optional — premium TTS voice
 ```
 
-For `scripts/seed.ts`, also add to `.env.local`:
-```
-SUPABASE_SERVICE_ROLE_KEY  # Service role key — bypasses RLS for seeding. NEVER use in browser.
+**`GEMINI_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` must NOT be in `.env`.** Set them as Supabase Edge Function secrets only:
+```bash
+npx supabase secrets set GEMINI_API_KEY=your_key
+npx supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your_key
 ```
 
-All `VITE_` vars are **public** (exposed in the browser bundle). Never put service role keys here. Supabase security is enforced by **Row Level Security**.
+All `VITE_` vars are **public** (exposed in the browser bundle). Never put secret keys here. Supabase security is enforced by **Row Level Security**.
 
 ---
 
@@ -336,7 +342,9 @@ Weekly points reset every Monday at midnight. Use `shouldResetWeeklyPoints(lastR
 
 ## Jabari AI Mentor
 
-**File:** `src/api/jabari.ts`
+**File:** `src/api/jabari.ts` (frontend) + `supabase/functions/jabari-chat/index.ts` (Edge Function)
+
+All Gemini calls are proxied through the `jabari-chat` Edge Function. The frontend builds the prompt and history, then posts to the Edge Function via `fetch()` with the user's Supabase auth token. The Gemini API key lives only in `Deno.env.get('GEMINI_API_KEY')` — it never touches the browser bundle or the APK.
 
 - Model: `gemini-2.0-flash`
 - Max output tokens: 600
@@ -535,8 +543,8 @@ Always derive `lang` from context — never use a bare string literal. Several p
 
 ## Service Worker (`public/sw.js`)
 
-- Cache name: `youth-educated-v2` — **bump `CACHE_VERSION` on every deploy** that changes shell files
-- Network-first: `supabase.co`, `generativelanguage.googleapis.com`
+- Cache name: `youth-educated-v3` — **bump `CACHE_VERSION` on every deploy** that changes shell files
+- Network-first: `supabase.co` (Gemini calls now go through Supabase Edge Functions, not the browser)
 - Cache-first: all static assets
 - Precaches: `/`, `/index.html`, `/manifest.json`, `/logo-mark.png`, `/logo.png`
 
@@ -649,7 +657,8 @@ if (error) {
 ## What NOT to Do
 
 - **Do not** add state to the Supabase auth listener's `useEffect` dep array in `AppContext.tsx`
-- **Do not** call Supabase inside `appReducer` — reducers must be pure
+- **Do not** call Gemini API directly from the frontend — always use the `jabari-chat` Edge Function
+- **Do not** call Supabase inside `appReducer` — reducers must be pure; put side-effects in the dispatch wrapper
 - **Do not** read `state` directly inside the auth `useEffect` — use `stateRef.current`
 - **Do not** store service role keys in any `VITE_` env var
 - **Do not** log phone numbers, guardian info, or safeguarding content to analytics

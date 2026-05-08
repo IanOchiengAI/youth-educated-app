@@ -5,7 +5,7 @@
  * To swap: implement TTSService interface with ElevenLabs SDK
  */
 
-import { getSelectedVoiceId } from '../data/voices';
+import { getSelectedVoiceId, ELEVENLABS_VOICE_IDS, JABARI_VOICE_OPTIONS } from '../data/voices';
 
 // ---------------------------------------------------------------------------
 // Interface — the contract every TTS backend must fulfill
@@ -282,8 +282,11 @@ export function getTTSService(): TTSService {
 
   _lastVoiceId = selectedVoice;
 
-  if (selectedVoice === 'elevenlabs_african' && apiKey) {
-    _currentService = new ElevenLabsTTS('EXAVo6Kbc98qBr9vO0s9');
+  const voiceOption = JABARI_VOICE_OPTIONS.find(v => v.id === selectedVoice);
+  const elevenLabsId = voiceOption?.elevenLabsVoiceId;
+
+  if (elevenLabsId && apiKey) {
+    _currentService = new ElevenLabsTTS(elevenLabsId);
   } else {
     _currentService = new WebSpeechTTS();
   }
@@ -302,7 +305,7 @@ export const tts: TTSService = {
 };
 
 /**
- * Direct factory for consuming code that wants to explicitly use ElevenLabs.
+ * Direct factories for explicitly using a specific ElevenLabs voice.
  */
-export const getElevenLabsTTS = () =>
-  new ElevenLabsTTS('EXAVo6Kbc98qBr9vO0s9');
+export const getElevenLabsAmaraTTS = () => new ElevenLabsTTS(ELEVENLABS_VOICE_IDS.amara);
+export const getElevenLabsJabariTTS = () => new ElevenLabsTTS(ELEVENLABS_VOICE_IDS.jabari);

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, ChevronRight, Sparkles } from 'lucide-react';
+import { Search, ChevronRight, Sparkles, BookOpen, Brain, Shield, Rocket, Coins, Users, GraduationCap, Heart } from 'lucide-react';
 import { useAppContext } from '../AppContext';
 import { t, type Language } from '../lib/i18n';
 import {
@@ -9,6 +9,20 @@ import {
   LIFEKIT_ARTICLES,
   type LifeKitArticle,
 } from '../data/lifekit';
+
+// ── Category icon + colour map ───────────────────────────────
+
+const CATEGORY_STYLE: Record<string, { bg: string; text: string; Icon: React.ElementType }> = {
+  'mentor-stories': { bg: 'bg-yellow/20',   text: 'text-yellow-700', Icon: GraduationCap },
+  'school':         { bg: 'bg-blue-50',      text: 'text-blue-700',   Icon: BookOpen },
+  'mental-health':  { bg: 'bg-teal-50',      text: 'text-teal-700',   Icon: Brain },
+  'relationships':  { bg: 'bg-pink-50',      text: 'text-pink-700',   Icon: Heart },
+  'safety':         { bg: 'bg-green-50',     text: 'text-green-700',  Icon: Shield },
+  'future':         { bg: 'bg-indigo-50',    text: 'text-indigo-700', Icon: Rocket },
+  'money':          { bg: 'bg-emerald-50',   text: 'text-emerald-700',Icon: Coins },
+};
+
+const DEFAULT_STYLE = { bg: 'bg-navy/5', text: 'text-navy/60', Icon: BookOpen };
 
 // ── Article Card ─────────────────────────────────────────────
 
@@ -20,36 +34,41 @@ const ArticleCard: React.FC<ArticleCardProps> = ({ article }) => {
   const navigate = useNavigate();
   const { state } = useAppContext();
   const lang: Language = state.user?.language ?? 'English';
+  const { bg, text, Icon } = CATEGORY_STYLE[article.category] ?? DEFAULT_STYLE;
+
   return (
-  <div
-    onClick={() => navigate(`/learn/article/${article.id}`)}
-    className="flex items-center gap-4 bg-white rounded-2xl p-4 shadow-sm border border-navy/5 active:scale-[0.98] transition-transform duration-120 cursor-pointer">
-    {/* Emoji */}
-    <span className="text-2xl flex-shrink-0 leading-none">{article.emoji}</span>
-
-    {/* Content */}
-    <div className="flex-1 min-w-0">
-      <h4 className="font-nunito font-semibold text-navy text-sm leading-snug mb-1.5">
-        {lang === 'Kiswahili' ? article.title_sw : article.title}
-      </h4>
-      <div className="flex items-center gap-1.5 flex-wrap">
-        {article.tags.map((tag) => (
-          <span
-            key={tag}
-            className="bg-pale-yellow text-navy/70 text-[11px] font-semibold px-2 py-0.5 rounded-full"
-          >
-            #{t('tag.' + tag, lang)}
-          </span>
-        ))}
-        <span className="text-grey text-[11px] ml-auto flex-shrink-0">
-          {article.readTime}
-        </span>
+    <div
+      onClick={() => navigate(`/learn/article/${article.id}`)}
+      className="flex items-center gap-4 bg-white rounded-2xl p-4 shadow-sm border border-navy/5 active:scale-[0.98] transition-transform duration-120 cursor-pointer"
+    >
+      {/* Category icon chip */}
+      <div className={`w-10 h-10 ${bg} rounded-xl flex items-center justify-center flex-shrink-0`}>
+        <Icon size={18} className={text} />
       </div>
-    </div>
 
-    {/* Chevron */}
-    <ChevronRight size={18} className="text-navy/30 flex-shrink-0" />
-  </div>
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <h4 className="font-nunito font-semibold text-navy text-sm leading-snug mb-1.5">
+          {lang === 'Kiswahili' ? article.title_sw : article.title}
+        </h4>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {article.tags.slice(0, 2).map((tag) => (
+            <span
+              key={tag}
+              className="bg-navy/5 text-navy/50 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider"
+            >
+              {t('tag.' + tag, lang)}
+            </span>
+          ))}
+          <span className="text-grey text-[11px] ml-auto flex-shrink-0">
+            {article.readTime}
+          </span>
+        </div>
+      </div>
+
+      {/* Chevron */}
+      <ChevronRight size={18} className="text-navy/30 flex-shrink-0" />
+    </div>
   );
 };
 
@@ -137,14 +156,13 @@ const Learn: React.FC = () => {
             <button
               key={cat.id}
               onClick={() => handleCategoryTap(cat.id)}
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-[13px] font-bold whitespace-nowrap transition-all ${
+              className={`px-4 py-2 rounded-full text-[13px] font-bold whitespace-nowrap transition-all ${
                 activeCategory === cat.id
                   ? 'bg-yellow text-navy'
                   : 'bg-white/10 text-white/70'
               }`}
             >
-              <span>{cat.emoji}</span>
-              <span>{lang === 'Kiswahili' ? cat.shortLabel_sw : cat.shortLabel}</span>
+              {lang === 'Kiswahili' ? cat.shortLabel_sw : cat.shortLabel}
             </button>
           ))}
         </div>
@@ -184,8 +202,7 @@ const Learn: React.FC = () => {
                 <section key={cat.id} className="space-y-3">
                   {/* Section heading */}
                   <div className="flex items-center justify-between">
-                    <h2 className="text-[16px] font-poppins font-bold text-navy flex items-center gap-2">
-                      <span>{cat.emoji}</span>
+                    <h2 className="text-[16px] font-poppins font-bold text-navy">
                       {lang === 'Kiswahili' ? cat.label_sw : cat.label}
                     </h2>
                     {catArticles.length > 2 && (

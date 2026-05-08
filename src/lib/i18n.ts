@@ -11,14 +11,15 @@ export type Language = 'English' | 'Kiswahili';
 
 const translations: Record<string, Record<Language, string>> = {
   /* ── Navigation ────────────────────────────────────────── */
-  'nav.home':       { English: 'Home',       Kiswahili: 'Nyumbani' },
-  'nav.lifekit':    { English: 'Life Kit',   Kiswahili: 'Mfuko wa Maisha' },
-  'nav.chat':       { English: 'Chat',       Kiswahili: 'Soga' },
-  'nav.circles':    { English: 'Circles',    Kiswahili: 'Vikundi' },
-  'nav.mentor':     { English: 'Mentor',     Kiswahili: 'Mshauri' },
-  'nav.calendar':   { English: 'Calendar',   Kiswahili: 'Kalenda' },
-  'nav.mypanel':    { English: 'My Panel',   Kiswahili: 'Paneli Yangu' },
-  'nav.admin':      { English: 'Admin',      Kiswahili: 'Msimamizi' },
+  'nav.home':        { English: 'Home',        Kiswahili: 'Nyumbani' },
+  'nav.lifekit':     { English: 'Life Kit',    Kiswahili: 'Mfuko wa Maisha' },
+  'nav.chat':        { English: 'Chat',        Kiswahili: 'Soga' },
+  'nav.circles':     { English: 'Circles',     Kiswahili: 'Vikundi' },
+  'nav.mentor':      { English: 'Mentor',      Kiswahili: 'Mshauri' },
+  'nav.ask_mentor':  { English: 'Ask Mentor',  Kiswahili: 'Uliza Mshauri' },
+  'nav.calendar':    { English: 'Calendar',    Kiswahili: 'Kalenda' },
+  'nav.mypanel':     { English: 'My Panel',    Kiswahili: 'Paneli Yangu' },
+  'nav.admin':       { English: 'Admin',       Kiswahili: 'Msimamizi' },
 
   /* ── Dashboard ─────────────────────────────────────────── */
   'dashboard.greeting':  { English: 'Welcome back',              Kiswahili: 'Karibu tena' },
@@ -40,10 +41,19 @@ const translations: Record<string, Record<Language, string>> = {
   'dashboard.no_recent_activity': { English: 'No recent activity. Start the conversation!', Kiswahili: 'Hakuna shughuli hivi karibuni. Anza mazungumzo!' },
 
   /* ── Quick Actions ─────────────────────────────────────── */
-  'action.ask_amara': { English: 'Ask Amara',   Kiswahili: 'Uliza Amara' },
-  'action.career':    { English: 'Career Map',  Kiswahili: 'Ramani ya Kazi' },
-  'action.opps':      { English: 'Opps Board',  Kiswahili: 'Fursa' },
-  'action.goals':     { English: 'My Goals',    Kiswahili: 'Malengo Yangu' },
+  'action.ask_amara': { English: 'Ask Amara',    Kiswahili: 'Uliza Amara' },
+  'action.ask_ai':    { English: 'Ask AI',       Kiswahili: 'Uliza AI' },
+  'action.career':    { English: 'Career Map',   Kiswahili: 'Ramani ya Kazi' },
+  'action.opps':      { English: 'Opps Board',   Kiswahili: 'Fursa' },
+  'action.goals':     { English: 'My Goals',     Kiswahili: 'Malengo Yangu' },
+  'action.mentor':    { English: 'Ask Mentor',   Kiswahili: 'Uliza Mshauri' },
+  'action.learn':     { English: 'Life Kit',     Kiswahili: 'Mfuko wa Maisha' },
+  'action.circles':   { English: 'Circles',      Kiswahili: 'Vikundi' },
+
+  /* ── Premium / YE+ ─────────────────────────────────────── */
+  'premium.badge':    { English: 'YE+',          Kiswahili: 'YE+' },
+  'premium.locked':   { English: 'Premium',      Kiswahili: 'Premium' },
+  'premium.upgrade':  { English: 'Upgrade to YE+', Kiswahili: 'Panda daraja la YE+' },
 
   /* ── Common Buttons ────────────────────────────────────── */
   'btn.continue':  { English: 'Continue',  Kiswahili: 'Endelea' },

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useRef, useCallback } from 'react';
 import { supabase } from './lib/supabase';
 import { db } from './lib/db';
 import { queueOfflineAction } from './lib/sync';
@@ -19,6 +19,8 @@ export interface User {
   joinedAt: string;
   role: 'student' | 'mentor' | 'admin' | 'dsl';
   jabariVoice: string;
+  aiPersona: 'amara' | 'jabari';
+  isPremium: boolean;
   mentorPairId: string | null;
 }
 
@@ -87,6 +89,13 @@ function deriveAccess(ageBracket: string) {
   return { canAccessSRH, canAccessDrugModule };
 }
 
+// Strips sensitive personal fields before persisting to localStorage
+function sanitizeForStorage(state: AppState): AppState {
+  if (!state.user) return state;
+  const { guardianPhone: _gp, guardianConsentAt: _gca, ...safeUser } = state.user;
+  return { ...state, user: safeUser as User };
+}
+
 type Action =
   | { type: 'SET_USER'; payload: User | null }
   | { type: 'ADD_POINTS'; payload: { points: number; reason: string } }
@@ -102,6 +111,7 @@ type Action =
   | { type: 'SET_JABARI_GOALS'; payload: { goals: string[]; agenda: string } }
   | { type: 'SET_MENTOR_PAIR'; payload: string | null }
   | { type: 'SET_JABARI_VOICE'; payload: string }
+  | { type: 'SET_AI_PERSONA'; payload: 'amara' | 'jabari' }
   | { type: 'HYDRATE'; payload: AppState }
   | { type: 'SYNC_FROM_SUPABASE'; payload: Partial<AppState> };
 
@@ -147,51 +157,32 @@ const AppContext = createContext<{
   dispatch: React.Dispatch<Action>;
 } | undefined>(undefined);
 
+// Pure reducer — no side effects
 function appReducer(state: AppState, action: Action): AppState {
-  let newState = state;
-
   switch (action.type) {
     case 'SET_USER': {
       if (!action.payload) return { ...state, user: null };
       const access = deriveAccess(action.payload.ageBracket);
-      newState = { ...state, user: action.payload, ...access };
-      break;
+      return { ...state, user: action.payload, ...access };
     }
     case 'ADD_POINTS': {
-      const { points, reason } = action.payload;
-      newState = {
+      const { points } = action.payload;
+      return {
         ...state,
         progress: { ...state.progress, points: state.progress.points + points },
       };
-      if (state.user) {
-        if (!state.isOffline) {
-          supabase.from('point_transactions').insert({
-            user_id: state.user.id,
-            points,
-            reason,
-          }).then(({ error }) => {
-            if (error) queueOfflineAction(state.user!.id, 'POINT_TRANSACTION', { points, reason });
-          });
-          supabase.from('profiles').update({ points: newState.progress.points }).eq('id', state.user.id);
-        } else {
-          queueOfflineAction(state.user.id, 'POINT_TRANSACTION', { points, reason });
-        }
-      }
-      break;
     }
     case 'UPDATE_PROGRESS':
-      newState = { ...state, progress: { ...state.progress, ...action.payload } };
-      break;
+      return { ...state, progress: { ...state.progress, ...action.payload } };
     case 'DOWNLOAD_MODULE':
       if (state.modules.downloaded.includes(action.payload)) return state;
-      newState = {
+      return {
         ...state,
         modules: { ...state.modules, downloaded: [...state.modules.downloaded, action.payload] },
       };
-      break;
     case 'START_MODULE':
       if (state.modules.inProgress.includes(action.payload)) return state;
-      newState = {
+      return {
         ...state,
         modules: {
           ...state.modules,
@@ -206,10 +197,9 @@ function appReducer(state: AppState, action: Action): AppState {
           },
         },
       };
-      break;
     case 'UPDATE_MODULE_PROGRESS': {
       const { moduleId, progress } = action.payload;
-      newState = {
+      return {
         ...state,
         modules: {
           ...state.modules,
@@ -226,28 +216,9 @@ function appReducer(state: AppState, action: Action): AppState {
           },
         },
       };
-      if (state.user) {
-        const payload = {
-          module_id: moduleId,
-          completed_lessons: newState.modules.moduleProgress[moduleId].completedLessons,
-          is_completed: newState.modules.completed.includes(moduleId),
-        };
-        if (!state.isOffline) {
-          supabase.from('user_module_progress').upsert({
-            user_id: state.user.id,
-            ...payload,
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'user_id,module_id' }).then(({ error }) => {
-            if (error) queueOfflineAction(state.user!.id, 'LESSON_COMPLETE', payload);
-          });
-        } else {
-          queueOfflineAction(state.user.id, 'LESSON_COMPLETE', payload);
-        }
-      }
-      break;
     }
     case 'COMPLETE_MODULE':
-      newState = {
+      return {
         ...state,
         modules: {
           ...state.modules,
@@ -255,36 +226,25 @@ function appReducer(state: AppState, action: Action): AppState {
           completed: [...state.modules.completed, action.payload],
         },
       };
-      break;
     case 'SET_OFFLINE':
-      newState = { ...state, isOffline: action.payload };
-      break;
+      return { ...state, isOffline: action.payload };
     case 'SET_NOTIFICATIONS':
-      newState = { ...state, notifications: { ...state.notifications, ...action.payload } };
-      break;
+      return { ...state, notifications: { ...state.notifications, ...action.payload } };
     case 'SET_CAREER_RESULTS':
-      newState = { ...state, careerResults: action.payload };
-      break;
+      return { ...state, careerResults: action.payload };
     case 'SET_CIRCLE_TYPE':
-      newState = { ...state, circleType: action.payload };
-      break;
+      return { ...state, circleType: action.payload };
     case 'SET_JABARI_GOALS':
-      newState = {
-        ...state,
-        jabariGoals: action.payload.goals,
-        jabariAgenda: action.payload.agenda,
-      };
-      break;
-    case 'SET_MENTOR_PAIR': {
+      return { ...state, jabariGoals: action.payload.goals, jabariAgenda: action.payload.agenda };
+    case 'SET_MENTOR_PAIR':
       if (!state.user) return state;
-      newState = { ...state, user: { ...state.user, mentorPairId: action.payload } };
-      break;
-    }
-    case 'SET_JABARI_VOICE': {
+      return { ...state, user: { ...state.user, mentorPairId: action.payload } };
+    case 'SET_JABARI_VOICE':
       if (!state.user) return state;
-      newState = { ...state, user: { ...state.user, jabariVoice: action.payload } };
-      break;
-    }
+      return { ...state, user: { ...state.user, jabariVoice: action.payload } };
+    case 'SET_AI_PERSONA':
+      if (!state.user) return state;
+      return { ...state, user: { ...state.user, aiPersona: action.payload } };
     case 'HYDRATE': {
       const hydrated = action.payload;
       if (hydrated.user) {
@@ -294,29 +254,87 @@ function appReducer(state: AppState, action: Action): AppState {
       return { ...hydrated, isOffline: !navigator.onLine };
     }
     case 'SYNC_FROM_SUPABASE':
-      newState = { ...state, ...action.payload };
-      break;
+      return { ...state, ...action.payload };
     default:
       return state;
   }
-
-  // Persist to local DB for offline access
-  if (newState.user) {
-    db.profile.put({ userId: newState.user.id, data: newState });
-  }
-
-  return newState;
 }
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [state, dispatch] = useReducer(appReducer, initialState);
+  const [state, rawDispatch] = useReducer(appReducer, initialState);
 
-  // Stable ref so the auth listener always reads the latest state
-  // without needing to be re-registered on every state update.
+  // Stable refs so effects and the enhanced dispatcher always read latest values
+  // without needing to re-register listeners on every state update.
   const stateRef = useRef(state);
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+
+  // Enhanced dispatcher: runs Supabase side-effects BEFORE handing off to the pure reducer.
+  // Reading from stateRef gives us the pre-action state, which is exactly what we need
+  // (e.g. to compute the new point total for the profiles update).
+  const dispatch = useCallback((action: Action) => {
+    const currentState = stateRef.current;
+
+    if (action.type === 'ADD_POINTS' && currentState.user) {
+      const { points, reason } = action.payload;
+      const newTotal = currentState.progress.points + points;
+      if (!currentState.isOffline) {
+        supabase
+          .from('point_transactions')
+          .insert({ user_id: currentState.user.id, points, reason })
+          .then(({ error }) => {
+            if (error) queueOfflineAction(currentState.user!.id, 'POINT_TRANSACTION', { points, reason });
+          });
+        supabase
+          .from('profiles')
+          .update({ points: newTotal })
+          .eq('id', currentState.user.id);
+      } else {
+        queueOfflineAction(currentState.user.id, 'POINT_TRANSACTION', { points, reason });
+      }
+    }
+
+    if (action.type === 'UPDATE_MODULE_PROGRESS' && currentState.user) {
+      const { moduleId, progress } = action.payload;
+      const existingProgress = currentState.modules.moduleProgress[moduleId] || {
+        currentLesson: 1,
+        completedLessons: [],
+        insights: {},
+      };
+      const mergedLessons = progress.completedLessons ?? existingProgress.completedLessons;
+      const payload = {
+        module_id: moduleId,
+        completed_lessons: mergedLessons,
+        is_completed: currentState.modules.completed.includes(moduleId),
+      };
+      if (!currentState.isOffline) {
+        supabase
+          .from('user_module_progress')
+          .upsert(
+            { user_id: currentState.user.id, ...payload, updated_at: new Date().toISOString() },
+            { onConflict: 'user_id,module_id' }
+          )
+          .then(({ error }) => {
+            if (error) queueOfflineAction(currentState.user!.id, 'LESSON_COMPLETE', payload);
+          });
+      } else {
+        queueOfflineAction(currentState.user.id, 'LESSON_COMPLETE', payload);
+      }
+    }
+
+    if (action.type === 'SET_AI_PERSONA' && currentState.user) {
+      supabase
+        .from('profiles')
+        .update({ ai_persona: action.payload })
+        .eq('id', currentState.user.id)
+        .then(({ error }) => {
+          if (error) console.error('[AppContext] Failed to persist ai_persona:', error.message);
+        });
+    }
+
+    rawDispatch(action);
+  }, []); // stable — reads state via ref, no dependencies needed
 
   // 1. Initial hydration from localStorage (fastest path)
   useEffect(() => {
@@ -324,7 +342,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (savedState) {
       try {
         const parsed = JSON.parse(savedState) as AppState;
-        // Guard against stale/malformed persisted state missing required keys
         if (parsed && parsed.user !== undefined && parsed.progress && parsed.modules) {
           dispatch({ type: 'HYDRATE', payload: parsed });
         }
@@ -363,6 +380,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             joinedAt: profile.joined_at,
             role: profile.role || 'student',
             jabariVoice: profile.jabari_voice || 'default_female',
+            aiPersona: (profile.ai_persona as 'amara' | 'jabari') || 'amara',
+            isPremium: profile.is_premium ?? false,
             mentorPairId: null,
           };
           dispatch({ type: 'SET_USER', payload: user });
@@ -373,7 +392,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             .eq('user_id', session.user.id);
 
           if (progressRows) {
-            // Read latest state via ref — avoids stale closure on modules/progress
             const latestModules = stateRef.current.modules;
             const latestProgress = stateRef.current.progress;
 
@@ -419,15 +437,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => subscription.unsubscribe();
   }, []); // intentionally empty — register the Supabase listener exactly once
 
-  // 3. Persist to localStorage — debounced to avoid write-thrashing on rapid dispatches
+  // 3. Persist to localStorage (debounced) — strips sensitive fields before writing
   useEffect(() => {
     const timer = setTimeout(() => {
-      localStorage.setItem('youth_educated_state', JSON.stringify(state));
+      localStorage.setItem('youth_educated_state', JSON.stringify(sanitizeForStorage(state)));
     }, 500);
     return () => clearTimeout(timer);
   }, [state]);
 
-  // 4. Online/Offline listeners
+  // 4. Persist to Dexie for offline access
+  useEffect(() => {
+    if (state.user) {
+      db.profile.put({ userId: state.user.id, data: state });
+    }
+  }, [state]);
+
+  // 5. Online/Offline listeners
   useEffect(() => {
     const handleOnline = () => dispatch({ type: 'SET_OFFLINE', payload: false });
     const handleOffline = () => dispatch({ type: 'SET_OFFLINE', payload: true });

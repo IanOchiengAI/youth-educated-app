@@ -1072,4 +1072,553 @@ Hapa kuna ukweli kuhusu kulia na hisia:
 Kwa kila mvulana anayesoma hapa: hisia zako ni muhimu. Maumivu yako ni halisi. Na kuyaonyesha hakukufanyi kuwa pungufu kama mwanamume — kunakufanya kuwa mwanamume kamili. Kulia si udhaifu.`,
     month: 1,
   },
+  // ▸ Month 2: 18-22 Transition & Adulting
+  {
+    id: 'ya-ms-1',
+    title: 'I graduated with a degree and had no job for 2 years. Here is what I did',
+    title_sw: 'Nilihitimu na digrii na kukosa kazi kwa miaka 2. Hiki ndicho nilichofanya',
+    category: 'mentor-stories',
+    tags: ['Career', 'Future', 'MentalHealth'],
+    emoji: '🎓',
+    readTime: '4 min',
+    body: `Let me be real with you — I graduated from university in 2019, threw my cap in the air, took beautiful photos at the KICC, and genuinely believed life was about to sort itself out. It did not. For two full years, I sent out hundreds of CVs. I woke up every Tuesday to buy the Daily Nation just for the jobs pullout. Nothing.
+    
+It was the darkest period of my life. The emotional reality of graduate unemployment in Kenya is heavy. You feel like a burden to your parents, and watching your friends post their new office badges on Instagram stings more than you want to admit.
+
+Here is what I actually did to get out of that hole:
+
+1. **I stopped waiting for "the" job and took "a" job.** I had a degree in Economics, but my first paying gig after graduating was writing product descriptions for a friend's online thrift shop. It paid KES 500 a day. It hurt my pride, but it got me out of the house and taught me digital marketing.
+
+2. **I shifted from certificate-hunting to skill-building.** In the real world, employers don't care about your GPA; they care about what you can do. I spent my free time on YouTube learning Excel and basic data analysis. I built a small portfolio of dummy projects. 
+
+3. **I used the gig economy.** Sites like Upwork and Fiverr, and local gigs like transcription or academic writing, kept me afloat. It wasn't glamorous, but it taught me client management and discipline.
+
+4. **I networked laterally, not just upwards.** We always try to network with CEOs who don't have time for us. I started networking with people just one or two steps ahead of me — the HR assistants, the junior analysts. They are the ones who know when an unadvertised internship is opening up.
+
+Your degree is not a guarantee; it is just a foundation. Do not let the waiting period destroy your self-worth. Keep moving, keep learning, and swallow your pride. Your breakthrough will come, but it might look different than you expected.`,
+    body_sw: `Wacha nikuambie ukweli — nilihitimu kutoka chuo kikuu mwaka wa 2019, nikarusha kofia yangu hewani, nikapiga picha nzuri pale KICC, na kuamini kabisa kwamba maisha yalikuwa karibu kunyooka. Haikuwa hivyo. Kwa miaka miwili kamili, nilituma mamia ya barua za maombi (CVs). Niliamka kila Jumanne kununua gazeti la Daily Nation kwa ajili ya kurasa za kazi tu. Hakuna chochote.
+
+Hicho kilikuwa kipindi kigumu zaidi katika maisha yangu. Ukweli wa kihisia wa ukosefu wa ajira kwa wahitimu nchini Kenya ni mzito. Unahisi kama mzigo kwa wazazi wako, na kuona marafiki zako wakiweka picha za vitambulisho vyao vipya vya ofisi kwenye Instagram inauma zaidi kuliko unavyotaka kukiri.
+
+Hiki ndicho nilichofanya hasa kujiondoa katika shimo hilo:
+
+1. **Niliacha kusubiri kazi "yangu" na kuchukua kazi "yoyote".** Nilikuwa na digrii ya Uchumi, lakini kazi yangu ya kwanza ya kulipwa baada ya kuhitimu ilikuwa kuandika maelezo ya bidhaa kwa duka la mtandaoni la rafiki yangu la kuuza mitumba. Ililipa KES 500 kwa siku. Ilinishushia hadhi, lakini ilinitoa nyumbani na kunifunza masoko ya kidijitali.
+
+2. **Nilibadilika kutoka kutafuta vyeti hadi kujenga ujuzi.** Katika ulimwengu wa kweli, waajiri hawajali kuhusu alama zako (GPA); wanajali kuhusu kile unachoweza kufanya. Nilitumia muda wangu wa ziada kwenye YouTube kujifunza Excel na uchanganuzi wa kimsingi wa data. Nilitengeneza miradi midogo ya majaribio kuonyesha ujuzi wangu.
+
+3. **Nilitumia fursa za kazi za mikataba (gig economy).** Tovuti kama Upwork na Fiverr, na kazi za ndani kama kuandika sauti (transcription) ziliniweka sawa kifedha. Haikuwa kazi ya kifahari, lakini ilinifunza usimamizi wa wateja na nidhamu.
+
+4. **Nilitengeneza mtandao na watu wa rika langu, si wakubwa tu.** Sisi kila mara tunajaribu kutengeneza mtandao na wakurugenzi (CEOs) ambao hawana muda na sisi. Nilianza kujenga uhusiano na watu walio hatua moja au mbili mbele yangu — wasaidizi wa HR, wachanganuzi wa ngazi ya chini. Hawa ndio wanaojua wakati nafasi ya tarajali (internship) isiyotangazwa inapotokea.
+
+Digrii yako si dhamana; ni msingi tu. Usiruhusu kipindi cha kusubiri kiharibu thamani yako. Endelea kusonga, endelea kujifunza, na uweke kiburi kando. Kufanikiwa kwako kutakuja, lakini huenda kukaonekana tofauti na ulivyotarajia.`,
+    month: 2,
+  },
+  {
+    id: 'ya-ms-2',
+    title: 'Moving out for the first time nearly broke me. What I wish I knew',
+    title_sw: 'Kuhama nyumbani kwa mara ya kwanza kulikaribia kunivunja. Kile natamani ningejua',
+    category: 'mentor-stories',
+    tags: ['Money', 'Decisions', 'MentalHealth'],
+    emoji: '🏠',
+    readTime: '4 min',
+    body: `I will never forget my first bedsitter in Roysambu. I had just gotten my first real job, packed my bags, and told my parents I was ready for independence. Two weeks later, I was sitting on a mattress on the floor, eating plain noodles, wondering how my money had finished so fast.
+
+Moving out is romanticized. The reality is expensive, lonely, and overwhelming. Here is what I wish I knew before I took the leap:
+
+1. **The hidden costs are brutal.** Rent is only half the story. I completely forgot about the deposit (usually equal to one month's rent), water deposits, electricity tokens, garbage collection fees, and the cost of basic items like a mop, bucket, salt, and matchboxes. You need at least three times your rent saved up before you move.
+
+2. **Loneliness hits you randomly.** In the family home, there is always noise — a TV playing, someone cooking, siblings arguing. In your own place, the silence can be deafening. The first few weekends alone were incredibly tough. I had to learn to enjoy my own company without constantly going out (and spending money) just to be around people.
+
+3. **Cooking is not optional; it is survival.** Eating out or ordering food will bankrupt you faster than anything else. I had to call my mum to learn how to cook basic meals like ugali, ndengu, and cabbage. Meal prepping on Sundays saved me from eating junk food when I came home tired from work.
+
+4. **Buy things slowly.** You do not need a TV, a fridge, and a carpet on day one. I lived out of a suitcase for a month. Buy a good mattress, a jiko or gas cylinder, and basic utensils. Everything else can wait until you get your next salary. 
+
+Independence is beautiful, but it requires strategy. Do not rush to move out just to look cool to your friends. Take your time, save up, and learn how to manage yourself first.`,
+    body_sw: `Sitawahi kusahau chumba changu cha kwanza (bedsitter) kule Roysambu. Nilikuwa ndio kwanza nimepata kazi yangu ya kwanza halisi, nikafunga virago vyangu, na kuwaambia wazazi wangu nilikuwa tayari kujitegemea. Wiki mbili baadaye, nilikuwa nimekaa kwenye godoro sakafuni, nikila noodles tupu, nikijiuliza pesa zangu ziliishaje haraka hivyo.
+
+Kuhama nyumbani mara nyingi huonekana kama jambo la kifahari sana. Ukweli ni kwamba ni ghali, kunaleta upweke, na kulemea sana. Hiki ndicho natamani ningejua kabla sijaamua:
+
+1. **Gharama zilizojificha ni kali.** Kodi ni nusu tu ya stori. Nilisahau kabisa kuhusu amana (deposit - kawaida ni sawa na kodi ya mwezi mmoja), amana ya maji, stima za tokeni, ada za kuzoa taka, na gharama za vitu vya msingi kama dekio (mop), ndoo, chumvi, na viberiti. Unahitaji kuwa na akiba ya angalau mara tatu ya kodi yako kabla ya kuhama.
+
+2. **Upweke unakupata bila kutarajia.** Nyumbani kwa familia, daima kuna kelele — TV inalia, mtu anapika, ndugu wanabishana. Kwenye nyumba yako mwenyewe, ukimya unaweza kuwa wa kutosha kukufanya uwe kiziwi. Wikendi chache za kwanza peke yangu zilikuwa ngumu sana. Ilinibidi nijifunze kufurahia kuwa peke yangu bila kulazimika kutoka nje (na kutumia pesa) ili tu kuwa karibu na watu.
+
+3. **Kupika si hiari; ni njia ya kuishi.** Kula kwenye mikahawa au kuagiza chakula kutakufilisi haraka kuliko kitu kingine chochote. Ilinibidi nimpigie simu mama yangu kujifunza jinsi ya kupika vyakula vya kawaida kama ugali, ndengu, na kabeji. Kupika vyakula vya wiki nzima siku ya Jumapili kulinisaidia kuepuka kula vyakula visivyo na afya niliporudi nyumbani nikiwa nimechoka kutoka kazini.
+
+4. **Nunua vitu polepole.** Huna haja ya TV, friji, na zulia siku ya kwanza. Niliishi kwa kutumia nguo kutoka kwenye sanduku kwa mwezi mmoja. Nunua godoro zuri, jiko au mtungi wa gesi, na vyombo vya msingi. Vitu vingine vyote vinaweza kusubiri hadi upate mshahara wako unaofuata.
+
+Kujitegemea ni kuzuri, lakini kunahitaji mkakati. Usikimbilie kuhama ili tu uonekane mjanja kwa marafiki zako. Chukua muda wako, weka akiba, na ujifunze jinsi ya kujisimamia kwanza.`,
+    month: 2,
+  },
+  {
+    id: 'ya-sl-1',
+    title: 'KCSE results are out. Now what? A real guide to your options',
+    title_sw: 'Matokeo ya KCSE yametoka. Sasa nini? Mwongozo halisi wa chaguo zako',
+    category: 'school',
+    tags: ['School', 'Future', 'Decisions'],
+    emoji: '📝',
+    readTime: '4 min',
+    body: `So the SMS came through. Maybe you are celebrating, maybe you are hiding in your room crying, or maybe you are just feeling numb. Whatever your KCSE grade is, take a deep breath. In Kenya, we treat KCSE like it is the end of the world, but it is just a junction in the road.
+
+Here is a realistic guide on what to do next, regardless of your grade:
+
+1. **If you got a C+ and above (University Route):**
+Congratulations, you qualify for university. But please, do not just choose a course because it sounds prestigious or because your parents want you to be an engineer. Look at the KUCCPS portal carefully. Research the job market. Are there actual jobs in that field? Sometimes a specialized diploma is better than a generic degree. Also, start understanding HELB loans now — it is money you will have to pay back, so apply wisely.
+
+2. **If you got a C or C- (Diploma/Polytechnic Route):**
+Let me be completely honest: this is often the most strategic place to be. TVETs (Technical and Vocational Education and Training) and polytechnics offer skills that the Kenyan market actually needs. While degree holders are tarmac-ing, people with diplomas in plumbing, electrical engineering, catering, and IT are getting hired or starting their own businesses. TVET is not for "failures"; it is for practical thinkers.
+
+3. **If you got a D+ and below (Certificate/Artisan Route):**
+You are not a failure. Exams test memory, not intelligence. You can start with a certificate or artisan course at a local technical institute and upgrade to a diploma later. Many successful business owners in Kenya started exactly here. Courses like hairdressing, mechanics, fashion design, or basic coding do not require an A. They require passion and hard work.
+
+4. **How to talk to your parents:**
+If your grades disappointed them, let them vent. Then, come to them with a PLAN. Do not just say "I'm sorry." Say, "I got a D, but I have researched this Certificate in Web Design at the local TVET, and here is how much it costs." Parents respect a plan.
+
+Your KCSE grade is a piece of paper. What you do with it from today onwards is what actually matters.`,
+    body_sw: `Basi ujumbe mfupi (SMS) umeingia. Labda unasherehekea, labda umejificha chumbani kwako ukilia, au labda unahisi tu ganzi. Chochote kile alama yako ya KCSE, vuta pumzi ndefu. Nchini Kenya, tunachukulia KCSE kama mwisho wa dunia, lakini ni njia panda tu katika safari yako.
+
+Huu hapa ni mwongozo wa kweli wa kile cha kufanya baadaye, bila kujali alama yako:
+
+1. **Ikiwa ulipata C+ na zaidi (Njia ya Chuo Kikuu):**
+Hongera, unafuzu kwenda chuo kikuu. Lakini tafadhali, usichague tu kozi kwa sababu inasikika kuwa ya kifahari au kwa sababu wazazi wako wanataka uwe mhandisi. Angalia mtandao wa KUCCPS kwa uangalifu. Fanya utafiti kuhusu soko la ajira. Je, kuna kazi halisi katika uwanja huo? Wakati mwingine diploma maalum ni bora kuliko digrii ya kawaida. Pia, anza kuelewa mikopo ya HELB sasa — ni pesa ambayo itabidi ulipe, kwa hivyo omba kwa busara.
+
+2. **Ikiwa ulipata C au C- (Njia ya Diploma/Polytechnic):**
+Wacha niwe mkweli kabisa: hili mara nyingi ndilo eneo la kimkakati zaidi kuwa. Vyuo vya TVET na polytechnic vinatoa ujuzi ambao soko la Kenya linahitaji hasa. Wakati wenye digrii wanahangaika kutafuta kazi, watu wenye diploma katika ufundi bomba, uhandisi wa umeme, upishi, na IT wanaajiriwa au kuanzisha biashara zao wenyewe. TVET si ya "waliofeli"; ni kwa wanaofikiri kwa vitendo.
+
+3. **Ikiwa ulipata D+ na chini (Njia ya Cheti/Ufundi):**
+Wewe si mshindwa. Mitihani hupima kumbukumbu, si akili. Unaweza kuanza na kozi ya cheti au ufundi katika taasisi ya kiufundi ya eneo lako na kujiendeleza hadi diploma baadaye. Wafanyabiashara wengi waliofanikiwa nchini Kenya walianzia hapa. Kozi kama ususi wa nywele, ufundi wa magari, ubunifu wa mavazi, au uandishi wa kodi za kompyuta hazihitaji A. Zinahitaji shauku na bidii.
+
+4. **Jinsi ya kuzungumza na wazazi wako:**
+Ikiwa alama zako zimewakatisha tamaa, waache watoe hasira zao. Kisha, nenda kwao na MPANGO. Usiseme tu "Nisamehe." Sema, "Nilipata D, lakini nimefanya utafiti kuhusu Cheti hiki cha Ubunifu wa Wavuti kwenye chuo cha TVET, na hii ndiyo gharama yake." Wazazi wanaheshimu mipango.
+
+Alama yako ya KCSE ni kipande cha karatasi. Kile unachofanya kuanzia leo ndicho chenye maana kweli.`,
+    month: 2,
+  },
+  {
+    id: 'ya-sl-2',
+    title: 'How to survive your first year at university or college',
+    title_sw: 'Jinsi ya kustahimili mwaka wako wa kwanza katika chuo kikuu au chuo',
+    category: 'school',
+    tags: ['School', 'MentalHealth', 'Decisions'],
+    emoji: '🏢',
+    readTime: '4 min',
+    body: `First-year freedom is a dangerous thing. For four years in high school, bells told you when to wake up, when to eat, and when to sleep. Suddenly, you are in campus. Nobody cares if you attend the 8 AM lecture. You get your HELB loan directly to your account. It feels amazing — until reality hits.
+
+Here is how to survive "First Year" without losing yourself or your grades:
+
+1. **Treat your HELB loan like an emergency fund, not party money.** I have seen students buy expensive sneakers and throw massive bashes in their first week, only to survive on strong tea and plain rice by week five. Budget that money. Pay your rent first, buy dry food items (unga, beans, rice) in bulk, and keep the rest locked in an M-Shwari account. 
+
+2. **Attend classes, even the boring ones.** Lecturers will not follow you around. But in university, 30% of your grade often comes from Continuous Assessment Tests (CATs) and assignments that are sometimes announced randomly in class. Missing classes is the easiest way to fail. 
+
+3. **Choose your friends carefully.** The people you hang out with in your first semester will shape your entire campus life. If you hang around people who think skipping class and drinking on Tuesdays is cool, you will become one of them. Find friends who are serious about their future but still know how to have healthy fun.
+
+4. **Join one club or society.** Campus is lonely at first. Joining a club — whether it is the Christian Union, the Drama society, or a Tech club — gives you an instant community. It is also where you will meet senior students who can give you past papers and advice on which lecturers are strict.
+
+5. **Protect your sexual health and boundaries.** Campus is full of pressure. You do not have to do anything you are not ready for just to fit in. Be extremely careful, know your boundaries, and never compromise your safety for a relationship or peer pressure.
+
+Campus is the bridge between childhood and adulthood. Cross it wisely.`,
+    body_sw: `Uhuru wa mwaka wa kwanza ni jambo la hatari. Kwa miaka minne katika shule ya upili, kengele zilikuelekeza wakati wa kuamka, wakati wa kula, na wakati wa kulala. Ghafla, uko chuoni. Hakuna anayejali ikiwa utahudhuria kipindi cha saa mbili asubuhi. Unapata mkopo wako wa HELB moja kwa moja kwenye akaunti yako. Inahisi vizuri sana — hadi ukweli unapokupiga.
+
+Hivi ndivyo unavyoweza kustahimili "Mwaka wa Kwanza" bila kujipoteza au kupoteza alama zako:
+
+1. **Chukulia mkopo wako wa HELB kama pesa ya dharura, si pesa ya sherehe.** Nimeona wanafunzi wakinunua viatu vya bei ghali na kufanya sherehe kubwa katika wiki yao ya kwanza, na baadaye kuishi kwa kunywa chai nzito na mchele mtupu ifikapo wiki ya tano. Panga bajeti ya pesa hiyo. Lipa kodi yako kwanza, nunua vyakula vikavu (unga, maharagwe, mchele) kwa wingi, na uweke zilizobaki kwenye akaunti ya M-Shwari.
+
+2. **Hudhuria madarasa, hata yale yanayochosha.** Wahadhiri hawatakufuata. Lakini chuo kikuu, asilimia 30 ya alama zako mara nyingi hutokana na Mitihani ya Mara kwa Mara (CATs) na kazi ambazo wakati mwingine hutangazwa kwa kushtukiza darasani. Kukosa madarasa ndiyo njia rahisi ya kufeli.
+
+3. **Chagua marafiki zako kwa uangalifu.** Watu unaoshirikiana nao katika muhula wako wa kwanza wataunda maisha yako yote ya chuo. Ikiwa unashirikiana na watu wanaofikiri kutoroka darasa na kunywa pombe siku za Jumanne ni ujanja, utakuwa mmoja wao. Tafuta marafiki walio makini na mustakabali wao lakini bado wanajua jinsi ya kufurahi kwa njia nzuri.
+
+4. **Jiunge na klabu au chama kimoja.** Chuo huleta upweke mwanzoni. Kujiunga na klabu — iwe ni Muungano wa Kikristo (CU), chama cha Drama, au klabu ya Teknolojia — kunakupa jamii mara moja. Pia ni pale utakapokutana na wanafunzi waandamizi ambao wanaweza kukupa makaratasi ya mitihani ya zamani (past papers) na ushauri kuhusu wahadhiri walio wakali.
+
+5. **Linda afya yako ya uzazi na mipaka yako.** Chuo kimejaa shinikizo. Huna haja ya kufanya chochote ambacho hauko tayari kukifanya ili tu uonekane unafaa. Kuwa mwangalifu sana, jua mipaka yako, na usiwahi kuhatarisha usalama wako kwa ajili ya mahusiano au shinikizo la rika.
+
+Chuo ni daraja kati ya utoto na utu uzima. Livuke kwa busara.`,
+    month: 2,
+  },
+  {
+    id: 'ya-mh-1',
+    title: 'Quarter-life crisis is real. Here is how to get through it',
+    title_sw: 'Kukata tamaa ukiwa kijana ni jambo halisi. Hivi ndivyo vya kufanya',
+    category: 'mental-health',
+    tags: ['MentalHealth', 'Stress', 'Future'],
+    emoji: '🌀',
+    readTime: '4 min',
+    body: `"Who am I? What am I doing with my life? Why is everyone else moving faster than me?" 
+
+If you are between 18 and 22, you have probably asked yourself these questions while staring at the ceiling at 2 AM. Welcome to the quarter-life crisis. It is that confusing period when you are officially an adult, but you still feel like a kid pretending to know what is going on.
+
+In Kenya, this crisis hits harder because of family expectations, youth unemployment, and the pressure to "make it" quickly. Here is how to navigate the storm:
+
+1. **Understand that your timeline is unique.** You will see former classmates getting jobs, starting businesses, or even getting married while you are still trying to figure out how to write a CV. Social media makes this worse. Remember: people only post their wins. Nobody posts their rejection emails. Stop comparing your behind-the-scenes to their highlight reel.
+
+2. **It is okay to change your mind.** Many young adults feel stuck because they chose a course at 18 that they hate at 21. It is perfectly fine to pivot. Your 20s are for experimenting. You are not a tree — you can move. The skills you learned will still be useful, even in a different field.
+
+3. **Focus on the "Next Right Step," not the next 10 years.** Thinking about where you will be at 30 is overwhelming. Instead, ask yourself: "What is the next right step I can take today?" Maybe it is applying for one internship. Maybe it is having a tough conversation with your parents. Maybe it is just getting out of bed. Small steps cure paralysis.
+
+4. **Talk about it with your peers.** The secret about the quarter-life crisis is that almost EVERYONE your age is going through it. We are just all pretending we are fine. The moment you tell a friend, "I honestly have no idea what I'm doing," you give them permission to say, "Me neither!" The relief is instant.
+
+You are not failing at life; you are just starting it. Be patient with yourself. The confusion means you are growing.`,
+    body_sw: `"Mimi ni nani? Ninafanya nini na maisha yangu? Kwa nini kila mtu mwingine anaonekana kusonga mbele kwa kasi kuliko mimi?"
+
+Ikiwa una kati ya miaka 18 na 22, labda umejiuliza maswali haya ukitazama dari saa nane usiku. Karibu katika kipindi cha mkanganyiko wa maisha ya ujana (quarter-life crisis). Ni kile kipindi cha kutatanisha ambapo wewe ni mtu mzima rasmi, lakini bado unahisi kama mtoto anayejifanya anajua kinachoendelea.
+
+Nchini Kenya, mgogoro huu unapiga sana kwa sababu ya matarajio ya familia, ukosefu wa ajira kwa vijana, na shinikizo la "kufanikiwa" haraka. Hivi ndivyo unavyoweza kuvuka dhoruba hii:
+
+1. **Elewa kuwa ratiba yako ni ya kipekee.** Utaona wanafunzi wenzako wa zamani wakipata kazi, wakianzisha biashara, au hata kuolewa wakati wewe bado unajaribu kuelewa jinsi ya kuandika CV. Mitandao ya kijamii hufanya hili kuwa baya zaidi. Kumbuka: watu huweka tu mafanikio yao mtandaoni. Hakuna anayeweka barua zake za kukataliwa kazi. Acha kulinganisha siri zako na picha zao nzuri.
+
+2. **Ni sawa kubadilisha mawazo yako.** Vijana wengi huhisi kukwama kwa sababu walichagua kozi wakiwa na miaka 18 ambayo wanaichukia wakiwa na miaka 21. Ni sawa kabisa kubadilisha mwelekeo. Miaka yako ya 20 ni ya kufanya majaribio. Wewe si mti — unaweza kusonga. Ujuzi uliojifunza bado utakuwa muhimu, hata katika uwanja tofauti.
+
+3. **Zingatia "Hatua Inayofuata Sahihi," si miaka 10 ijayo.** Kufikiria utakuwa wapi ukiwa na miaka 30 kunalemea. Badala yake, jiulize: "Ni hatua gani sahihi inayofuata ninayoweza kuchukua leo?" Labda ni kutuma maombi ya nafasi moja ya mafunzo (internship). Labda ni kuwa na mazungumzo magumu na wazazi wako. Labda ni kuamka tu kitandani. Hatua ndogo huponya hali ya kukwama.
+
+4. **Zungumza na vijana wenzako.** Siri kuhusu mgogoro huu ni kwamba karibu KILA MTU wa umri wako anaupitia. Sisi sote tunajifanya tuko sawa. Mara tu unapomwambia rafiki, "Kwa kweli sijui ninafanya nini," unampa ruhusa ya kusema, "Mimi pia!" Utulivu unakuja mara moja.
+
+Hufeli maishani; ndio kwanza unaanza. Kuwa na subira na wewe mwenyewe. Mkanganyiko unamaanisha unakua.`,
+    month: 2,
+  },
+  {
+    id: 'ya-mh-2',
+    title: 'How to deal with family pressure about your choices',
+    title_sw: 'Jinsi ya kukabiliana na shinikizo la familia kuhusu chaguo zako',
+    category: 'mental-health',
+    tags: ['MentalHealth', 'Decisions', 'Future'],
+    emoji: '🫂',
+    readTime: '4 min',
+    body: `Family gatherings in Kenya can be stressful. Between the nyama choma and the laughter, there is always that one uncle or aunt who asks, "So when are you getting a real job?" or "Why are you studying Art instead of Medicine?"
+
+In our collectivist culture, your choices are rarely just your own. Family pressure comes from a place of love and a desire for security, but it can still feel incredibly heavy. Here is how to handle it while respecting both your elders and yourself:
+
+1. **Do not argue; explain your 'Why'.** When your parents criticize your choice to start a small business instead of getting a master's degree, do not get defensive. Say, "I know you want me to be secure. The reason I am doing this is because..." Show them your research. Parents fear the unknown; facts reduce their fear.
+
+2. **Understand the generational gap.** Your parents grew up in a Kenya where a degree from a public university guaranteed a government job and a pension. They are giving you the best advice for the world THEY grew up in. Recognize that their advice is outdated, but their intention is good. 
+
+3. **Set boundaries respectfully.** If conversations about your career or relationship status always end in a fight, it is okay to draw a line. You can say, "Mum, I appreciate that you care about my future, but I need time to figure this out. I will update you when I have news, but for now, can we not talk about it every time we meet?"
+
+4. **Find a family ally.** Is there an older cousin, an aunt, or a sibling who "gets" what you are trying to do? Talk to them. Sometimes, having another adult explain your choices to your parents works better than you trying to defend yourself.
+
+You are the one who has to live your life. Honoring your parents does not mean living the life they want for you at the expense of your own happiness.`,
+    body_sw: `Mikutano ya familia nchini Kenya inaweza kuleta msongo wa mawazo. Kati ya nyama choma na vicheko, kila mara kuna yule mjomba au shangazi ambaye anauliza, "Sasa utapata lini kazi halisi?" au "Kwa nini unasomea Sanaa (Art) badala ya Udaktari?"
+
+Katika utamaduni wetu wa kijamii, chaguo zako mara chache huwa zako pekee. Shinikizo la familia hutokana na upendo na tamaa ya usalama, lakini bado linaweza kuhisiwa kuwa zito sana. Hivi ndivyo unavyoweza kukabiliana nalo huku ukiwaheshimu wazee wako na wewe mwenyewe:
+
+1. **Usibishane; eleza 'Kwa nini' yako.** Wazazi wako wanapokosoa uamuzi wako wa kuanzisha biashara ndogo badala ya kusomea digrii ya uzamili (master's), usijihami kwa ukali. Sema, "Najua mnataka niwe na usalama wa maisha. Sababu inayonifanya nifanye hivi ni kwa sababu..." Waonyeshe utafiti wako. Wazazi huogopa wasichokijua; ukweli hupunguza hofu yao.
+
+2. **Elewa tofauti ya kizazi.** Wazazi wako walikua katika Kenya ambapo digrii kutoka chuo kikuu cha umma ilihakikisha kazi ya serikali na pensheni. Wanakupa ushauri bora zaidi kwa dunia WALIYOKULIA. Tambua kuwa ushauri wao umepitwa na wakati, lakini nia yao ni nzuri.
+
+3. **Weka mipaka kwa heshima.** Ikiwa mazungumzo kuhusu kazi yako au hali ya uhusiano wako kila mara huishia kwenye ugomvi, ni sawa kuweka mpaka. Unaweza kusema, "Mama, nashukuru kwa kuwa unajali mustakabali wangu, lakini nahitaji muda wa kujua nifanye nini. Nitakupa taarifa nikiwa na habari mpya, lakini kwa sasa, tunaweza kuacha kuzungumza kuhusu hili kila tunapokutana?"
+
+4. **Tafuta mshirika katika familia.** Je, kuna binamu mkubwa, shangazi, au ndugu ambaye "anaelewa" kile unachojaribu kufanya? Zungumza nao. Wakati mwingine, kuwa na mtu mzima mwingine kuelezea chaguo zako kwa wazazi wako hufanya kazi vizuri zaidi kuliko wewe kujaribu kujitetea.
+
+Wewe ndiye unayepaswa kuishi maisha yako. Kuwaheshimu wazazi wako hakumaanishi kuishi maisha wanayotaka wao kwa gharama ya furaha yako mwenyewe.`,
+    month: 2,
+  },
+  {
+    id: 'ya-rs-1',
+    title: 'Navigating romantic relationships when you are broke and ambitious',
+    title_sw: 'Kusimamia mahusiano ya kimapenzi ukiwa huna pesa lakini una malengo',
+    category: 'relationships',
+    tags: ['Money', 'Decisions', 'Future'],
+    emoji: '❤️',
+    readTime: '4 min',
+    body: `Dating in Kenya right now is expensive. Between the pressure to go to aesthetic cafes, buy gifts, and cover transport (yes, the famous "tuma fare"), maintaining a relationship when you are young and broke can feel like an extreme sport.
+
+But romance and ambition can coexist if you handle them maturely. Here is how to navigate relationships when you are building your future from zero:
+
+1. **Be honest about your financial reality from day one.** Do not fake a lifestyle you cannot afford to impress someone. If you are surviving on a tight budget, say so. "I would love to take you to that new restaurant, but it is not in my budget right now. How about we get street food and walk in Karura Forest instead?" If they like you, they will say yes. If they say no, they just saved you from a very expensive mistake.
+
+2. **Stop subscribing to the "provider" myth too early.** Many young men feel intense pressure to fully finance their girlfriends, while many young women feel pressured to expect it. When you are 20, you are both supposed to be building. Support each other emotionally, study together, brainstorm business ideas together. Your 20s are for partnership, not sponsorship.
+
+3. **Watch out for relationships that drain your focus.** An ambitious person's greatest asset is time. If your partner requires you to text them 24/7, gets jealous when you are studying, or makes you feel guilty for working on a side hustle, that is a massive red flag. A good partner will push you toward your goals, not pull you away from them.
+
+4. **Do not let "being broke" stop you from being romantic.** Romance is about effort, not cash. A handwritten note, a shared playlist, cooking a simple meal together, or saving up for one meaningful date shows more love than putting yourself in debt to buy expensive shoes.
+
+Love is beautiful, but do not sacrifice your future for a temporary feeling. The right person will build with you in the trenches.`,
+    body_sw: `Kuchumbiana nchini Kenya sasa hivi ni ghali. Kati ya shinikizo la kwenda kwenye mikahawa ya kifahari, kununua zawadi, na kulipia usafiri (ndiyo, ule msemo maarufu wa "tuma fare"), kudumisha uhusiano unapokuwa kijana asiye na pesa inaweza kuhisi kama mchezo wa hatari.
+
+Lakini mapenzi na malengo makubwa vinaweza kuishi pamoja ikiwa utavishughulikia kwa ukomavu. Hivi ndivyo unavyoweza kusimamia mahusiano unapojenga hatima yako kuanzia sifuri:
+
+1. **Kuwa mkweli kuhusu hali yako ya kifedha tangu siku ya kwanza.** Usijifanye una maisha ambayo huwezi kuyamudu ili kumvutia mtu. Ikiwa unaishi kwa bajeti ngumu, sema hivyo. "Ningependa kukupeleka kwenye ule mkahawa mpya, lakini hauko kwenye bajeti yangu sasa hivi. Vipi tuchukue chakula cha mtaani (street food) na tutembee katika Msitu wa Karura badala yake?" Ikiwa wanakupenda, watasema ndiyo. Ikiwa watasema hapana, wamekuokoa kutokana na kosa la gharama kubwa sana.
+
+2. **Acha kufuata hadithi ya "mtoaji" (provider) mapema sana.** Vijana wengi wa kiume huhisi shinikizo kubwa la kufadhili kikamilifu wapenzi wao, huku vijana wengi wa kike wakihisi shinikizo la kutarajia hilo. Unapokuwa na miaka 20, nyote mnapaswa kuwa mnajenga. Kusaidiana kihisia, kusoma pamoja, kujadiliana kuhusu mawazo ya biashara pamoja. Miaka yako ya 20 ni ya ubia (partnership), si ufadhili (sponsorship).
+
+3. **Kuwa mwangalifu na mahusiano yanayopoteza mwelekeo wako.** Rasilimali kuu ya mtu mwenye malengo ni wakati. Ikiwa mpenzi wako anakuhitaji umtumie ujumbe saa 24/7, anakuwa na wivu unaposoma, au anakufanya ujisikie hatia kwa kufanya kazi yako ya kando, hiyo ni ishara kubwa ya hatari (red flag). Mpenzi mzuri atakusukuma kuelekea malengo yako, si kukuvuta mbali nayo.
+
+4. **Usiruhusu "kukosa pesa" kukuzuie kuwa na mapenzi (romantic).** Mapenzi ni kuhusu juhudi, si pesa taslimu. Ujumbe ulioandikwa kwa mkono, orodha ya nyimbo mnazoshiriki (playlist), kupika chakula rahisi pamoja, au kuweka akiba kwa ajili ya mlo mmoja wa maana kunaonyesha upendo zaidi kuliko kujiingiza kwenye madeni ili kununua viatu vya bei ghali.
+
+Mapenzi ni mazuri, lakini usijinyime mustakabali wako kwa hisia za muda mfupi. Mtu anayefaa atajenga nawe tangu mwanzo.`,
+    month: 2,
+  },
+  {
+    id: 'ya-rs-2',
+    title: 'Friendships change after school. How to handle it',
+    title_sw: 'Urafiki hubadilika baada ya shule. Jinsi ya kukabiliana na hilo',
+    category: 'relationships',
+    tags: ['Friendship', 'MentalHealth'],
+    emoji: '👋',
+    readTime: '3 min',
+    body: `In high school, it was easy. You saw your friends every single day. You ate the same food, wore the same uniform, and hated the same teachers. Then KCSE happened, and suddenly... silence.
+
+The group chat is dead. Everyone is busy. One friend went to university, another started a business, and another just disappeared into their estate. 
+
+Here is the harsh but necessary truth about friendships in young adulthood:
+
+1. **Proximity is not the same as connection.** You will realize that some people were only your friends because you shared a desk. Once the desk was gone, the friendship vanished. That is completely normal. Do not take it personally. Not every friend is meant to be a "forever" friend. Some are just meant for a season.
+
+2. **You have to put in effort now.** In adulthood, friendships do not just happen; they are scheduled. You cannot rely on seeing someone at 10 AM break time anymore. If you want to keep a friendship alive, you have to be intentional. Call them. Check on them. Suggest a meet-up. If you are the only one making the effort for months, though, let it go.
+
+3. **Jealousy will test you.** When you are 20, everyone moves at different speeds. Your friend might get a high-paying job while you are still tarmac-ing. Or you might get into university while they do not. It is easy to feel envious or insecure. Remind yourself that their success does not take away from your potential. Clap for your friends, loudly.
+
+4. **Make space for new people.** As your interests change, so should your circle. If you start a business, you need friends who understand the hustle. If you go to college, you need study partners. Keep your old friends close, but do not close your heart to new ones.
+
+Growing up means growing apart from some people. It hurts, but it is the only way to make room for who you are becoming.`,
+    body_sw: `Katika shule ya upili, ilikuwa rahisi. Uliwaona marafiki zako kila siku. Mlikula chakula kimoja, mlivaa sare moja, na mliwajadili walimu wale wale. Kisha KCSE ikatokea, na ghafla... kimya.
+
+Kikundi cha WhatsApp kimekufa. Kila mtu yuko busy. Rafiki mmoja alienda chuo kikuu, mwingine alianzisha biashara, na mwingine alitoweka tu mtaani kwao.
+
+Huu hapa ni ukweli mchungu lakini wa lazima kuhusu urafiki katika utu uzima wa mapema:
+
+1. **Kuwa karibu si sawa na kuwa na muungano wa kweli.** Utatambua kwamba baadhi ya watu walikuwa marafiki zako tu kwa sababu mlishiriki dawati moja. Dawati lilipotoweka, urafiki ulitoweka. Hilo ni jambo la kawaida kabisa. Usilichukulie binafsi. Si kila rafiki anakusudiwa kuwa rafiki wa "milele". Baadhi ni wa msimu tu.
+
+2. **Inabidi uweke juhudi sasa.** Katika utu uzima, urafiki hautokei tu; unaratibiwa. Huwezi kutegemea tena kumuona mtu saa nne asubuhi wakati wa mapumziko. Ikiwa unataka kuweka urafiki hai, lazima uwe na dhamira. Wapigie simu. Wajulie hali. Pendekeza mweze kukutana. Lakini ikiwa wewe ndiye pekee anayeweka juhudi kwa miezi kadhaa, uachilie urafiki huo.
+
+3. **Wivu utakujaribu.** Unapokuwa na miaka 20, kila mtu anasonga kwa kasi tofauti. Rafiki yako anaweza kupata kazi inayolipa mshahara mkubwa huku wewe bado ukitafuta (tarmacing). Au unaweza kuingia chuo kikuu huku wao wakikosa. Ni rahisi kuhisi wivu au kutojiamini. Jikumbushe kwamba mafanikio yao hayaondoi uwezo wako. Wapigie makofi marafiki zako, kwa sauti kubwa.
+
+4. **Toa nafasi kwa watu wapya.** Jinsi mapendeleo yako yanavyobadilika, ndivyo na mzunguko wako unavyopaswa kubadilika. Ukianzisha biashara, unahitaji marafiki wanaoelewa harakati hizo (hustle). Ukienda chuoni, unahitaji washirika wa kusoma. Waweke marafiki zako wa zamani karibu, lakini usifunge moyo wako kwa wapya.
+
+Kukua inamaanisha kukua mbali na baadhi ya watu. Inauma, lakini ndiyo njia pekee ya kutoa nafasi kwa mtu unayekuwa sasa.`,
+    month: 2,
+  },
+  {
+    id: 'ya-sa-1',
+    title: 'Digital safety for young adults: protecting your M-Pesa, your data, and your reputation',
+    title_sw: 'Usalama wa kidijitali: kulinda M-Pesa, data yako, na sifa yako',
+    category: 'safety',
+    tags: ['Safety', 'Technology', 'Money'],
+    emoji: '🔐',
+    readTime: '4 min',
+    body: `We live online. Our money, our memories, and our conversations are all trapped in our phones. But the digital world in Kenya is crawling with scammers and people looking to take advantage of you. You are no longer a kid; if you lose money on M-Pesa now, it is YOUR money.
+
+Here is the ultimate young adult survival guide to digital safety:
+
+1. **Beware the "SIM Swap" and "Tuma kwa hii number" scams.** If someone calls you claiming to be from Safaricom or Airtel, and they sound very professional, hang up. True customer care will NEVER ask for your PIN, ID number, or ask you to dial codes to "update your line." Also, ignore SMS messages saying "Tuma ile pesa kwa hii number" (Send the money to this number) — it is a classic trick.
+
+2. **Do not use "1234" as your PIN.** Make your M-Pesa, banking app, and phone lock passwords hard to guess. Do not use your birth year. If your phone gets stolen on a matatu in the CBD, the first thing they will try is your birth year. Protect your hard-earned cash.
+
+3. **The internet does not forget.** You are entering the job market soon. Employers will Google your name. They will check your Twitter and TikTok. If your timeline is full of extreme insults, inappropriate videos, or hate speech, you will lose opportunities before you even get an interview. Scrub your digital footprint. Clean it up.
+
+4. **Sexting and digital coercion.** If you share an intimate photo with someone, understand that you have handed them a loaded gun. Relationships end, phones get stolen, and people get bitter. "Revenge porn" is illegal in Kenya under the Computer Misuse and Cybercrimes Act, but the damage to your reputation is hard to undo. Protect your dignity.
+
+5. **Do not click suspicious links.** "Congratulations, you have won KES 50,000! Click here." "Free government youth funds available here!" If it sounds too good to be true, it is a scam. Clicking those WhatsApp links can give hackers access to your phone's data. 
+
+Be smart. In the digital world, your privacy is your power. Guard it fiercely.`,
+    body_sw: `Tunaishi mtandaoni. Pesa zetu, kumbukumbu zetu, na mazungumzo yetu yote yamefungiwa kwenye simu zetu. Lakini ulimwengu wa kidijitali nchini Kenya umejaa matapeli na watu wanaotaka kukutumia vibaya. Wewe si mtoto tena; ukipoteza pesa kwenye M-Pesa sasa, ni pesa YAKO.
+
+Huu hapa ni mwongozo mkuu kwa vijana kuhusu usalama wa kidijitali:
+
+1. **Jihadhari na utapeli wa "SIM Swap" na "Tuma kwa hii number".** Ikiwa mtu atakupigia simu akidai anatoka Safaricom au Airtel, na anasikika kwa njia ya kitaalamu sana, kata simu. Huduma ya kweli kwa wateja HAITAWAHI kukuuliza PIN yako, nambari ya kitambulisho, au kukuomba upige kodi ili "kusasisha laini yako." Pia, puuza jumbe za SMS zinazosema "Tuma ile pesa kwa hii number" — ni mbinu ya zamani.
+
+2. **Usitumie "1234" kama PIN yako.** Fanya M-Pesa yako, programu ya benki, na manenosiri ya kufunga simu kuwa ngumu kukisia. Usitumie mwaka wako wa kuzaliwa. Ikiwa simu yako itaibiwa kwenye matatu katikati mwa jiji (CBD), jambo la kwanza watakalojaribu ni mwaka wako wa kuzaliwa. Linda pesa zako ulizozipata kwa bidii.
+
+3. **Mtandao hausahau.** Unaingia kwenye soko la ajira hivi karibuni. Waajiri watatafuta jina lako kwenye Google. Wataangalia Twitter/X na TikTok yako. Ikiwa kurasa zako zimejaa matusi makali, video zisizofaa, au matamshi ya chuki, utapoteza fursa kabla hata hujapata mahojiano. Safisha alama yako ya kidijitali. Iweke safi.
+
+4. **Kutuma picha za faragha (Sexting).** Ikiwa unashiriki picha ya faragha na mtu, elewa kuwa umempa silaha yenye risasi. Mahusiano huisha, simu huibiwa, na watu huwa na uchungu. "Revenge porn" (kusambaza picha za uchi kulipiza kisasi) ni kinyume cha sheria nchini Kenya chini ya Sheria ya Matumizi Mabaya ya Kompyuta na Uhalifu wa Mtandao, lakini madhara kwa sifa yako ni ngumu kufuta. Linda utu wako.
+
+5. **Usibofye viungo (links) vinavyotiliwa shaka.** "Hongera, umeshinda KES 50,000! Bofya hapa." "Pesa za bure za vijana za serikali zinapatikana hapa!" Ikiwa inasikika kuwa nzuri sana kuwa kweli, ni utapeli. Kubofya viungo hivyo vya WhatsApp kunaweza kuwapa wadukuzi ufikiaji wa data ya simu yako.
+
+Kuwa mwerevu. Katika ulimwengu wa kidijitali, faragha yako ni nguvu yako. Ilinde kwa ukali.`,
+    month: 2,
+  },
+  {
+    id: 'ya-sa-2',
+    title: 'Signing your first contract or lease. What to check before you say yes',
+    title_sw: 'Kutia saini mkataba au kodi yako ya kwanza. La kuangalia kabla ya kusema ndiyo',
+    category: 'safety',
+    tags: ['Safety', 'Future', 'Money'],
+    emoji: '✍️',
+    readTime: '3 min',
+    body: `Welcome to adulthood, where every major decision comes with a piece of paper you need to sign. Whether it is your first job offer, a lease for a bedsitter, or a deal for your side hustle, signing a contract is legally binding. Ignorance of the law is not an excuse in Kenya.
+
+Here is what you MUST look out for before putting pen to paper:
+
+1. **Read everything. Yes, even the small print.** Nobody likes reading a 5-page document filled with legal jargon, but you have to. Take the contract home. Do not let anyone rush you by saying, "Just sign here quickly." If they are rushing you, they are probably hiding something.
+
+2. **For House Leases (Rent):**
+- **Deposit terms:** Know exactly under what conditions your deposit will be returned when you move out. Many landlords in Kenya invent reasons (like "repainting") to withhold your money. 
+- **Hidden fees:** Does the rent include water, garbage, and security? Ask.
+- **Goodwill:** If you are renting a shop for a business, watch out for "goodwill" payments. This is a non-refundable fee landlords charge just to give you the space. Negotiate it or walk away if it is too high.
+
+3. **For Employment Contracts:**
+- **Probation period:** How long is it? (Usually 3-6 months). Can they fire you without notice during this time?
+- **Deductions:** Are they deducting PAYE, NHIF, and NSSF? If a company is paying you "gross" and telling you to sort out your own taxes, you are legally liable if KRA comes knocking.
+- **Working hours:** Does the contract state you work Monday to Friday, but your boss verbally expects you there on Saturdays? What is on paper is what matters.
+
+4. **When in doubt, ask.** Show the contract to an older sibling, a mentor, or a friend who has been working for a while. "Hey, does this clause look normal to you?" can save you from a trap.
+
+Your signature is your bond. Protect it. Do not give it away out of excitement or desperation.`,
+    body_sw: `Karibu katika utu uzima, ambapo kila uamuzi mkuu unakuja na karatasi unayohitaji kutia saini. Iwe ni ofa yako ya kwanza ya kazi, mkataba wa kupanga chumba (bedsitter), au mkataba wa biashara yako ya kando, kutia saini mkataba kunakufunga kisheria. Kutojua sheria si utetezi nchini Kenya.
+
+Hiki ndicho LAZIMA uangalie kabla ya kuweka kalamu kwenye karatasi:
+
+1. **Soma kila kitu. Ndiyo, hata maandishi madogo.** Hakuna anayependa kusoma hati ya kurasa 5 iliyojaa misamiati ya kisheria, lakini inabidi ufanye hivyo. Chukua mkataba nyumbani. Usiruhusu mtu yeyote akuharakishe kwa kusema, "Tia saini hapa haraka." Ikiwa wanakuharakisha, labda wanaficha kitu.
+
+2. **Kwa Mikataba ya Nyumba (Kodi):**
+- **Masharti ya amana (Deposit):** Jua hasa chini ya masharti gani amana yako itarudishwa utakapohama. Wamiliki wengi wa nyumba nchini Kenya hubuni sababu (kama "kupaka rangi upya") ili kuzuia pesa zako.
+- **Gharama zilizofichwa:** Je, kodi inajumuisha maji, taka, na usalama? Uliza.
+- **Goodwill:** Ikiwa unakodisha duka kwa ajili ya biashara, jihadhari na malipo ya "goodwill". Hii ni ada isiyorejeshwa ambayo wamiliki wa nyumba hutoza ili tu kukupa nafasi. Ijadili au uondoke ikiwa ni ghali mno.
+
+3. **Kwa Mikataba ya Ajira:**
+- **Kipindi cha majaribio (Probation):** Ni cha muda gani? (Kawaida ni miezi 3-6). Je, wanaweza kukufuta kazi bila taarifa wakati huu?
+- **Makatato:** Je, wanakata PAYE (ushuru), NHIF, na NSSF? Ikiwa kampuni inakulipa jumla na kukuambia ujishughulikie ushuru wako mwenyewe, unawajibika kisheria KRA wakibisha hodi.
+- **Saa za kazi:** Je, mkataba unasema unafanya kazi Jumatatu hadi Ijumaa, lakini bosi wako anatarajia uwepo Jumamosi kwa mdomo tu? Kile kilicho kwenye karatasi ndicho muhimu.
+
+4. **Unapokuwa na shaka, uliza.** Muonyeshe mkataba huo kaka au dada mkubwa, mshauri, au rafiki ambaye amekuwa akifanya kazi kwa muda. "Vipi, kipengele hiki kinaonekana kuwa cha kawaida kwako?" inaweza kukuokoa kutoka kwenye mtego.
+
+Saini yako ni ahadi yako. Ilinde. Usiitoe kwa sababu ya msisimko au kukata tamaa.`,
+    month: 2,
+  },
+  {
+    id: 'ya-fc-1',
+    title: 'How to tell if you are actually ready for a serious relationship',
+    title_sw: 'Jinsi ya kujua kama kweli uko tayari kwa uhusiano mkubwa',
+    category: 'relationships',
+    tags: ['Relationships', 'MentalHealth', 'Future'],
+    emoji: '🤔',
+    readTime: '3 min',
+    body: `Everyone around you is posting their partners, and the pressure is getting to you. You feel like you should be in a serious relationship because "it is time." But are you actually ready, or do you just want to avoid being lonely?
+
+Here is a checklist to know if you are genuinely ready to build with someone else:
+
+1. **You are okay being alone.** This sounds contradictory, but the best relationships happen between two people who do not NEED each other to survive, but CHOOSE each other. If you are terrified of your own company, you will accept toxic behavior just to avoid being single.
+
+2. **You know how to communicate when you are angry.** In high school, if you were mad, you just stopped talking to the person. Silent treatment. In an adult relationship, silent treatment is emotional abuse. Are you ready to sit down, swallow your pride, and say, "I felt hurt when you did that," instead of seeking revenge?
+
+3. **You have your own goals.** A relationship should complement your life, not become your entire life. If you are looking for a partner to give your life meaning, direction, or financial stability, you are looking for a parent, not a partner. 
+
+4. **You are willing to compromise.** When you are single, you eat what you want, go where you want, and sleep when you want. A relationship requires considering another person's feelings and schedule every single day. It is a sacrifice.
+
+If you read this and realized you are not ready, congratulations! Self-awareness is a superpower. Enjoy your single season, work on yourself, and let love find you when you are fully prepared to handle it.`,
+    body_sw: `Kila mtu karibu nawe anaweka picha za wapenzi wao mtandaoni, na shinikizo linakufikia. Unahisi kama unapaswa kuwa katika uhusiano mkubwa (serious relationship) kwa sababu "ni wakati." Lakini je, kweli uko tayari, au unataka tu kuepuka kuwa mpweke?
+
+Hii hapa ni orodha ya kukuwezesha kujua ikiwa uko tayari kweli kujenga maisha na mtu mwingine:
+
+1. **Uko sawa kuwa peke yako.** Hili linasikika kama kinyume, lakini mahusiano bora zaidi hutokea kati ya watu wawili ambao HAWAHITAJI mwingine ili kuishi, bali WANACHAGUANA. Ikiwa unaogopa kuwa peke yako, utakubali tabia mbaya (toxic) ili tu uepuke kuwa mseja.
+
+2. **Unajua jinsi ya kuwasiliana unapokuwa na hasira.** Katika shule ya upili, ikiwa ulikasirika, uliacha tu kuzungumza na mtu huyo. Kususia (silent treatment). Katika uhusiano wa watu wazima, kususia ni unyanyasaji wa kihisia. Je, uko tayari kuketi, kuweka kiburi kando, na kusema, "Nilihisi kuumia ulipofanya vile," badala ya kutafuta kulipiza kisasi?
+
+3. **Una malengo yako mwenyewe.** Uhusiano unapaswa kuongeza thamani kwenye maisha yako, si kuwa maisha yako yote. Ikiwa unatafuta mpenzi ili ayape maisha yako maana, mwelekeo, au usalama wa kifedha, unatafuta mzazi, si mpenzi.
+
+4. **Uko tayari kukubaliana (compromise).** Unapokuwa mseja, unakula unachotaka, unaenda unakotaka, na kulala unapotaka. Uhusiano unahitaji kuzingatia hisia na ratiba ya mtu mwingine kila siku. Ni kujitolea.
+
+Ikiwa umesoma haya na kugundua hauko tayari, hongera! Kujitambua ni nguvu kubwa. Furahia msimu wako wa kuwa mseja, jifanyie kazi, na uruhusu mapenzi yakupate ukiwa tayari kabisa kuyashughulikia.`,
+    month: 2,
+  },
+  {
+    id: 'ya-fc-2',
+    title: 'Red flags to look out for in Kenyan dating',
+    title_sw: 'Ishara za hatari za kuangalia katika uchumba nchini Kenya',
+    category: 'relationships',
+    tags: ['Safety', 'Relationships', 'Decisions'],
+    emoji: '🚩',
+    readTime: '4 min',
+    body: `When you start dating as an adult, the stakes are higher. You are no longer just sharing a soda; you are sharing your time, your peace of mind, and sometimes your finances. 
+
+Here are some specific "red flags" (warning signs) to look out for in the modern Kenyan dating scene:
+
+1. **They are rude to service workers.** Pay attention to how they treat the waiter at the restaurant, the matatu conductor, or the watchman at the gate. If they are sweet to you but disrespectful to people they consider "below" them, it is only a matter of time before they treat you the same way. Character is how you treat people who cannot do anything for you.
+
+2. **They have no friends.** If someone has cut off their family, has zero close friends, and claims "everyone is just jealous of me," run. It is highly unlikely that the entire world is toxic and they are the only good person. Usually, they are the common denominator in all those broken relationships.
+
+3. **They pressure you for physical intimacy.** "If you loved me, you would do it." "Everyone is doing it." This is manipulation, not love. A partner who truly respects you will respect your boundaries, whether you want to wait three months or until marriage. 
+
+4. **They borrow money early and often.** Yes, times are tough, but if you have only been dating for a month and they are already asking you for an emergency M-Pesa loan to "sort a supplier" or "pay rent," step back. You are looking for a partner, not someone to adopt.
+
+5. **They hide you completely.** Privacy is okay; secrecy is a red flag. If after six months, you have never met a single friend of theirs, they refuse to take pictures with you, and they only want to meet indoors, you might be the "side" person.
+
+Trust your gut. If something feels wrong, it probably is.`,
+    body_sw: `Unapoanza kuchumbiana kama mtu mzima, athari huwa kubwa zaidi. Hushiriki tu soda; unashiriki wakati wako, amani yako ya akili, na wakati mwingine fedha zako.
+
+Hizi hapa ni baadhi ya "ishara za hatari" (red flags) mahususi za kuangalia katika mazingira ya sasa ya uchumba nchini Kenya:
+
+1. **Wana dharau kwa watoa huduma.** Zingatia jinsi wanavyomhudumia mhudumu hotelini, kondakta wa matatu, au mlinzi getini. Ikiwa ni wazuri kwako lakini hawawaheshimu watu wanaowaona "chini" yao, ni suala la muda tu kabla hawajakutendea vivyo hivyo. Tabia halisi ni jinsi unavyowatendea watu ambao hawawezi kukufanyia chochote.
+
+2. **Hawana marafiki.** Ikiwa mtu amekata mawasiliano na familia yake, hana marafiki wa karibu hata kidogo, na anadai "kila mtu ananionea wivu tu," kimbia. Haiwezekani sana kwamba dunia nzima ni mbaya na wao pekee ndio wazuri. Kawaida, wao ndio chanzo kikuu katika mahusiano hayo yote yaliyovunjika.
+
+3. **Wanakushinikiza kufanya ngono.** "Kama ungenipenda, ungefanya." "Kila mtu anafanya." Huu ni ujanja wa kisaikolojia, si mapenzi. Mpenzi anayekuheshimu kweli ataheshimu mipaka yako, iwe unataka kusubiri miezi mitatu au hadi ndoa.
+
+4. **Wanakopa pesa mapema na mara kwa mara.** Ndiyo, nyakati ni ngumu, lakini ikiwa mmekuwa mkichumbiana kwa mwezi mmoja tu na tayari wanakuomba mkopo wa dharura wa M-Pesa ili "kumlipa msambazaji" au "kulipa kodi," rudi nyuma. Unatafuta mpenzi, si mtu wa kumlea.
+
+5. **Wanakuficha kabisa.** Faragha (privacy) ni sawa; usiri (secrecy) ni ishara ya hatari. Ikiwa baada ya miezi sita, hujawahi kukutana na rafiki yao hata mmoja, wanakataa kupiga picha na wewe, na wanataka tu mpatane ndani ya nyumba, labda wewe ni mtu wa "kando".
+
+Sikiliza hisia zako za ndani (gut feeling). Ikiwa kitu kinahisi kuwa si sawa, labda kweli si sawa.`,
+    month: 2,
+  },
+  {
+    id: 'ya-mb-1',
+    title: 'The truth about betting and "quick money" in Kenya',
+    title_sw: 'Ukweli kuhusu kamari (betting) na "pesa za haraka" nchini Kenya',
+    category: 'money',
+    tags: ['Money', 'Future', 'MentalHealth'],
+    emoji: '💸',
+    readTime: '3 min',
+    body: `Walk into any shopping center in Kenya on a weekend, and you will see crowds of young men staring at screens, analyzing football odds. Betting has become a national crisis disguised as entertainment.
+
+If you are thinking about trying it to make some quick cash to pay your rent or buy a phone, read this first:
+
+1. **The house always wins.** Betting companies are not charities; they are multi-billion shilling corporations. They make those billions from the money that you and your friends lose. For every one person you see on Facebook who won KES 50,000, there are a thousand people who lost KES 500. The math is designed against you.
+
+2. **It destroys your work ethic.** The biggest danger of betting is psychological. Once your brain gets used to the idea that you can make KES 10,000 by just clicking a button, you will start despising honest, hard work. Why work for a whole month for KES 15,000 when you could "win" it in 90 minutes? This mindset will keep you broke forever.
+
+3. **It ruins relationships.** Gambling addiction is real. It starts with KES 50. Then you lose, and you bet KES 100 to recover the KES 50. Before you know it, you are using your school fees, borrowing from Fuliza, and lying to your parents to fund your bets. 
+
+4. **There are no shortcuts to wealth.** The people making real money in Kenya are solving problems, selling goods, or providing services. They are not waiting for Manchester United to score a corner. 
+
+Protect your mind and your little money. Uninstall the apps. If you want to invest, put that KES 100 into an M-Shwari lock savings account or buy data to learn a skill online.`,
+    body_sw: `Tembea katika kituo chochote cha biashara nchini Kenya wikendi, na utaona makundi ya vijana wakitazama skrini, wakichanganua uwezekano wa matokeo ya mpira wa miguu (odds). Kamari (betting) imekuwa janga la kitaifa lililojificha kama burudani.
+
+Ikiwa unafikiria kuijaribu ili upate pesa za haraka za kulipa kodi au kununua simu, soma haya kwanza:
+
+1. **Mwenye mchezo (kampuni) hushinda kila wakati.** Kampuni za kamari si mashirika ya msaada; ni mashirika yanayomiliki mabilioni ya shilingi. Wanatengeneza mabilioni hayo kutokana na pesa ambazo wewe na marafiki zako mnapoteza. Kwa kila mtu mmoja unayemuona kwenye Facebook aliyeshinda KES 50,000, kuna watu elfu moja waliopoteza KES 500. Hesabu imeundwa dhidi yako.
+
+2. **Inaharibu maadili yako ya kazi.** Hatari kubwa zaidi ya kamari ni ya kisaikolojia. Mara ubongo wako unapozoea wazo kwamba unaweza kutengeneza KES 10,000 kwa kubofya kitufe tu, utaanza kudharau kazi ya haki na ya bidii. Kwa nini ufanye kazi mwezi mzima kwa KES 15,000 wakati unaweza "kuishinda" kwa dakika 90? Fikra hizi zitakufanya uwe maskini milele.
+
+3. **Inaharibu mahusiano.** Uraibu wa kamari ni wa kweli. Inaanza na KES 50. Kisha unapoteza, na unaweka KES 100 ili kurudisha zile 50. Kabla hujajua, unatumia karo yako ya shule, unakopa kutoka Fuliza, na kuwadanganya wazazi wako ili kufadhili michezo yako.
+
+4. **Hakuna njia za mkato za utajiri.** Watu wanaotengeneza pesa halisi nchini Kenya wanatatua matatizo, wanauza bidhaa, au wanatoa huduma. Hawasubiri Manchester United ipate kona.
+
+Linda akili yako na pesa zako kidogo. Futa (uninstall) hizo programu (apps) kwenye simu yako. Ikiwa unataka kuwekeza, weka hiyo KES 100 kwenye akaunti ya akiba ya M-Shwari lock au nunua data ili ujifunze ujuzi mtandaoni.`,
+    month: 2,
+  },
+  {
+    id: 'ya-mb-2',
+    title: 'How to save your first 10,000 shillings',
+    title_sw: 'Jinsi ya kuweka akiba ya shilingi 10,000 zako za kwanza',
+    category: 'money',
+    tags: ['Money', 'Future', 'Decisions'],
+    emoji: '💰',
+    readTime: '3 min',
+    body: `When you are making little to no money, saving feels impossible. "How do I save when my salary cannot even cover my basic needs?" It is a valid question. But saving is not about having a lot of money; it is a habit you build when you have little, so that you know how to manage a lot.
+
+Here is a realistic strategy to save your first KES 10,000:
+
+1. **Pay yourself first.** If you get KES 1,000 from a hustle or a relative, immediately send KES 100 (10%) to a savings account that is hard to access (like a locked M-Shwari or KCB M-Pesa account). Do not wait to save what is left after spending, because there will never be anything left.
+
+2. **Stop the "small small" leaks.** In Kenya, we lose a lot of money to "black tax" (giving relatives money) and convenience. Buying a KES 50 chapati every morning adds up to KES 1,500 a month. Paying KES 100 extra for a matatu because you did not want to wait 10 minutes adds up. Track every single coin you spend for one week. You will be shocked at where your money is hiding.
+
+3. **Avoid the Fuliza trap.** Mobile loans like Fuliza, Branch, and Tala charge massive interest rates. When you use Fuliza to buy airtime, you are essentially borrowing money to consume. This creates a cycle where your next income goes entirely to paying debt. Turn off auto-fuliza.
+
+4. **Sell what you do not need.** Have an old phone? Shoes you never wear? A textbook from last semester? Sell them on Jiji or to your neighbors. Take that money directly to your savings.
+
+Hitting KES 10,000 gives you psychological power. It gives you confidence. It means if an emergency happens, you do not have to beg. Start with KES 50 today. Build the muscle.`,
+    body_sw: `Unapokuwa hupati pesa nyingi au hupati kabisa, kuweka akiba inaonekana kuwa haiwezekani. "Nawezaje kuweka akiba wakati mshahara wangu hauwezi hata kukidhi mahitaji yangu ya msingi?" Ni swali halali. Lakini kuweka akiba si kuwa na pesa nyingi; ni tabia unayoijenga unapokuwa na kidogo, ili ujue jinsi ya kusimamia nyingi.
+
+Huu hapa ni mkakati halisi wa kuweka akiba yako ya kwanza ya KES 10,000:
+
+1. **Jilipe kwanza.** Ukipata KES 1,000 kutoka kwenye kibarua au jamaa, tuma KES 100 (10%) mara moja kwenye akaunti ya akiba ambayo ni ngumu kuifikia (kama M-Shwari iliyofungwa au akaunti ya KCB M-Pesa). Usisubiri kuweka akiba kile kilichobaki baada ya matumizi, kwa sababu hakutawahi kusalia chochote.
+
+2. **Zuia uvujaji wa "kidogo kidogo".** Nchini Kenya, tunapoteza pesa nyingi kwa "ushuru wa weusi" (black tax - kuwapa jamaa pesa) na urahisi. Kununua chapati ya KES 50 kila asubuhi hujumlisha hadi KES 1,500 kwa mwezi. Kulipa KES 100 ya ziada kwa matatu kwa sababu hukutaka kusubiri dakika 10 hujumlisha. Fuatilia kila sarafu unayotumia kwa wiki moja. Utashtushwa na mahali pesa zako zinapojificha.
+
+3. **Epuka mtego wa Fuliza.** Mikopo ya simu kama Fuliza, Branch, na Tala hutoza viwango vikubwa vya riba. Unapotumia Fuliza kununua muda wa maongezi (airtime), kimsingi unakopa pesa ili kutumia tu. Hili huunda mzunguko ambapo mapato yako yajayo yote huenda kulipa deni. Zima huduma ya auto-fuliza.
+
+4. **Uza usichokihitaji.** Una simu ya zamani? Viatu ambavyo huvivai kamwe? Kitabu cha kiada cha muhula uliopita? Viuze kwenye Jiji au kwa majirani zako. Peleka pesa hizo moja kwa moja kwenye akiba yako.
+
+Kufikia KES 10,000 kunakupa nguvu ya kisaikolojia. Kunakupa ujasiri. Inamaanisha ikiwa dharura itatokea, huna haja ya kuomba. Anza na KES 50 leo. Jenga tabia hiyo.`,
+    month: 2,
+  },
 ]

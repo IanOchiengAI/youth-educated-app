@@ -258,6 +258,8 @@ const SignIn: React.FC = () => {
                           joinedAt: new Date().toISOString(),
                           role: 'student',
                           jabariVoice: 'default_female',
+                          aiPersona: 'amara' as const,
+                          isPremium: false,
                           mentorPairId: null
                         }
                       }));
@@ -285,6 +287,8 @@ const SignIn: React.FC = () => {
                           joinedAt: new Date().toISOString(),
                           role: 'mentor',
                           jabariVoice: 'default_male',
+                          aiPersona: 'jabari' as const,
+                          isPremium: false,
                           mentorPairId: null
                         }
                       }));
@@ -312,6 +316,8 @@ const SignIn: React.FC = () => {
                           joinedAt: new Date().toISOString(),
                           role: 'admin',
                           jabariVoice: 'default_female',
+                          aiPersona: 'amara' as const,
+                          isPremium: false,
                           mentorPairId: null
                         }
                       }));

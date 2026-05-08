@@ -18,6 +18,7 @@ import { LessonSection } from '../data/modules';
 import { useModules } from '../hooks/useContent';
 import { addPoints, checkAchievements, getCurrentTier } from '../lib/gamification';
 import TierUpgradeModal from '../components/TierUpgradeModal';
+import PremiumGate from '../components/PremiumGate';
 
 const ModuleView: React.FC = () => {
   const { moduleId } = useParams<{ moduleId: string }>();
@@ -49,6 +50,11 @@ const ModuleView: React.FC = () => {
   const userMinAge = parseInt(state.user?.ageBracket?.split('-')[0] || '10');
   if (module.min_age > userMinAge) {
     return <Navigate to="/learn" replace />;
+  }
+
+  // Premium gate: free users see the upgrade screen
+  if (module.isPremium && !state.user?.isPremium) {
+    return <PremiumGate moduleName={module.title} moduleIcon={module.icon} />;
   }
 
   const currentLesson = module.content[currentLessonIndex] || module.content[0];

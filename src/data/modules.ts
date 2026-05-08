@@ -27,6 +27,7 @@ export interface Module {
   competency: string;
   difficulty: string;
   content: Lesson[];
+  isPremium?: boolean;
 }
 
 export const MODULES: Module[] = [
@@ -292,6 +293,7 @@ export const MODULES: Module[] = [
     min_age: 10,
     is_sensitive: false,
     brothers_keepers_variant: false,
+    isPremium: true,
     lessons: 5,
     duration: '30 min',
     competency: 'Self-Efficacy',
@@ -362,6 +364,7 @@ export const MODULES: Module[] = [
     min_age: 10,
     is_sensitive: false,
     brothers_keepers_variant: false,
+    isPremium: true,
     lessons: 8,
     duration: '48 min',
     competency: 'Critical Thinking',
@@ -546,6 +549,7 @@ export const MODULES: Module[] = [
     min_age: 15,
     is_sensitive: true,
     brothers_keepers_variant: false,
+    isPremium: true,
     lessons: 6,
     duration: '36 min',
     competency: 'Critical Thinking',
@@ -627,6 +631,7 @@ export const MODULES: Module[] = [
     min_age: 13,
     is_sensitive: true,
     brothers_keepers_variant: false,
+    isPremium: true,
     lessons: 5,
     duration: '30 min',
     competency: 'Critical Thinking',
@@ -685,6 +690,55 @@ export const MODULES: Module[] = [
           { type: 'pullquote', content: 'Take care of your body. It is the only place you have to live.' },
           { type: 'insight_prompt', prompt: 'Which of the three pillars (sleep, nutrition, exercise) do you struggle with the most, and why?' },
           { type: 'quiz', question: 'Which of the following is considered one of the three main pillars of physical health?', options: ['Having the latest smartphone', 'Watching television every day', 'Getting 8-10 hours of sleep per night'], correctIndex: 2 },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'adulting-101',
+    title: 'Adulting 101: The Real World',
+    description: "Everything they didn't teach you in school about surviving and thriving after KCSE.",
+    icon: '🌍',
+    min_age: 18,
+    is_sensitive: false,
+    brothers_keepers_variant: false,
+    isPremium: true,
+    lessons: 3,
+    duration: '45 min',
+    competency: 'Life Skills',
+    difficulty: 'Intermediate',
+    content: [
+      {
+        id: 1,
+        title: 'Lesson 1: The M-Pesa Black Hole',
+        duration: '15 min',
+        sections: [
+          { type: 'text', content: 'Managing money as a young adult in Kenya can feel like a trap. One minute you have KES 2,000, and the next, it has vanished into transaction fees, buying airtime to browse Instagram, and sending "small small" amounts to friends.\n\nThe biggest financial trap for young Kenyans today is instant mobile loans like Fuliza. While it seems convenient to borrow KES 200 for lunch, the daily interest rates compound quickly. It creates a cycle where your future money is already spent before you even earn it. To build wealth, you must break the debt cycle.\n\nStart by tracking every coin you spend for a week. You will be surprised at how much goes to things you do not even remember buying. Second, build an emergency fund before you buy anything flashy. Your peace of mind is worth more than a new pair of sneakers.' },
+          { type: 'pullquote', content: 'Do not save what is left after spending; spend what is left after saving.' },
+          { type: 'insight_prompt', prompt: 'Look at your M-Pesa statement for the last 3 days. What was your most unnecessary expense?' },
+          { type: 'quiz', question: 'What is the biggest risk of using mobile loans like Fuliza for daily expenses?', options: ['They make your phone slower', 'They trap you in a cycle of high-interest debt', 'They report you to the police'], correctIndex: 1 },
+        ],
+      },
+      {
+        id: 2,
+        title: 'Lesson 2: Navigating Relationships and "Tuma Fare"',
+        duration: '15 min',
+        sections: [
+          { type: 'text', content: 'Dating in your late teens and early twenties is complicated. There is intense social pressure to be in a relationship, but very little guidance on what a healthy one looks like. A lot of modern dating culture revolves around transactional relationships — where money, gifts, and paying for transport ("tuma fare") are expected to prove love.\n\nA healthy relationship is not transactional. If someone only values you for what you can buy them, or if someone expects physical intimacy because they bought you dinner, that is manipulation, not love.\n\nSet your boundaries early. It is okay to go on cheap or free dates like walking in a public park. It is okay to say, "I am broke right now." A partner who genuinely likes you will respect your boundaries and build with you, rather than draining you.' },
+          { type: 'pullquote', content: 'Your 20s are for partnership, not sponsorship. Build together.' },
+          { type: 'insight_prompt', prompt: 'Have you ever felt pressured to spend money you didn\'t have just to impress someone?' },
+          { type: 'quiz', question: 'What is a sign of a transactional relationship?', options: ['Supporting each other\'s career goals', 'Expecting gifts or money as proof of love', 'Having honest conversations about being broke'], correctIndex: 1 },
+        ],
+      },
+      {
+        id: 3,
+        title: 'Lesson 3: Securing the Bag (Skills & Hustle)',
+        duration: '15 min',
+        sections: [
+          { type: 'text', content: 'The Kenyan job market is tough. A university degree or college diploma is no longer a guaranteed ticket to employment. So, how do you stand out when hundreds of people are applying for the same entry-level job?\n\nThe secret is in "proof of work." Employers do not just want to see a certificate; they want to see what you can DO. If you want to be a graphic designer, build a portfolio of sample posters. If you want to be in sales, start by selling small items online and document your process.\n\nWhile you wait for your dream job, embrace the gig economy. Online writing, social media management, tutoring, or selling second-hand clothes (mitumba) teaches you negotiation, discipline, and customer service. Swallow your pride and start small. The hustle you start today could be the business that employs others tomorrow.' },
+          { type: 'pullquote', content: 'Your degree is just the foundation. Your skills and hustle build the house.' },
+          { type: 'insight_prompt', prompt: 'What is one practical skill you could start learning on YouTube this week?' },
+          { type: 'quiz', question: 'What do modern employers value most when looking at entry-level candidates?', options: ['The prestige of your high school', 'Proof of work and practical skills', 'How many followers you have on social media'], correctIndex: 1 },
         ],
       },
     ],

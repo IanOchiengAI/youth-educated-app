@@ -1,21 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { t, type Language } from '../lib/i18n';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  MessageCircle, 
-  BookOpen, 
-  ChevronRight, 
-  Sparkles, 
-  Target, 
+import {
+  MessageCircle,
+  BookOpen,
+  ChevronRight,
+  Sparkles,
+  Target,
   Heart,
   Users,
-  Briefcase,
-  Compass,
+  User as UserIcon,
   X,
   ThumbsUp,
   Send,
   RefreshCw,
-  BrainCircuit
+  BrainCircuit,
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
@@ -26,6 +25,7 @@ import { db } from '../lib/db';
 import { supabase } from '../lib/supabase';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { checkSafeguarding } from '../lib/safeguarding';
+import SafeguardingCard from '../components/SafeguardingCard';
 import { MODULES } from '../data/modules';
 import { LIFEKIT_ARTICLES } from '../data/lifekit';
 
@@ -50,6 +50,8 @@ const Dashboard: React.FC = () => {
   const [unratedSession, setUnratedSession] = useState<any | null>(null);
   const [ratingScore, setRatingScore] = useState<number>(0);
   const [savingRating, setSavingRating] = useState(false);
+
+  const [escalationMsg, setEscalationMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (!state.user?.id) return;
@@ -130,7 +132,7 @@ const Dashboard: React.FC = () => {
     
     const safeCheck = checkSafeguarding(commitmentText, state.user?.ageBracket || '', state.user?.id, 'session_commitment');
     if (safeCheck.triggered && safeCheck.escalationText) {
-      alert(safeCheck.escalationText);
+      setEscalationMsg(safeCheck.escalationText);
     }
 
     setSavingCommitment(true);
@@ -215,7 +217,7 @@ const Dashboard: React.FC = () => {
     
     const safeCheck = checkSafeguarding(replyText, state.user?.ageBracket || '', state.user?.id, 'nudge_reply');
     if (safeCheck.triggered && safeCheck.escalationText) {
-      alert(safeCheck.escalationText);
+      setEscalationMsg(safeCheck.escalationText);
     }
 
     setReplyStatus('sending');
@@ -294,11 +296,12 @@ const Dashboard: React.FC = () => {
 
   const featuredArticles = LIFEKIT_ARTICLES.slice(0, 3);
 
+  const aiName = state.user?.aiPersona === 'jabari' ? 'Jabari' : 'Amara';
   const QUICK_ACTIONS = [
-    { id: 'mentor', icon: <Users size={24} />, label: t('action.mentor', lang), path: '/mentor', color: 'bg-yellow', text: 'text-navy' },
-    { id: 'goals', icon: <Target size={24} />, label: t('action.goals', lang), path: '/goals', color: 'bg-navy/10', text: 'text-navy' },
+    { id: 'chat', icon: <MessageCircle size={24} />, label: `Ask ${aiName}`, path: '/chat', color: 'bg-yellow', text: 'text-navy' },
+    { id: 'mentor', icon: <Users size={24} />, label: t('action.mentor', lang), path: '/mentor', color: 'bg-navy/10', text: 'text-navy' },
     { id: 'learn', icon: <BrainCircuit size={24} />, label: t('action.learn', lang), path: '/learn', color: 'bg-navy/10', text: 'text-navy' },
-    { id: 'community', icon: <MessageCircle size={24} />, label: t('action.community', lang), path: '/community', color: 'bg-navy/10', text: 'text-navy' },
+    { id: 'circles', icon: <Target size={24} />, label: t('action.circles', lang), path: '/circles', color: 'bg-navy/10', text: 'text-navy' },
   ];
 
   return (
@@ -312,9 +315,9 @@ const Dashboard: React.FC = () => {
         <div className="flex justify-between items-start mb-6 relative z-10">
           <div className="flex items-center gap-3">
             <img 
-              src="/logo-mark.png" 
-              alt="Youth Educated" 
-              className="w-14 h-14 rounded-2xl object-contain shadow-lg shadow-yellow/20"
+              src="/logo-ye.png"
+              alt="Youth Educated"
+              className="h-14 w-auto object-contain drop-shadow-lg"
             />
             <div>
               <h2 className="text-sm font-bold text-yellow tracking-wide">{t('app.name_full', lang)}</h2>
@@ -405,9 +408,9 @@ const Dashboard: React.FC = () => {
               <div className="absolute top-[-20px] right-[-20px] w-32 h-32 bg-blue-500/20 rounded-full blur-2xl opacity-40 pointer-events-none" />
               <div className="flex gap-4 relative z-10">
                 <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 overflow-hidden">
-                  {unreadNudge.profiles?.avatar && unreadNudge.profiles.avatar.length >= 5 
+                  {unreadNudge.profiles?.avatar && unreadNudge.profiles.avatar.length >= 5
                     ? <img src={unreadNudge.profiles.avatar} alt="Mentor" className="w-full h-full object-cover" />
-                    : unreadNudge.profiles?.avatar || '👤'}
+                    : <UserIcon size={20} className="text-white/60" />}
                 </div>
                 <div className="flex-1 space-y-2">
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-yellow/80">
@@ -580,8 +583,8 @@ const Dashboard: React.FC = () => {
             {recentResponses.length > 0 ? recentResponses.map((resp, index) => (
               <div key={resp.id || index} className="min-w-[280px] bg-white p-5 rounded-[32px] border border-navy/5 shadow-sm space-y-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-off-white rounded-xl flex items-center justify-center text-sm shadow-inner">
-                    {resp.userId === state.user?.id ? '👤' : ['🦁', '🦒', '🐘', '🐆', '🦓'][index % 5]}
+                  <div className="w-8 h-8 bg-navy/10 rounded-xl flex items-center justify-center shadow-inner">
+                    <Users size={14} className="text-navy/60" />
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-navy">{resp.userId === state.user?.id ? 'You' : 'Scholar'}</h4>
@@ -671,6 +674,25 @@ const Dashboard: React.FC = () => {
           <Leaderboard />
         </section>
       </main>
+
+      {/* Safeguarding overlay */}
+      <AnimatePresence>
+        {escalationMsg && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-navy/80 flex items-end p-4"
+          >
+            <div className="w-full max-w-md mx-auto">
+              <SafeguardingCard
+                message={escalationMsg}
+                onDismiss={() => setEscalationMsg(null)}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Mood Tracker Modal */}
       <AnimatePresence>
