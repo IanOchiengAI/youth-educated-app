@@ -58,45 +58,47 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
   return (
     <div className="min-h-screen flex flex-col max-w-md mx-auto bg-off-white relative overflow-x-hidden shadow-2xl">
-      {/* Fixed Header/Banner Area */}
-      <div className="fixed top-0 left-0 right-0 z-50 max-w-md mx-auto">
-        <AnimatePresence>
-          {state.isOffline && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="bg-yellow px-4 py-2 flex items-center justify-center gap-2 border-b border-navy/10"
-            >
-              <WifiOff size={14} className="text-navy" />
-              <span className="text-[11px] font-black uppercase tracking-widest text-navy">{t('app.offline', lang)}</span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {!shouldHideNav && (
-          <div className="bg-off-white/90 backdrop-blur-md border-b border-navy/5 px-4 py-2 flex items-center gap-2">
-            <img src="/logo-ye.png" alt="Youth Educated" className="h-7 w-auto object-contain" />
-            <span className="text-[10px] font-black uppercase tracking-[0.15em] text-navy/50">{t('app.name_full', lang)}</span>
-            <div className="ml-auto flex items-center gap-2">
-              {state.user?.role === 'mentor' && (
-                <span className="text-[10px] font-black uppercase tracking-widest text-yellow bg-navy/10 px-2 py-0.5 rounded-full">
-                  {t('app.mentor_badge', lang)}
-                </span>
-              )}
-              <button
-                onClick={() => dispatch({ type: 'SET_LANGUAGE', payload: lang === 'English' ? 'Kiswahili' : 'English' })}
-                className="text-[10px] font-black uppercase tracking-widest text-navy/50 hover:text-navy transition-colors px-2 py-0.5 rounded-full border border-navy/15 hover:border-navy/30 hover:bg-navy/5"
-                aria-label="Switch language"
+      {/* Fixed Header/Banner Area — pinned to viewport top, always visible */}
+      <div className="fixed top-0 left-0 right-0 z-[9999]" style={{ pointerEvents: 'none' }}>
+        <div className="max-w-md mx-auto" style={{ pointerEvents: 'auto' }}>
+          <AnimatePresence>
+            {state.isOffline && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="bg-yellow px-4 py-2 flex items-center justify-center gap-2 border-b border-navy/10"
               >
-                {lang === 'English' ? 'KSW' : 'ENG'}
-              </button>
+                <WifiOff size={14} className="text-navy" />
+                <span className="text-[11px] font-black uppercase tracking-widest text-navy">{t('app.offline', lang)}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {!shouldHideNav && (
+            <div className="bg-off-white/95 backdrop-blur-lg border-b border-navy/5 px-4 py-2.5 flex items-center gap-2 shadow-sm">
+              <img src="/logo-ye.png" alt="Youth Educated" className="h-7 w-auto object-contain" />
+              <span className="text-[10px] font-black uppercase tracking-[0.15em] text-navy/50">{t('app.name_full', lang)}</span>
+              <div className="ml-auto flex items-center gap-2">
+                {state.user?.role === 'mentor' && (
+                  <span className="text-[10px] font-black uppercase tracking-widest text-yellow bg-navy/10 px-2 py-0.5 rounded-full">
+                    {t('app.mentor_badge', lang)}
+                  </span>
+                )}
+                <button
+                  onClick={() => dispatch({ type: 'SET_LANGUAGE', payload: lang === 'English' ? 'Kiswahili' : 'English' })}
+                  className="text-[10px] font-black uppercase tracking-widest text-navy/50 hover:text-navy transition-colors px-2 py-0.5 rounded-full border border-navy/15 hover:border-navy/30 hover:bg-navy/5"
+                  aria-label="Switch language"
+                >
+                  {lang === 'English' ? 'KSW' : 'ENG'}
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      <main className={`flex-1 pb-20 ${!shouldHideNav ? 'pt-11' : ''} ${state.isOffline && !shouldHideNav ? 'pt-[84px]' : state.isOffline ? 'pt-9' : ''}`}>
+      <main className={`flex-1 pb-20 ${!shouldHideNav ? 'pt-[48px]' : ''} ${state.isOffline && !shouldHideNav ? 'pt-[84px]' : state.isOffline ? 'pt-9' : ''}`}>
         {children}
       </main>
 

@@ -181,7 +181,7 @@ const Learn: React.FC = () => {
                   : 'bg-pale-yellow text-navy'
               }`}
             >
-              #{tag}
+              #{t('tag.' + tag, lang)}
             </button>
           ))}
         </div>

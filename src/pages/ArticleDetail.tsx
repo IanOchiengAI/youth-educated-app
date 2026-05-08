@@ -9,16 +9,32 @@ import AIAvatar from '../components/AIAvatar';
 import { supabase } from '../lib/supabase';
 
 /** Convert markdown-style **bold** to <strong> and split paragraphs on double newlines */
-const renderBody = (body: string) => {
-  const paragraphs = body.split(/\n\n+/);
+const renderBody = (body: string | undefined | null) => {
+  if (!body || typeof body !== 'string') return null;
+
+  // Split by 2+ newlines, handling potential \r from Windows line endings
+  const paragraphs = body.split(/\r?\n\r?\n+/);
+
   return paragraphs.map((p, i) => {
+    const trimmedP = p.trim();
+    if (!trimmedP) return null;
+
     // Replace **text** with <strong>text</strong>
-    const parts = p.split(/\*\*(.+?)\*\*/g);
+    const parts = trimmedP.split(/\*\*(.+?)\*\*/g);
     const rendered = parts.map((part, j) =>
-      j % 2 === 1 ? <strong key={j} className="font-bold text-navy">{part}</strong> : part,
+      j % 2 === 1 ? (
+        <strong key={j} className="font-bold text-navy">
+          {part}
+        </strong>
+      ) : (
+        part
+      ),
     );
     return (
-      <p key={i} className="font-nunito text-[15px] leading-relaxed text-navy/85 mb-4 whitespace-pre-line">
+      <p
+        key={i}
+        className="font-nunito text-[15px] leading-relaxed text-navy/85 mb-4 whitespace-pre-line"
+      >
         {rendered}
       </p>
     );

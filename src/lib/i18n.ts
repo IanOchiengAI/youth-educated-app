@@ -103,6 +103,7 @@ const translations: Record<string, Record<Language, string>> = {
   'tag.Money':        { English: 'Money',        Kiswahili: 'Fedha' },
   'tag.Career':       { English: 'Career',       Kiswahili: 'Kazi' },
   'tag.MentalHealth': { English: 'Mental Health', Kiswahili: 'Afya ya Akili' },
+  'tag.Relationships': { English: 'Relationships', Kiswahili: 'Uhusiano' },
   'tag.School':       { English: 'School',       Kiswahili: 'Shule' },
   'tag.Safety':       { English: 'Safety',       Kiswahili: 'Usalama' },
   'tag.Future':       { English: 'Future',       Kiswahili: 'Hatima' },
