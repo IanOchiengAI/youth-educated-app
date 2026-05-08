@@ -11,7 +11,7 @@
     "lint": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "deploy:edge": "npx supabase functions deploy check-session-followup --no-verify-jwt && npx supabase functions deploy jabari-chat"
+    "deploy:edge": "npx supabase functions deploy check-session-followup --no-verify-jwt && npx supabase functions deploy jabari-chat --no-verify-jwt"
   },
   "dependencies": {
     "@capacitor/android": "^8.2.0",
