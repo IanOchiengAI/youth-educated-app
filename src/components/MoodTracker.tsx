@@ -46,7 +46,7 @@ const MoodTracker: React.FC<{ onComplete?: () => void }> = ({ onComplete }) => {
     if (selectedMood === null) return;
 
     // 1. Safeguarding on note
-    const safeguard = checkSafeguarding(note, state.user?.ageBracket || '16-18');
+    const safeguard = checkSafeguarding(note, state.user?.ageBracket || '16-18', state.user?.id, 'mood');
     
     // 2. Points
     const result = addPoints(
@@ -103,7 +103,7 @@ const MoodTracker: React.FC<{ onComplete?: () => void }> = ({ onComplete }) => {
 
     // 4. Jabari Response
     let resp = "";
-    if (safeguard.triggered) {
+    if (safeguard.triggered && safeguard.escalationText) {
       resp = safeguard.escalationText!;
       // Special sync for safeguarding flag
       if (state.user && !state.isOffline) {
@@ -114,6 +114,8 @@ const MoodTracker: React.FC<{ onComplete?: () => void }> = ({ onComplete }) => {
           updated_at: new Date().toISOString()
         });
       }
+    } else if (safeguard.guidancePrefix) {
+      resp = safeguard.guidancePrefix;
     } else if (selectedMood <= 2) {
       resp = "Pole sana. I'm sorry you're feeling this way. Remember, I'm here if you want to talk about it. 💙 You are not alone.";
     } else if (selectedMood === 3) {

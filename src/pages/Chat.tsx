@@ -261,12 +261,15 @@ const Chat: React.FC = () => {
       activeScenario || undefined,
       state.user?.aiPersona ?? 'amara'
     );
+    const finalResponseText = safeguard.guidancePrefix
+      ? `${safeguard.guidancePrefix}\n\n${responseText}`
+      : responseText;
     
     setIsTyping(false);
     const newModelMessage: Message = {
       id: (Date.now() + 1).toString(),
       role: 'model',
-      text: responseText,
+      text: finalResponseText,
       timestamp: new Date().toISOString()
     };
 

@@ -77,13 +77,14 @@ Copy `.env.example` to `.env` before running locally.
 ```
 VITE_SUPABASE_URL          # Supabase project URL
 VITE_SUPABASE_ANON_KEY     # Supabase public anon key (protected by RLS)
-VITE_ELEVENLABS_API_KEY    # Optional — premium TTS voice
 ```
 
-**`GEMINI_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` must NOT be in `.env`.** Set them as Supabase Edge Function secrets only:
+**`GEMINI_API_KEY`, `ELEVENLABS_API_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` must NOT be in `.env`.** Set them as Supabase Edge Function secrets only:
 ```bash
 npx supabase secrets set GEMINI_API_KEY=your_key
+npx supabase secrets set ELEVENLABS_API_KEY=your_key
 npx supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your_key
+npx supabase secrets set FOLLOWUP_CRON_SECRET=your_long_random_secret
 ```
 
 All `VITE_` vars are **public** (exposed in the browser bundle). Never put secret keys here. Supabase security is enforced by **Row Level Security**.
@@ -392,7 +393,7 @@ System prompt pulls in: user name, age bracket, county, goals, language preferen
 **File:** `src/lib/tts.ts`
 
 - **`WebSpeechTTS`** — `window.speechSynthesis`. Free, works offline. Default.
-- **`ElevenLabsTTS`** — premium African accent voice. Requires `VITE_ELEVENLABS_API_KEY`.
+- **`ElevenLabsTTS`** — premium African accent voice proxied through the `elevenlabs-tts` Supabase Edge Function. The ElevenLabs key must never be exposed as `VITE_`.
 
 Voice selection stored in `user.jabariVoice` → `profiles.jabari_voice` in Supabase.
 

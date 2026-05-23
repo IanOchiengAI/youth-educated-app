@@ -72,11 +72,10 @@ If you're having trouble running the app, check the following:
 ### 1. Missing `.env` File
 The app requires a `.env` file in the root directory. Ensure it contains the following (copy from `.env.example`):
 ```env
-VITE_GEMINI_API_KEY=your_key_here
 VITE_SUPABASE_URL=your_url_here
 VITE_SUPABASE_ANON_KEY=your_anon_key_here
 ```
-Note: To use the AI features, you **must** provide a valid Gemini API key. Without it, the app will fallback to offline/limited mode.
+AI and premium TTS keys must be configured as Supabase Edge Function secrets, never as `VITE_` browser variables.
 
 ### 2. Node.js Version
 The project uses Vite 6 and React 19, which require **Node.js v18 or newer**. Check your version with:

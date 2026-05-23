@@ -6,64 +6,73 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") ?? "";
-const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const MODEL = "llama-3.3-70b-versatile";
+const MODEL = "gemini-2.0-flash";
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
 
-console.log("[jabari-chat] GROQ_API_KEY set:", GROQ_API_KEY.length > 0);
+type GeminiMessage = {
+  role: "user" | "model";
+  parts: { text: string }[];
+};
 
-// Convert Gemini-style history to OpenAI-style messages.
-// preparedHistory[0] is the system prompt embedded as a fake user turn.
-// preparedHistory[1] is the initial model greeting.
-// preparedHistory[2+] is the real conversation.
-function toOpenAIMessages(preparedHistory: { role: string; parts: { text: string }[] }[]) {
+function splitSystemPrompt(preparedHistory: GeminiMessage[]) {
   const system = preparedHistory[0]?.parts[0]?.text ?? "";
-  const messages = preparedHistory.slice(1).map((m) => ({
-    role: m.role === "model" ? "assistant" : "user",
-    content: m.parts[0]?.text ?? "",
-  }));
-  return { system, messages };
+  const contents = preparedHistory.slice(1);
+  return { system, contents };
 }
 
-async function groqChat(
-  system: string,
-  messages: { role: string; content: string }[],
-  userMessage: string
-): Promise<string> {
-  const body = {
-    model: MODEL,
-    max_tokens: 600,
-    temperature: 0.8,
-    messages: [
-      { role: "system", content: system },
-      ...messages,
-      { role: "user", content: userMessage },
-    ],
-  };
+async function geminiGenerate(system: string, contents: GeminiMessage[]): Promise<string> {
+  const apiKey = Deno.env.get("GEMINI_API_KEY");
+  if (!apiKey) throw new Error("GEMINI_API_KEY is not configured");
 
-  const res = await fetch(GROQ_URL, {
+  const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${GROQ_API_KEY}`,
-    },
-    body: JSON.stringify(body),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      systemInstruction: {
+        parts: [{ text: system }],
+      },
+      contents,
+      generationConfig: {
+        maxOutputTokens: 600,
+        temperature: 0.8,
+      },
+      safetySettings: [
+        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_ONLY_HIGH" },
+        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+      ],
+    }),
   });
 
   const data = await res.json();
-
   if (!res.ok) {
-    const errMsg = data?.error?.message ?? `Groq HTTP ${res.status}`;
-    console.error("[jabari-chat] Groq error:", errMsg);
+    const errMsg = data?.error?.message ?? `Gemini HTTP ${res.status}`;
+    console.error("[jabari-chat] Gemini error:", errMsg);
     throw new Error(errMsg);
   }
 
-  return data.choices?.[0]?.message?.content ?? "";
+  const finishReason = data?.candidates?.[0]?.finishReason;
+  if (finishReason === "SAFETY") {
+    throw new Error("SAFETY_BLOCK");
+  }
+
+  return data?.candidates?.[0]?.content?.parts
+    ?.map((part: { text?: string }) => part.text ?? "")
+    .join("")
+    .trim() ?? "";
 }
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
+  }
+
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 
   const authHeader = req.headers.get("Authorization");
@@ -82,7 +91,6 @@ serve(async (req) => {
 
   const { data: { user } } = await supabaseClient.auth.getUser();
 
-  // Rate-limit authenticated users: 2 s between messages
   if (user) {
     const { data: lastMsg } = await supabaseClient
       .from("ai_conversations")
@@ -105,65 +113,71 @@ serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
-    // ── Chat ──────────────────────────────────────────────────
     if (action === "chat") {
       const { message, preparedHistory } = body as {
         message: string;
-        preparedHistory: { role: string; parts: { text: string }[] }[];
+        preparedHistory: GeminiMessage[];
       };
 
-      console.log("[jabari-chat] chat | message length:", message?.length);
-      const { system, messages } = toOpenAIMessages(preparedHistory);
-      const text = await groqChat(system, messages, message);
-      console.log("[jabari-chat] success | response length:", text.length);
+      if (typeof message !== "string" || !Array.isArray(preparedHistory)) {
+        return new Response(JSON.stringify({ error: "Invalid chat payload" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { system, contents } = splitSystemPrompt(preparedHistory);
+      const text = await geminiGenerate(system, [
+        ...contents,
+        { role: "user", parts: [{ text: message }] },
+      ]);
 
       return new Response(JSON.stringify({ text }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // ── Mentor briefing ───────────────────────────────────────
     if (action === "mentor-briefing") {
       const { studentName, activityData } = body as {
         studentName: string;
         activityData: string;
       };
 
-      const system = `You are a Mentor's Assistant at 'Youth Educated'.
+      const system = `You are a Mentor's Assistant at Youth Educated.
 Provide a concise, professional briefing for a human mentor about their student.
 Keep the entire summary under 60 words with exactly 3 bullet points.
 Focus on: Recent Mood Trends, Key Topics discussed with AI, and Progress towards Goals.`;
 
-      const text = await groqChat(system, [], `Student: ${studentName}\n\nData:\n${activityData}`);
+      const text = await geminiGenerate(system, [
+        { role: "user", parts: [{ text: `Student: ${studentName}\n\nData:\n${activityData}` }] },
+      ]);
 
       return new Response(JSON.stringify({ text }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // ── Check-in summary ──────────────────────────────────────
     if (action === "checkin-summary") {
       const { history } = body as {
-        history: { role: string; parts: { text: string }[] }[];
+        history: GeminiMessage[];
       };
 
-      if (history.length < 3) {
+      if (!Array.isArray(history) || history.length < 3) {
         return new Response(JSON.stringify({ text: null }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
       const system = "You analyse youth mentoring conversations and return structured summaries.";
-      const messages = history.map((m) => ({
-        role: m.role === "model" ? "assistant" : "user",
-        content: m.parts[0]?.text ?? "",
-      }));
-
-      const text = await groqChat(
-        system,
-        messages,
-        "Give a 1-sentence summary, list which goals came up, and rate the mood as positive, neutral, or concerning. Format exactly as: SUMMARY: ... | GOALS: ... | MOOD: ..."
-      );
+      const text = await geminiGenerate(system, [
+        ...history,
+        {
+          role: "user",
+          parts: [{
+            text: "Give a 1-sentence summary, list which goals came up, and rate the mood as positive, neutral, or concerning. Format exactly as: SUMMARY: ... | GOALS: ... | MOOD: ...",
+          }],
+        },
+      ]);
 
       return new Response(JSON.stringify({ text }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -174,15 +188,20 @@ Focus on: Recent Mood Trends, Key Topics discussed with AI, and Progress towards
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error("[jabari-chat] ERROR:", message);
 
-    // Rate-limit passthrough
     if (message.includes("429") || message.includes("rate_limit") || message.includes("Too Many Requests")) {
       return new Response(JSON.stringify({ error: "TOO_FAST" }), {
         status: 429,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (message === "SAFETY_BLOCK") {
+      return new Response(JSON.stringify({ error: "SAFETY_BLOCK" }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

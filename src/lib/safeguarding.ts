@@ -6,6 +6,7 @@ export interface SafeguardingResult {
   triggered: boolean;
   category: SafeguardingCategory;
   escalationText: string | null;
+  guidancePrefix?: string;
 }
 
 const CATEGORY_A_KEYWORDS = [
@@ -64,6 +65,7 @@ const CATEGORY_D_KEYWORDS = [
 export const ESCALATION_TEXT = {
   A: "What you've shared with me is important, and I want to make sure you get the right support. You are not alone. 💙 Childline Kenya: 116 (free, 24/7)",
   B: "Thank you for trusting me with this. What you're describing sounds really hard, and you deserve proper support. Childline Kenya: 116",
+  C: "I hear that this feels heavy. If you feel unsafe or this gets worse, please speak to a trusted adult or contact Childline Kenya on 116.",
   D: "I want to be helpful, but I am not equipped to provide advice on this topic. Please speak to a trusted adult, health professional, or counselor for accurate information.",
 } as const;
 
@@ -88,8 +90,8 @@ export async function reportSafeguardingFlag(userId: string, category: Safeguard
     user_id: userId,
     category,
     message: sanitizedMessage,
+    source,
     status: 'pending'
-    // Note: The schema in supabase_schema.sql doesn't have 'source' column yet, but we will pass it anyway
   });
 
   if (error) console.error("Failed to log safeguarding flag:", error);
@@ -117,7 +119,7 @@ export function checkSafeguarding(text: string, ageBracket: string, userId?: str
     if (ageBracket === '10-12') {
       result = { triggered: true, category: 'B', escalationText: ESCALATION_TEXT.B };
     } else {
-      result = { triggered: true, category: 'C', escalationText: null };
+      result = { triggered: true, category: 'C', escalationText: null, guidancePrefix: ESCALATION_TEXT.C };
     }
   }
   // Check Category D (SRH for under 16)
@@ -129,7 +131,7 @@ export function checkSafeguarding(text: string, ageBracket: string, userId?: str
 
   // Log to Supabase if triggered and userId is provided
   if (result.triggered && userId && result.category && result.category !== 'D') {
-    reportSafeguardingFlag(userId, result.category, text, source || 'chat');
+    void reportSafeguardingFlag(userId, result.category, text, source || 'chat');
   }
 
   return result;

@@ -462,7 +462,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // 4. Persist to Dexie for offline access
   useEffect(() => {
     if (state.user) {
-      db.profile.put({ userId: state.user.id, data: state });
+      db.profile.put({ userId: state.user.id, data: sanitizeForStorage(state) });
     }
   }, [state]);
 

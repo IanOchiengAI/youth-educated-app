@@ -264,9 +264,10 @@ CREATE TABLE analytics_events (
 CREATE TABLE safeguarding_flags (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
-  category TEXT NOT NULL,
+  category TEXT NOT NULL CHECK (category IN ('A', 'B', 'C')),
   message TEXT NOT NULL,
-  status TEXT DEFAULT 'pending',
+  source TEXT DEFAULT 'chat',
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'reviewed', 'resolved')),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -390,7 +391,11 @@ CREATE POLICY "Users cannot view safeguarding cases" ON safeguarding_cases FOR A
 
 CREATE POLICY "DSL and Admin only view flags" ON safeguarding_flags FOR SELECT
   USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'dsl')));
-CREATE POLICY "Users cannot view safeguarding flags" ON safeguarding_flags FOR ALL TO PUBLIC USING (FALSE);
+CREATE POLICY "Users can insert own safeguarding flags" ON safeguarding_flags FOR INSERT
+  WITH CHECK (auth.uid() = user_id AND category IN ('A', 'B', 'C'));
+CREATE POLICY "DSL and Admin can update flags" ON safeguarding_flags FOR UPDATE
+  USING (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'dsl')))
+  WITH CHECK (EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role IN ('admin', 'dsl')));
 
 -- Offline Sync Queue
 CREATE POLICY "Users can manage own sync queue" ON offline_sync_queue FOR ALL USING (auth.uid() = user_id);
@@ -521,12 +526,12 @@ ALTER TABLE mentor_matches
 CREATE TABLE jabari_checkins (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   mentee_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  pair_id UUID NOT NULL REFERENCES mentor_matches(id) ON DELETE CASCADE,
+  pair_id UUID REFERENCES mentor_matches(id) ON DELETE SET NULL,
   checkin_date DATE DEFAULT CURRENT_DATE,
   summary TEXT,
   goals_touched TEXT[] DEFAULT '{}',
   mood_signal TEXT NOT NULL CHECK (mood_signal IN ('positive', 'neutral', 'concerning')),
-  safeguarding_flag TEXT CHECK (safeguarding_flag IS NULL OR safeguarding_flag IN ('A', 'B', 'C')),
+  safeguarding_flag BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -549,7 +554,7 @@ CREATE POLICY "Mentors can view checkins for their students"
 CREATE POLICY "DSLs can view flagged checkins"
   ON jabari_checkins FOR SELECT
   USING (
-    safeguarding_flag IS NOT NULL
+    safeguarding_flag = TRUE
     AND EXISTS (
       SELECT 1 FROM profiles p
       WHERE p.id = auth.uid()

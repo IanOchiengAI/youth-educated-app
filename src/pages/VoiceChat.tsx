@@ -235,15 +235,18 @@ const VoiceChat: React.FC = () => {
         sendToJabari(text, historyWithContext, state.user, state.isOffline),
         timeoutPromise
       ]) as string;
+      const finalResp = safeguard.guidancePrefix
+        ? `${safeguard.guidancePrefix}\n\n${resp}`
+        : resp;
       
-      setResponse(resp);
-      speak(resp);
+      setResponse(finalResp);
+      speak(finalResp);
 
       // Sync and update history (without injected goal context turns)
       const updatedMessages: Message[] = [
         ...messages,
         { role: 'user', parts: [{ text }] },
-        { role: 'model', parts: [{ text: resp }] }
+        { role: 'model', parts: [{ text: finalResp }] }
       ];
       setMessages(updatedMessages);
       if (state.user?.id && !state.isOffline) {

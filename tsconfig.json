@@ -23,6 +23,7 @@
     "node_modules",
     "supabase/**/*",
     "scripts/**/*",
+    "scratch/**/*",
     "test_query.ts",
     "public/sw.js",
     "dist/**/*"
