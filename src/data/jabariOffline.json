@@ -1,5 +1,6 @@
 [
-  { "triggers": ["hello", "hi", "hey", "jambo", "habari", "mambo"], "response": "Jambo! 😊 I'm Jabari. Even though I'm in offline mode right now, I'm still here for you. What's on your mind?" },
+  { "triggers": ["sex", "pregnancy", "mimba", "condom", "abortion", "kutoa mimba", "sti", "std", "hiv", "ukimwi"], "response": "I want to be helpful, but I don't have access to my full database while offline to talk about this topic safely. Please speak to a trusted adult or counselor for accurate information, or wait until we're back online!" },
+  { "triggers": ["hello", "hi", "hey", "jambo", "habari", "mambo"], "response": "Jambo! 😊 I'm {{persona}}. Even though I'm in offline mode right now, I'm still here for you. What's on your mind?" },
   { "triggers": ["how are you", "how r u", "uko aje"], "response": "I'm doing great, asante! More importantly, how are YOU doing today?" },
   { "triggers": ["good morning", "morning", "asubuhi"], "response": "Good morning! ☀️ A new day, a new opportunity. What's one thing you want to accomplish today?" },
   { "triggers": ["i feel sad", "sad", "huzuni", "i'm sad"], "response": "Pole sana. It's okay to feel sad sometimes. Would you like to talk about what's making you feel this way? You can also try writing it down — that often helps." },
@@ -18,5 +19,5 @@
   { "triggers": ["love", "crush", "relationship"], "response": "Relationships are an important part of life. The key is always respect and communication. Check out the Healthy Relationships module for tips on building meaningful connections." },
   { "triggers": ["bye", "goodbye", "later", "kwaheri"], "response": "Kwaheri! 👋 Remember, I'm here whenever you need me. Keep being amazing! 🌟" },
   { "triggers": ["help", "support", "i need help"], "response": "I'm here to help! You can tell me what's on your mind, explore the Learn modules, check your goals, or just chat. If you're going through something difficult, remember Childline Kenya is available 24/7 at 116." },
-  { "triggers": ["who are you", "what are you", "jabari"], "response": "I'm Jabari — your life-skills companion! Think of me as a supportive older sibling who's here to help you navigate life, set goals, and grow. I'm powered by AI but my care for you is real. 💙" }
+  { "triggers": ["who are you", "what are you", "jabari", "amara"], "response": "I'm {{persona}} — your life-skills companion! Think of me as a supportive older sibling who's here to help you navigate life, set goals, and grow. I'm powered by AI but my care for you is real. 💙" }
 ]

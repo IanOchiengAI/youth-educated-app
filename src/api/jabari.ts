@@ -155,23 +155,14 @@ function getInitialModelResponse(mode: InteractionMode, persona: 'amara' | 'jaba
   return p.greeting;
 }
 
-export const sendToJabari = async (
+export async function sendCloudMessage(
   message: string,
   history: { role: 'user' | 'model'; parts: { text: string }[] }[],
   user: User | null,
-  isOffline: boolean,
-  mode: InteractionMode = 'default',
+  mode: InteractionMode,
   scenario?: RoleplayScenario,
   persona: 'amara' | 'jabari' = 'amara'
-): Promise<string> => {
-  if (isOffline) {
-    const lowerMessage = message.toLowerCase();
-    const fallback = (offlineResponses as { triggers: string[]; response: string }[]).find(r =>
-      r.triggers.some(t => lowerMessage.includes(t))
-    );
-    return fallback ? fallback.response : "Mambo! I'm in offline mode right now, but I'm still here for you. What's on your mind? 😊";
-  }
-
+): Promise<string> {
   try {
     const preparedHistory = [
       { role: 'user' as const, parts: [{ text: buildJabariPrompt(user, mode, scenario, persona) }] },
@@ -218,6 +209,31 @@ export const sendToJabari = async (
     }
     return "Pole sana, I'm having a bit of trouble connecting right now. Let's try again in a moment! 🙏";
   }
+}
+
+/**
+ * @deprecated Use routeAIRequest in '../api/aiProvider' instead.
+ */
+export const sendToJabari = async (
+  message: string,
+  history: { role: 'user' | 'model'; parts: { text: string }[] }[],
+  user: User | null,
+  isOffline: boolean,
+  mode: InteractionMode = 'default',
+  scenario?: RoleplayScenario,
+  persona: 'amara' | 'jabari' = 'amara'
+): Promise<string> => {
+  const { routeAIRequest } = await import('./aiProvider');
+  const res = await routeAIRequest({
+    message,
+    history,
+    user,
+    mode,
+    persona,
+    scenario,
+    isOffline
+  });
+  return res.text;
 };
 
 export const generateMentorBriefing = async (

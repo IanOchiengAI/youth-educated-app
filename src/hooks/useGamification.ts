@@ -39,9 +39,10 @@ export const useGamification = () => {
     });
 
     dispatch({
-      type: 'UPDATE_PROGRESS',
+      type: 'ADD_POINTS',
       payload: {
-        points: result.newTotal,
+        points: result.pointsAdded,
+        reason: action,
         weeklyPoints: result.newWeeklyPoints,
         lastWeeklyReset: result.newLastReset,
         tier: result.newTier.swahili,

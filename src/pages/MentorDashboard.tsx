@@ -23,6 +23,7 @@ import { updateMentorGoals } from '../lib/mentoring';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { checkSafeguarding } from '../lib/safeguarding';
 import SafeguardingCard from '../components/SafeguardingCard';
+import { sendGuardianSMS } from '../lib/notifications';
 import { t, type Language } from '../lib/i18n';
 
 interface Student {
@@ -45,6 +46,8 @@ interface PendingRequest {
   studentName: string;
   county: string;
   createdAt: string;
+  guardianPhone?: string;
+  ageBracket?: string;
 }
 
 interface JabariCheckin {
@@ -237,7 +240,7 @@ const MentorDashboard: React.FC = () => {
             profiles!mentor_matches_student_id_fkey (
               name,
               current_tier,
-              total_points,
+              points,
               streak_days,
               last_active_date,
               guardian_phone
@@ -262,7 +265,7 @@ const MentorDashboard: React.FC = () => {
           const studentIds = pendingData.map((p: any) => p.student_id);
           const { data: profilesData } = await supabase
             .from('profiles')
-            .select('id, name, county')
+            .select('id, name, county, guardian_phone, age_bracket')
             .in('id', studentIds);
           const profileMap = new Map((profilesData || []).map((p: any) => [p.id, p]));
           setPendingRequests(pendingData.map((p: any) => ({
@@ -271,6 +274,8 @@ const MentorDashboard: React.FC = () => {
             studentName: profileMap.get(p.student_id)?.name || 'Student',
             county: profileMap.get(p.student_id)?.county || '',
             createdAt: p.created_at,
+            guardianPhone: profileMap.get(p.student_id)?.guardian_phone,
+            ageBracket: profileMap.get(p.student_id)?.age_bracket,
           })));
         }
 
@@ -295,21 +300,22 @@ const MentorDashboard: React.FC = () => {
             agenda: m.jabari_agenda ?? '',
           };
           
-          if (m.profiles) {
+          const profile = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles;
+          if (profile) {
             fetchedStudents.push({
               id: m.student_id,
-              name: m.profiles.name || 'Anonymous Student',
+              name: profile.name || 'Anonymous Student',
               avatar: '👤',
-              lastActive: m.profiles.last_active_date 
-                ? new Date(m.profiles.last_active_date).toLocaleDateString()
+              lastActive: profile.last_active_date 
+                ? new Date(profile.last_active_date).toLocaleDateString()
                 : 'Unknown',
-              progress: m.profiles.current_tier || 'New',
+              progress: profile.current_tier || 'New',
               recentActivity: 'Student assigned and active.',
-              guardian_phone: m.profiles.guardian_phone || undefined,
-              totalPoints: m.profiles.total_points ?? 0,
-              streakDays: m.profiles.streak_days ?? 0,
-              tier: m.profiles.current_tier || 'MWANZO',
-              lastActiveRaw: m.profiles.last_active_date || null,
+              guardian_phone: profile.guardian_phone || undefined,
+              totalPoints: profile.points ?? 0,
+              streakDays: profile.streak_days ?? 0,
+              tier: profile.current_tier || 'MWANZO',
+              lastActiveRaw: profile.last_active_date || null,
             });
           }
         });
@@ -450,11 +456,23 @@ const MentorDashboard: React.FC = () => {
   };
 
   const handleAcceptRequest = async (matchId: string) => {
+    const requestObj = pendingRequests.find(r => r.id === matchId);
     const { error } = await supabase
       .from('mentor_matches').update({ status: 'active' }).eq('id', matchId);
     if (!error) {
       setPendingRequests(prev => prev.filter(r => r.id !== matchId));
       setRefetchKey(k => k + 1);
+
+      if (requestObj) {
+        const isUnder16 = requestObj.ageBracket === '10-12' || requestObj.ageBracket === '13-15';
+        if (isUnder16 && requestObj.guardianPhone) {
+          const mentorName = state.user?.name || 'an approved mentor';
+          const smsMessage = state.user?.language === 'Kiswahili'
+            ? `Hujambo, mtoto wako ${requestObj.studentName} ameunganishwa na mshauri aliyekubaliwa ${mentorName} kwenye Youth Educated. Watapanga vipindi vya masomo pamoja kwa usalama.`
+            : `Hello, your child ${requestObj.studentName} has been paired with approved mentor ${mentorName} on Youth Educated. They will schedule learning sessions together safely.`;
+          sendGuardianSMS(requestObj.guardianPhone, smsMessage);
+        }
+      }
     }
   };
   const handleDeclineRequest = async (matchId: string) => {
@@ -468,8 +486,10 @@ const MentorDashboard: React.FC = () => {
     if (!draft.trim() || draft.length > 80 || todaysNudges[studentId]) return;
 
     const safeCheck = checkSafeguarding(draft, state.user?.ageBracket || 'adult', state.user?.id, 'mentor_nudge');
-    if (safeCheck.triggered && safeCheck.escalationText) {
-      setEscalationMsg(safeCheck.escalationText);
+    const safetyMessage = safeCheck.escalationText ?? safeCheck.guidancePrefix;
+    if (safeCheck.triggered && safetyMessage) {
+      setEscalationMsg(safetyMessage);
+      return;
     }
 
     setNudgeStatus(prev => ({ ...prev, [studentId]: 'sending' }));
@@ -712,9 +732,16 @@ const MentorDashboard: React.FC = () => {
                       </div>
                     )}
                   </div>
+                  <button 
+                    className="w-12 h-12 bg-off-white rounded-2xl flex items-center justify-center text-navy/20 hover:bg-navy hover:text-white transition-all shadow-sm flex-shrink-0"
+                    aria-label={`Message ${student.name}`}
+                  >
+                    <MessageCircle size={20} />
+                  </button>
+                </div>
 
                 {/* Student Progress Grid */}
-                <div className="grid grid-cols-3 gap-2 mt-3 px-6 pb-2">
+                <div className="grid grid-cols-3 gap-2 px-6 pb-4">
                   <div className="bg-off-white rounded-2xl p-3 text-center">
                     <p className="text-[10px] font-black text-navy/30 uppercase tracking-widest">Points</p>
                     <p className="font-bold text-navy">{student.totalPoints.toLocaleString()}</p>
@@ -727,13 +754,6 @@ const MentorDashboard: React.FC = () => {
                     <p className="text-[10px] font-black text-navy/30 uppercase tracking-widest">Tier</p>
                     <p className="font-bold text-navy text-xs">{student.tier}</p>
                   </div>
-                </div>
-                  <button 
-                    className="w-12 h-12 bg-off-white rounded-2xl flex items-center justify-center text-navy/20 hover:bg-navy hover:text-white transition-all shadow-sm flex-shrink-0"
-                    aria-label={`Message ${student.name}`}
-                  >
-                    <MessageCircle size={20} />
-                  </button>
                 </div>
 
                 {/* AI Briefing Area */}

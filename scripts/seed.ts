@@ -74,6 +74,7 @@ async function seed() {
       tags: article.tags,
       emoji: article.emoji,
       read_time: article.readTime,
+      content: article.body,  // satisfies the NOT NULL constraint
       body: article.body,
       body_sw: article.body_sw,
       month: article.month ?? null,

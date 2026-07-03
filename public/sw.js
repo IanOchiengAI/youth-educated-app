@@ -1,6 +1,6 @@
 // Youth Educated Service Worker
 // Bump CACHE_VERSION on every deploy to invalidate old caches.
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v6';
 const CACHE_NAME = `youth-educated-${CACHE_VERSION}`;
 
 const PRECACHE_ASSETS = [
@@ -54,6 +54,13 @@ self.addEventListener('fetch', (event) => {
           headers: { 'Content-Type': 'application/json' },
         })
       )
+    );
+    return;
+  }
+
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).catch(() => caches.match('/index.html'))
     );
     return;
   }

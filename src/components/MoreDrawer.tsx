@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
-import { Globe, User, CalendarDays, Target, Settings, X } from 'lucide-react';
+import { Globe, User, CalendarDays, Target, Settings, X, MessageCircle } from 'lucide-react';
 import { useAppContext } from '../AppContext';
 import { t, type Language } from '../lib/i18n';
 
@@ -16,10 +16,11 @@ const MoreDrawer: React.FC<MoreDrawerProps> = ({ open, onClose }) => {
   const lang: Language = state.user?.language ?? 'English';
 
   const items = [
-    { path: '/circles',  icon: Globe,        label: t('nav.circles', lang),                        color: 'bg-blue-500/10 text-blue-700' },
-    { path: '/goals',    icon: Target,       label: lang === 'Kiswahili' ? 'Malengo' : 'My Goals', color: 'bg-green-500/10 text-green-700' },
-    { path: '/calendar', icon: CalendarDays, label: t('nav.calendar', lang),                       color: 'bg-orange-500/10 text-orange-700' },
-    { path: '/profile',  icon: Settings,     label: lang === 'Kiswahili' ? 'Wasifu' : 'Profile',   color: 'bg-navy/10 text-navy' },
+    { path: '/circles',   icon: Globe,        label: t('nav.circles', lang),                        color: 'bg-blue-500/10 text-blue-700' },
+    { path: '/goals',     icon: Target,       label: lang === 'Kiswahili' ? 'Malengo' : 'My Goals', color: 'bg-green-500/10 text-green-700' },
+    { path: '/calendar',  icon: CalendarDays, label: t('nav.calendar', lang),                       color: 'bg-orange-500/10 text-orange-700' },
+    { path: '/chat/voice', icon: MessageCircle, label: lang === 'Kiswahili' ? 'Sauti' : 'Voice Chat',color: 'bg-yellow/20 text-yellow-700' },
+    { path: '/profile',   icon: Settings,     label: lang === 'Kiswahili' ? 'Wasifu' : 'Profile',   color: 'bg-navy/10 text-navy' },
   ];
 
   const go = (path: string) => { onClose(); navigate(path); };

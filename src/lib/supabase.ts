@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { Capacitor } from '@capacitor/core'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -23,9 +24,22 @@ if (!supabaseUrl || !supabaseAnonKey) {
 const PLACEHOLDER_URL = 'https://placeholder.supabase.co'
 const PLACEHOLDER_KEY = 'eyBwbGFjZWhvbGRlciB9'
 
+const isNative = Capacitor.isNativePlatform()
+
 export const supabase = createClient(
   supabaseUrl || PLACEHOLDER_URL,
-  supabaseAnonKey || PLACEHOLDER_KEY
+  supabaseAnonKey || PLACEHOLDER_KEY,
+  {
+    auth: {
+      // On native Android the WebView URL is always https://localhost — never contains
+      // OAuth tokens. Disabling URL detection prevents Supabase from accidentally
+      // clearing an in-flight PKCE session when the app resumes after OAuth redirect.
+      detectSessionInUrl: !isNative,
+      // Keep PKCE (the default) — it is safe on native because both signInWithOAuth
+      // and exchangeCodeForSession run in the same WebView storage context.
+      flowType: 'pkce',
+    }
+  }
 )
 
 export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey)

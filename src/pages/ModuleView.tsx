@@ -20,6 +20,7 @@ import { addPoints, checkAchievements, getCurrentTier } from '../lib/gamificatio
 import TierUpgradeModal from '../components/TierUpgradeModal';
 import PremiumGate from '../components/PremiumGate';
 import AIAvatar from '../components/AIAvatar';
+import { t, type Language } from '../lib/i18n';
 
 const ModuleView: React.FC = () => {
   const { moduleId } = useParams<{ moduleId: string }>();
@@ -39,6 +40,7 @@ const ModuleView: React.FC = () => {
 
   const persona = state.user?.aiPersona ?? 'amara';
   const aiName = persona === 'jabari' ? 'Jabari' : 'Amara';
+  const lang: Language = state.user?.language ?? 'English';
   const LESSON_TIPS = [
     `Real growth happens one step at a time. You're doing this!`,
     `Every concept you understand is a tool in your kit. Keep building.`,
@@ -52,6 +54,15 @@ const ModuleView: React.FC = () => {
     if (!module) return;
     if (!state.modules.inProgress.includes(module.id)) {
       dispatch({ type: 'START_MODULE', payload: module.id });
+    }
+  }, [module?.id]);
+
+  useEffect(() => {
+    if (module && state.modules.moduleProgress[module.id]) {
+      const savedLesson = state.modules.moduleProgress[module.id].currentLesson;
+      if (savedLesson > 1 && savedLesson <= module.content.length) {
+        setCurrentLessonIndex(savedLesson - 1);
+      }
     }
   }, [module?.id]);
 
@@ -77,11 +88,54 @@ const ModuleView: React.FC = () => {
     return <PremiumGate moduleName={module.title} moduleIcon={module.icon} />;
   }
 
+  if (module.content.length === 0) {
+    return (
+      <div className="min-h-screen bg-off-white flex flex-col items-center justify-center p-8 text-center">
+        <div className="w-20 h-20 rounded-3xl bg-yellow/20 flex items-center justify-center text-4xl mb-6">
+          {module.icon}
+        </div>
+        <h1 className="text-2xl font-poppins font-bold text-navy mb-3">
+          {t('module.content_unavailable_title', lang)}
+        </h1>
+        <p className="text-grey font-nunito text-sm leading-relaxed max-w-xs mb-8">
+          {t('module.content_unavailable_body', lang)}
+        </p>
+        <button
+          onClick={() => navigate('/learn')}
+          className="h-12 px-6 rounded-full bg-navy text-white font-bold text-sm active:scale-95 transition-transform"
+        >
+          {t('btn.back', lang)}
+        </button>
+      </div>
+    );
+  }
+
   const currentLesson = module.content[currentLessonIndex] || module.content[0];
   const isLastLesson = currentLessonIndex === module.content.length - 1;
 
   const advanceLesson = () => {
     setPendingAdvance(false);
+
+    // Save lesson progress
+    const nextLessonNum = currentLessonIndex + 2;
+    const completedLessonId = currentLesson.id;
+    const existingCompleted = state.modules.moduleProgress[module!.id]?.completedLessons || [];
+
+    dispatch({
+      type: 'UPDATE_MODULE_PROGRESS',
+      payload: {
+        moduleId: module!.id,
+        progress: {
+          currentLesson: nextLessonNum,
+          completedLessons: Array.from(new Set([...existingCompleted, completedLessonId])),
+          insights: insight.trim() ? {
+            ...(state.modules.moduleProgress[module!.id]?.insights || {}),
+            [completedLessonId]: insight
+          } : (state.modules.moduleProgress[module!.id]?.insights || {})
+        }
+      }
+    });
+
     const result = addPoints(
       'COMPLETE_LESSON',
       state.progress.points,
@@ -89,8 +143,14 @@ const ModuleView: React.FC = () => {
       state.progress.lastWeeklyReset
     );
     dispatch({
-      type: 'UPDATE_PROGRESS',
-      payload: { points: result.newTotal, weeklyPoints: result.newWeeklyPoints }
+      type: 'ADD_POINTS',
+      payload: { 
+        points: result.pointsAdded, 
+        reason: 'COMPLETE_LESSON',
+        weeklyPoints: result.newWeeklyPoints,
+        lastWeeklyReset: result.newLastReset,
+        tier: result.newTier.swahili
+      }
     });
     if (result.upgraded) setShowTierUpgrade(true);
     setCurrentLessonIndex(prev => prev + 1);
@@ -109,6 +169,25 @@ const ModuleView: React.FC = () => {
   };
 
   const handleCompleteModule = () => {
+    // Save last lesson progress first
+    const completedLessonId = currentLesson.id;
+    const existingCompleted = state.modules.moduleProgress[module!.id]?.completedLessons || [];
+
+    dispatch({
+      type: 'UPDATE_MODULE_PROGRESS',
+      payload: {
+        moduleId: module!.id,
+        progress: {
+          currentLesson: currentLessonIndex + 1,
+          completedLessons: Array.from(new Set([...existingCompleted, completedLessonId])),
+          insights: insight.trim() ? {
+            ...(state.modules.moduleProgress[module!.id]?.insights || {}),
+            [completedLessonId]: insight
+          } : (state.modules.moduleProgress[module!.id]?.insights || {})
+        }
+      }
+    });
+
     const result = addPoints(
       'COMPLETE_MODULE',
       state.progress.points,
@@ -116,10 +195,16 @@ const ModuleView: React.FC = () => {
       state.progress.lastWeeklyReset
     );
     
-    dispatch({ type: 'COMPLETE_MODULE', payload: module.id });
+    dispatch({ type: 'COMPLETE_MODULE', payload: module!.id });
     dispatch({ 
-      type: 'UPDATE_PROGRESS', 
-      payload: { points: result.newTotal, weeklyPoints: result.newWeeklyPoints } 
+      type: 'ADD_POINTS', 
+      payload: { 
+        points: result.pointsAdded, 
+        reason: 'COMPLETE_MODULE',
+        weeklyPoints: result.newWeeklyPoints,
+        lastWeeklyReset: result.newLastReset,
+        tier: result.newTier.swahili
+      } 
     });
 
     if (result.upgraded) setShowTierUpgrade(true);

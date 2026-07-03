@@ -15,7 +15,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
 import { CIRCLE_PROMPTS, CIRCLE_MEMBERS, CirclePrompt } from '../data/circles';
-import { checkSafeguarding } from '../lib/safeguarding';
+import { runAIPreflight } from '../lib/aiPreflight';
 import { db } from '../lib/db';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { supabase } from '../lib/supabase';
@@ -47,11 +47,14 @@ const Circles: React.FC = () => {
     const random = filtered[Math.floor(Math.random() * filtered.length)];
     setActivePrompt(random);
 
-    // Initial fetch from Supabase if online
+    // Initial fetch from Supabase if online — scoped to user's county cohort
     if (!state.isOffline && state.user) {
       supabase.from('circle_responses')
         .select('*')
+        .eq('circle_id', state.user.county || 'default')
         .eq('week_number', weekNumber)
+        .order('created_at', { ascending: false })
+        .limit(50)
         .then(({ data }) => {
           if (data) {
             data.forEach(async (r: any) => {
@@ -75,9 +78,17 @@ const Circles: React.FC = () => {
     if (!responseText.trim() || !state.user) return;
 
     // 1. Safeguarding
-    const safeguard = checkSafeguarding(responseText, state.user.ageBracket, state.user.id, 'circle');
-    if (safeguard.triggered) {
-      setSafeguardingEscalation(safeguard.escalationText || "Please keep our community safe. Your message contains sensitive content.");
+    const preflight = await runAIPreflight(responseText, state.user, 'circles', state.isOffline);
+    if (preflight.blocked) {
+      setSafeguardingEscalation(preflight.responseText || "Please keep our community safe. Your message contains sensitive content.");
+      return;
+    }
+    if (preflight.safeguarding.triggered) {
+      setSafeguardingEscalation(
+        preflight.safeguarding.guidancePrefix ||
+        preflight.safeguarding.escalationText ||
+        "Please keep our community safe. Your message contains sensitive content."
+      );
       return;
     }
 

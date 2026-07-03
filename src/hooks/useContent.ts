@@ -1,10 +1,16 @@
 import { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { MODULES, Module } from '../data/modules';
+import { PREMIUM_MODULE_IDS } from '../data/moduleMetadata';
 import { OPPORTUNITIES, Opportunity } from '../data/opportunities';
 import { CAREER_QUESTIONS, CareerQuestion } from '../data/careerQuestions';
 import { LIFEKIT_ARTICLES, LifeKitArticle } from '../data/lifekit';
 import { useAppContext } from '../AppContext';
+import {
+  hasPremiumPackAccess,
+  loadPremiumModulesFromPack,
+  mergeModuleBodies,
+} from '../lib/contentPacks';
 
 // Helper hook to fetch data with local fallback
 function useSupabaseFallback<T>(
@@ -60,10 +66,14 @@ function useSupabaseFallback<T>(
 }
 
 export function useModules() {
-  return useSupabaseFallback<Module>(
-    'modules',
-    MODULES,
-    (data) => data.map(m => ({
+  const [data, setData] = useState<Module[]>(MODULES);
+  const [loading, setLoading] = useState(true);
+  const { state } = useAppContext();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const mapRemoteModules = (remoteModules: any[]): Module[] => remoteModules.map(m => ({
       id: m.id,
       title: m.title,
       description: m.description,
@@ -71,6 +81,7 @@ export function useModules() {
       min_age: m.min_age,
       is_sensitive: m.is_sensitive,
       brothers_keepers_variant: m.brothers_keepers_variant,
+      isPremium: m.is_premium ?? m.isPremium ?? PREMIUM_MODULE_IDS.includes(m.id),
       lessons: m.lessons,
       duration: m.duration,
       competency: m.competency,
@@ -83,9 +94,63 @@ export function useModules() {
           duration: l.duration,
           sections: l.sections || [],
         })) ?? [],
-    })),
-    '*, content(*)'
-  );
+    }));
+
+    const stripPremiumBodies = (modules: Module[]) =>
+      modules.map((module) =>
+        module.isPremium ? { ...module, content: [] } : module
+      );
+
+    async function fetchModules() {
+      setLoading(true);
+      const userId = state.user?.id;
+      const isPremiumNow = state.user?.isPremium ?? false;
+      const canUsePremiumPack = await hasPremiumPackAccess(userId, isPremiumNow, {
+        canRefreshEntitlement: !state.isOffline && isSupabaseConfigured,
+      });
+      let nextModules = MODULES;
+
+      if (!state.isOffline && isSupabaseConfigured) {
+        try {
+          const { data: remoteData, error } = await supabase
+            .from('modules')
+            .select('*, content(*)');
+
+          if (error) throw error;
+
+          if (remoteData && remoteData.length > 0) {
+            nextModules = mapRemoteModules(remoteData);
+          }
+        } catch (e) {
+          console.warn('Failed to fetch from modules, using fallback.', e);
+          nextModules = MODULES;
+        }
+      }
+
+      if (canUsePremiumPack) {
+        try {
+          nextModules = mergeModuleBodies(nextModules, await loadPremiumModulesFromPack());
+        } catch (e) {
+          console.warn('Failed to load premium content pack.', e);
+        }
+      } else {
+        nextModules = stripPremiumBodies(nextModules);
+      }
+
+      if (isMounted) {
+        setData(nextModules);
+        setLoading(false);
+      }
+    }
+
+    fetchModules();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [state.isOffline, state.user?.id, state.user?.isPremium]);
+
+  return { data, loading };
 }
 
 export function useOpportunities() {

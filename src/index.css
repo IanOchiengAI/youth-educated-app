@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Nunito:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600&family=Nunito:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -12,8 +12,17 @@
   --color-green: #2ECC71;
   --color-red: #E74C3C;
 
+  /* Proposal-specific brand tokens */
+  --color-navy-deep: oklch(0.24 0.13 265);
+  --color-navy-soft: oklch(0.46 0.15 262);
+  --color-gold: oklch(0.87 0.17 92);
+  --color-gold-soft: oklch(0.93 0.11 95);
+  --color-ink: oklch(0.27 0.02 250);
+  --color-cream: oklch(0.985 0.005 250);
+
   --font-poppins: "Poppins", sans-serif;
   --font-nunito: "Nunito", sans-serif;
+  --font-inter: "Inter", sans-serif;
 
   --shadow-card: 0 2px 12px rgba(28, 28, 110, 0.08);
 }
@@ -96,3 +105,28 @@
     opacity: 1;
   }
 }
+
+/* ── Proposal page utilities ── */
+@layer utilities {
+  .glass-light {
+    background-color: color-mix(in oklab, white 70%, transparent);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid color-mix(in oklab, white 50%, transparent);
+    box-shadow: 0 10px 40px -12px color-mix(in oklab, var(--color-navy) 18%, transparent);
+  }
+  .glass-dark {
+    background-color: color-mix(in oklab, white 6%, transparent);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid color-mix(in oklab, white 14%, transparent);
+    box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.5);
+  }
+  .bg-hero-gradient {
+    background:
+      radial-gradient(ellipse 80% 60% at 70% 0%, color-mix(in oklab, var(--color-gold) 22%, transparent), transparent 60%),
+      radial-gradient(ellipse 60% 50% at 10% 100%, color-mix(in oklab, var(--color-navy-soft) 50%, transparent), transparent 60%),
+      linear-gradient(180deg, var(--color-navy-deep), var(--color-navy));
+  }
+}
+

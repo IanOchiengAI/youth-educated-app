@@ -75,15 +75,36 @@ const translations: Record<string, Record<Language, string>> = {
   /* ── Offline Banner ────────────────────────────────────── */
   'app.offline':      { English: 'Offline Mode',       Kiswahili: 'Hali ya Nje ya Mtandao' },
 
-  /* ── Learn Page (Life Kit) ─────────────────────────────── */
-  'learn.title': { English: 'YE+ Life Kit', Kiswahili: 'YE+ Mfuko wa Maisha' },
-  'learn.subtitle': { English: 'Guides and stories for real life', Kiswahili: 'Miongozo na hadithi za maisha halisi' },
+  /* ── Learn Page ─────────────────────────────── */
+  'learn.title': { English: 'Learn', Kiswahili: 'Jifunze' },
+  'learn.subtitle': { English: 'Courses and guides for real life', Kiswahili: 'Kozi na miongozo ya maisha halisi' },
+  'learn.courses_subtitle': { English: 'Offline courses for your next step', Kiswahili: 'Kozi za nje ya mtandao kwa hatua yako ijayo' },
+  'learn.lifekit_subtitle': { English: 'Guides and stories for real life', Kiswahili: 'Miongozo na hadithi za maisha halisi' },
+  'learn.tab_courses': { English: 'Courses', Kiswahili: 'Kozi' },
+  'learn.tab_lifekit': { English: 'Life Kit', Kiswahili: 'Mfuko wa Maisha' },
+  'learn.course_library': { English: 'Course Library', Kiswahili: 'Maktaba ya Kozi' },
+  'learn.course_library_hint': { English: 'Built into the app for reliable offline learning.', Kiswahili: 'Zimo ndani ya app ili ujifunze hata bila mtandao.' },
+  'learn.loading_courses': { English: 'Loading courses...', Kiswahili: 'Inapakia kozi...' },
+  'learn.loading_articles': { English: 'Loading articles...', Kiswahili: 'Inapakia makala...' },
+  'learn.no_courses': { English: 'No courses found', Kiswahili: 'Hakuna kozi zilizopatikana' },
+  'learn.lesson': { English: 'lesson', Kiswahili: 'somo' },
+  'learn.lessons': { English: 'lessons', Kiswahili: 'masomo' },
+  'learn.free_badge': { English: 'Free', Kiswahili: 'Bure' },
+  'learn.offline_badge': { English: 'Offline ready', Kiswahili: 'Tayari nje ya mtandao' },
+  'learn.offline_short': { English: 'Offline', Kiswahili: 'Nje ya mtandao' },
+  'learn.age_locked_badge': { English: 'Age locked', Kiswahili: 'Umri umefungwa' },
+  'learn.age_locked_message': { English: 'Available from age {age}.', Kiswahili: 'Inapatikana kuanzia miaka {age}.' },
+  'learn.progress': { English: 'Progress', Kiswahili: 'Maendeleo' },
   'learn.search_placeholder': { English: 'Search articles...', Kiswahili: 'Tafuta makala...' },
   'learn.no_articles': { English: 'No articles found', Kiswahili: 'Hakuna makala yaliyopatikana' },
   'learn.see_all_arrow': { English: 'See all →', Kiswahili: 'Ona zote →' },
   'learn.article_not_found': { English: 'Article not found', Kiswahili: 'Makala hayapatikani' },
   'learn.article_detail_back': { English: 'Back to Life Kit', Kiswahili: 'Rudi Mfuko wa Maisha' },
   'learn.content_coming_soon': { English: 'Content coming soon ✨', Kiswahili: 'Maudhui yanakuja hivi karibuni ✨' },
+
+  /* ── Module View ─────────────────────────────── */
+  'module.content_unavailable_title': { English: 'Course pack needed', Kiswahili: 'Pakiti ya kozi inahitajika' },
+  'module.content_unavailable_body': { English: 'Connect to the internet to refresh your YE+ access and download this course pack.', Kiswahili: 'Unganisha intaneti ili kuthibitisha YE+ na kupakua pakiti hii ya kozi.' },
 
   /* ── Life Kit Categories ───────────────────────────────── */
   'category.all':            { English: 'All',           Kiswahili: 'Zote' },
@@ -159,10 +180,12 @@ const translations: Record<string, Record<Language, string>> = {
   'onboarding.guardian_consent': { English: 'Parental / Guardian Consent', Kiswahili: 'Idhini ya Mzazi / Mlezi' },
   'onboarding.guardian_hint': { English: 'Because you are under 16, we need a guardian to approve your access.', Kiswahili: 'Kwa sababu una umri wa chini ya miaka 16, tunahitaji mlezi kuidhinisha ufikiaji wako.' },
   'onboarding.guardian_agree': { English: 'My guardian agrees to the terms of service.', Kiswahili: 'Mlezi wangu anakubaliana na masharti ya huduma.' },
+  'onboarding.guardian_phone': { English: 'Guardian phone', Kiswahili: 'Simu ya mlezi' },
   'onboarding.keep_safe': { English: 'Keep it safe.', Kiswahili: 'Baki salama.' },
   'onboarding.all_set': { English: "You're all set!", Kiswahili: 'Umekamilisha kila kitu!' },
   'onboarding.ready_journey': { English: 'Ready to start your journey with Amara?', Kiswahili: 'Uko tayari kuanza safari yako na Amara?' },
   'onboarding.complete': { English: 'Complete', Kiswahili: 'Kamilisha' },
+  'onboarding.completing': { English: 'Completing...', Kiswahili: 'Inakamilisha...' },
 
   /* ── Opportunities ──────────────────────────────────────── */
   'opps.title': { English: 'Opportunities', Kiswahili: 'Fursa' },
@@ -197,6 +220,105 @@ const translations: Record<string, Record<Language, string>> = {
   'mentor.recent_sync': { English: 'Recent Sync', Kiswahili: 'Usawazishaji wa Hivi Karibuni' },
   'mentor.just_now': { English: 'Just Now', Kiswahili: 'Sasa Hivi' },
   'mentor.no_students': { English: 'No matched students yet.', Kiswahili: 'Hakuna wanafunzi waliolinganishwa bado.' },
+
+  /* ── Leaderboard & Gamification ── */
+  'leaderboard.title':        { English: 'Cohort Leaders', Kiswahili: 'Viongozi wa Kundi' },
+  'leaderboard.offline':      { English: 'Leaderboard unavailable offline', Kiswahili: 'Orodha ya viongozi haipatikani nje ya mtandao' },
+  'leaderboard.top_half':     { English: "You're in the top half!", Kiswahili: 'Uko kwenye nusu ya juu!' },
+  'leaderboard.keep_pushing':  { English: "Keep pushing, you're getting there!", Kiswahili: 'Endelea kujitahidi, unakaribia!' },
+  'leaderboard.pts_away':     { English: 'Only {points} pts away from the top 5', Kiswahili: 'Bado pointi {points} tu kufikia 5 bora' },
+  'leaderboard.resets':       { English: 'Resets every Monday at 00:00 EAT', Kiswahili: 'Huanza upya kila Jumatatu saa 00:00 EAT' },
+  'leaderboard.cohort':       { English: '{county} Cohort', Kiswahili: 'Kundi la {county}' },
+  'leaderboard.pts_abbr':     { English: 'pts', Kiswahili: 'pointi' },
+
+  /* ── Mentor Browse ── */
+  'mentor_browse.title':      { English: 'Talk to a Mentor', Kiswahili: 'Soga na Mshauri' },
+  'mentor_browse.tagline':    { English: 'Your guide. Your pace.', Kiswahili: 'Mwongozo wako. Kasi yako.' },
+  'mentor_browse.tab_browse': { English: 'Browse Mentors', Kiswahili: 'Tazama Washauri' },
+  'mentor_browse.tab_my':     { English: 'My Mentor', Kiswahili: 'Mshauri Wangu' },
+  'mentor_browse.vetted_hint': { English: 'All mentors are vetted and safeguarding-trained', Kiswahili: 'Washauri wote wamekaguliwa na kuelimishwa kuhusu usalama' },
+  'mentor_browse.find_btn':   { English: 'Help me find the right mentor', Kiswahili: 'Nisaidie kupata mshauri anayefaa' },
+  'mentor_browse.guide_hint': { English: '{persona} will guide you to your best match', Kiswahili: '{persona} atakuongoza kupata chaguo bora' },
+  'mentor_browse.coming_soon': { English: 'Coming soon', Kiswahili: 'Inakuja hivi karibuni' },
+  'mentor_browse.coming_soon_mentors': { English: 'Coming soon', Kiswahili: 'Washauri wanakuja hivi karibuni' },
+  'mentor_browse.featured_week': { English: 'Featured This Week', Kiswahili: 'Washauri Mashuhuri Wiki Hii' },
+  'mentor_browse.featured':   { English: 'Featured', Kiswahili: 'Mashuhuri' },
+  'mentor_browse.wish_knew':  { English: 'One thing I wish I knew at your age…', Kiswahili: 'Kitu kimoja ningependa kujua nilipokuwa na umri wako…' },
+  'mentor_browse.connect_with': { English: 'Connect with this mentor', Kiswahili: 'Ungana na mshauri huyu' },
+  'mentor_browse.connect':    { English: 'Connect', Kiswahili: 'Ungana' },
+  'mentor_browse.connected':  { English: 'Connected ✓', Kiswahili: 'Umeunganishwa ✓' },
+  'mentor_browse.pending':    { English: 'Request pending', Kiswahili: 'Ombi linasubiri' },
+  'mentor_browse.preview_only': { English: 'Preview only', Kiswahili: 'Onyesho tu' },
+  'mentor_browse.connecting': { English: 'Sending Request…', Kiswahili: 'Inatuma Maombi…' },
+  'mentor_browse.offline_short': { English: 'Offline', Kiswahili: 'Nje ya mtandao' },
+  'mentor_browse.all_fields': { English: 'All Fields', Kiswahili: 'Nyanja Zote' },
+  'mentor_browse.all_mentors': { English: 'All Mentors', Kiswahili: 'Washauri Wote' },
+  'mentor_browse.field_mentors': { English: '{field} Mentors', Kiswahili: 'Washauri wa {field}' },
+  'mentor_browse.empty':      { English: 'No mentors available in this category yet.', Kiswahili: 'Hakuna washauri wanaopatikana katika kundi hili bado.' },
+  'mentor_browse.safe_title': { English: 'Safe & Verified', Kiswahili: 'Salama & Wamethibitishwa' },
+  'mentor_browse.safe_desc':  { English: 'All mentors undergo strict vetting and safeguarding training.', Kiswahili: 'Washauri wote hupitia ukaguzi mkali na mafunzo ya usalama.' },
+  'mentor_browse.wisdom_title': { English: "Mentor's Wisdom", Kiswahili: 'Hekima ya Mshauri' },
+  
+  /* ── Mentor Matching Quiz ── */
+  'mentor_match.browse_all':  { English: "I know what I'm looking for → Browse all mentors", Kiswahili: 'Ninajua ninachotafuta → Tazama washauri wote' },
+  'mentor_match.goal_q':      { English: "What's the one thing you most want to change in the next 3 months?", Kiswahili: 'Je, ni kitu gani kimoja unachotaka kubadilisha zaidi katika miezi 3 ijayo?' },
+  'mentor_match.style_q':     { English: 'How do you prefer to get guidance?', Kiswahili: 'Je, unapendelea kupata mwongozo vipi?' },
+  'mentor_match.avail_q':     { English: 'How often can you commit to meeting?', Kiswahili: 'Je, unaweza kujitolea kukutana mara ngapi?' },
+  'mentor_match.searching':   { English: '{persona} is finding your matches...', Kiswahili: '{persona} anatafuta washauri wanaokufaa...' },
+  'mentor_match.results_title': { English: 'Your Top Matches', Kiswahili: 'Washauri Wanaokufaa Zaidi' },
+  'mentor_match.no_matches':  { English: 'No matches found right now. Try browsing all mentors!', Kiswahili: 'Hakuna washauri waliopatikana kwa sasa. Jaribu kutazama washauri wote!' },
+  'mentor_match.top_match_badge': { English: 'Top Match', Kiswahili: 'Chaguo Bora' },
+  'mentor_match.recommend_desc': { English: '{name} specialises in {expertise} and has helped students {goal_reason}.', Kiswahili: '{name} amebobea katika {expertise} na amesaidia wanafunzi {goal_reason}.' },
+  'mentor_match.stay_with':   { English: 'Stay with {name}', Kiswahili: 'Baki na {name}' },
+  'mentor_match.browse_again': { English: 'Browse Again', Kiswahili: 'Tafuta Tena' },
+  'mentor_match.fit_title':   { English: 'Finding the right fit', Kiswahili: 'Kupata anayefaa' },
+  'mentor_match.fit_desc':    { English: 'Sometimes it takes a few tries to find the right mentor. Would you like to explore other mentors?', Kiswahili: 'Wakati mwingine inachukua majaribio kadhaa kupata mshauri anayefaa. Je, ungependa kuangalia washauri wengine?' },
+  'mentor_match.offline_cached': { English: 'Offline — Displaying cached data', Kiswahili: 'Nje ya mtandao — Inaonyesha data iliyohifadhiwa' },
+
+  /* ── Mentor Matching Quiz Options ── */
+  'mentor_match.goal.learn_skill': { English: 'Learn a skill', Kiswahili: 'Jifunze ujuzi' },
+  'mentor_match.goal.start_something': { English: 'Start something', Kiswahili: 'Anza mradi' },
+  'mentor_match.goal.build_confidence': { English: 'Build confidence', Kiswahili: 'Jenga kujiamini' },
+  'mentor_match.goal.improve_school': { English: 'Improve at school', Kiswahili: 'Fanya vizuri shuleni' },
+  'mentor_match.goal.understand_money': { English: 'Understand money', Kiswahili: 'Elewa fedha' },
+  'mentor_match.goal.health_wellbeing': { English: 'Health & wellbeing', Kiswahili: 'Afya na ustawi' },
+
+  'mentor_match.style.clear_plan': { English: 'Give me a clear plan and structure', Kiswahili: 'Nipe mpango wazi na muundo' },
+  'mentor_match.style.listen_figure': { English: 'Listen to me and help me figure it out', Kiswahili: 'Nisikilize na unisaidie kupata suluhisho' },
+  'mentor_match.style.challenge_me': { English: 'Challenge me and push me harder', Kiswahili: 'Nikabili na unisukume kufanya zaidi' },
+  'mentor_match.style.regular_checkins': { English: 'Check in on me regularly', Kiswahili: 'Nikaguliwe mara kwa mara' },
+
+  'mentor_match.avail.once_a_week': { English: 'Once a week (30 min)', Kiswahili: 'Mara moja kwa wiki (dakika 30)' },
+  'mentor_match.avail.every_two_weeks': { English: 'Every two weeks (45 min)', Kiswahili: 'Kila wiki mbili (dakika 45)' },
+  'mentor_match.avail.once_a_month': { English: 'Once a month (60 min)', Kiswahili: 'Mara moja kwa mwezi (dakika 60)' },
+  'mentor_match.avail.flexible': { English: 'Flexible — just when I need it', Kiswahili: 'Kubadilika — wakati tu ninapohitaji' },
+
+  'mentor_match.reason.learn_skill': { English: 'learn new skills', Kiswahili: 'kujifunza ujuzi mpya' },
+  'mentor_match.reason.start_something': { English: 'start their own projects', Kiswahili: 'kuanzisha miradi yao wenyewe' },
+  'mentor_match.reason.build_confidence': { English: 'build self-confidence', Kiswahili: 'kujenga kujiamini' },
+  'mentor_match.reason.improve_school': { English: 'improve academically', Kiswahili: 'kufanya vizuri kimasomo' },
+  'mentor_match.reason.understand_money': { English: 'understand personal finance', Kiswahili: 'kuelewa fedha za kibinafsi' },
+  'mentor_match.reason.health_wellbeing': { English: 'improve their wellbeing', Kiswahili: 'kuboresha ustawi wao' },
+
+  /* ── My Mentor Page ── */
+  'my_mentor.sessions':       { English: 'Sessions', Kiswahili: 'Vipindi' },
+  'my_mentor.next_sync':      { English: 'Next Sync', Kiswahili: 'Mkutano Ujao' },
+  'my_mentor.active':         { English: 'Active', Kiswahili: 'Kikamilifu' },
+  'my_mentor.scheduled':      { English: 'Scheduled', Kiswahili: 'Kimeratibiwa' },
+  'my_mentor.message':        { English: 'Message', Kiswahili: 'Tuma Ujumbe' },
+
+  /* ── Sign In ── */
+  'signin.choose_title':      { English: 'Choose Sign In', Kiswahili: 'Chagua Kuingia' },
+  'signin.choose_access':     { English: 'Pick the access type that matches this test account.', Kiswahili: 'Chagua aina ya ufikiaji inayolingana na akaunti hii ya jaribio.' },
+  'signin.verify_title':      { English: 'Verify Code', Kiswahili: 'Thibitisha Msimbo' },
+  'signin.verify_desc':       { English: 'We sent a 6-digit code to', Kiswahili: 'Tulituma msimbo wa tarakimu 6 kwa' },
+  'signin.phone_description': { English: 'Enter your phone number to sign in or sign up.', Kiswahili: 'Ingiza nambari yako ya simu ili kuingia au kujisajili.' },
+  'signin.enter_phone':       { English: 'Enter phone number', Kiswahili: 'Ingiza nambari ya simu' },
+  'signin.send_code':         { English: 'Send Code', Kiswahili: 'Tuma Msimbo' },
+  'signin.sending_code':      { English: 'Sending...', Kiswahili: 'Inatuma...' },
+
+  /* ── Age Warning ── */
+  'onboarding.age_warning':   { English: 'Youth Educated is designed specifically for youth aged 10-22. Standard accounts cannot be older than 22. If you are an approved mentor or admin, please log in with your registered account.', Kiswahili: 'Youth Educated imeundwa mahususi kwa vijana wenye umri wa miaka 10-22. Akaunti za kawaida haziwezi kuwa zaidi ya miaka 22. Ikiwa wewe ni mshauri au msimamizi aliyeidhinishwa, tafadhali ingia kwa kutumia akaunti yako iliyosajiliwa.' },
 };
 
 /**

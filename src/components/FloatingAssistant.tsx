@@ -3,8 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Send, Maximize2 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
-import { sendToJabari } from '../api/jabari';
-import { checkSafeguarding } from '../lib/safeguarding';
+import { routeAIRequest } from '../api/aiProvider';
+import { runAIPreflight } from '../lib/aiPreflight';
 import AIAvatar from './AIAvatar';
 import SafeguardingCard from './SafeguardingCard';
 
@@ -66,9 +66,9 @@ const FloatingAssistant: React.FC = () => {
     const text = input.trim();
     setInput('');
 
-    const safe = checkSafeguarding(text, state.user.ageBracket ?? '', state.user.id, 'floating_chat');
-    if (safe.triggered && safe.escalationText) {
-      setEscalation(safe.escalationText);
+    const preflight = await runAIPreflight(text, state.user, 'floating_assistant', state.isOffline);
+    if (preflight.blocked) {
+      setEscalation(preflight.responseText || 'Please speak to a trusted adult. Childline Kenya: 116');
       return;
     }
 
@@ -81,15 +81,17 @@ const FloatingAssistant: React.FC = () => {
       parts: [{ text: m.text }],
     }));
 
-    const reply = await sendToJabari(
-      text,
+    const aiResponse = await routeAIRequest({
+      message: text,
       history,
-      state.user,
-      state.isOffline,
-      'default',
-      undefined,
-      persona
-    );
+      user: state.user,
+      mode: 'default',
+      persona,
+      isOffline: state.isOffline,
+    });
+    const reply = preflight.safeguarding.guidancePrefix
+      ? `${preflight.safeguarding.guidancePrefix}\n\n${aiResponse.text}`
+      : aiResponse.text;
 
     setMessages(prev => [...prev, { role: 'model', text: reply }]);
     setIsTyping(false);

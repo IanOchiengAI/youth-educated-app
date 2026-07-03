@@ -24,7 +24,7 @@ export const OPPORTUNITIES: Opportunity[] = [
     maxAge: 15,
     counties: ['All'],
     gender: 'all',
-    deadline: '2026-12-15',
+    deadline: '2027-12-15',
     link: 'https://equitygroupfoundation.com/wings-to-fly/',
     pointsRequired: 500
   },
@@ -52,7 +52,7 @@ export const OPPORTUNITIES: Opportunity[] = [
     maxAge: 24,
     counties: ['All'],
     gender: 'female',
-    deadline: '2026-11-30',
+    deadline: '2027-11-30',
     link: 'https://akirachix.com/',
     pointsRequired: 1200
   },
@@ -66,7 +66,7 @@ export const OPPORTUNITIES: Opportunity[] = [
     maxAge: 30,
     counties: ['All'],
     gender: 'all',
-    deadline: '2026-08-30',
+    deadline: '2027-08-30',
     link: 'https://kuccps.net/',
     pointsRequired: 800
   },
@@ -80,7 +80,7 @@ export const OPPORTUNITIES: Opportunity[] = [
     maxAge: 14,
     counties: ['All'],
     gender: 'all',
-    deadline: '2026-07-15',
+    deadline: '2027-07-15',
     link: 'https://mpesafoundationacademy.ac.ke/',
     pointsRequired: 600
   },
@@ -94,7 +94,7 @@ export const OPPORTUNITIES: Opportunity[] = [
     maxAge: 35,
     counties: ['All'],
     gender: 'all',
-    deadline: '2026-12-31',
+    deadline: '2027-12-31',
     link: 'https://ajiradigital.go.ke/',
     pointsRequired: 300
   },
@@ -108,7 +108,7 @@ export const OPPORTUNITIES: Opportunity[] = [
     maxAge: 29,
     counties: ['All'],
     gender: 'all',
-    deadline: '2026-09-15',
+    deadline: '2027-09-15',
     link: 'https://kyeop.go.ke/',
     pointsRequired: 1500
   },
@@ -122,7 +122,7 @@ export const OPPORTUNITIES: Opportunity[] = [
     maxAge: 24,
     counties: ['All'],
     gender: 'all',
-    deadline: '2026-05-20',
+    deadline: '2027-05-20',
     link: 'https://developers.google.com/africa',
     pointsRequired: 2000
   },
@@ -136,7 +136,7 @@ export const OPPORTUNITIES: Opportunity[] = [
     maxAge: 35,
     counties: ['All'],
     gender: 'all',
-    deadline: '2026-10-10',
+    deadline: '2027-10-10',
     link: 'https://www.yalieastafrica.org/',
     pointsRequired: 1800
   },
@@ -150,7 +150,7 @@ export const OPPORTUNITIES: Opportunity[] = [
     maxAge: 19,
     counties: ['All'],
     gender: 'all',
-    deadline: '2026-11-15',
+    deadline: '2027-11-15',
     link: 'https://gmin.org/',
     pointsRequired: 900
   },
@@ -164,7 +164,7 @@ export const OPPORTUNITIES: Opportunity[] = [
     maxAge: 20,
     counties: ['All'],
     gender: 'all',
-    deadline: '2026-12-01',
+    deadline: '2027-12-01',
     link: 'https://www.ashoka.org/',
     pointsRequired: 1000
   },
@@ -178,7 +178,7 @@ export const OPPORTUNITIES: Opportunity[] = [
     maxAge: 18,
     counties: ['Laikipia', 'Meru', 'Mombasa'],
     gender: 'female',
-    deadline: '2026-08-15',
+    deadline: '2027-08-15',
     link: 'https://ichooselife.or.ke/',
     pointsRequired: 700
   }

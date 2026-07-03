@@ -76,7 +76,16 @@ const CareerMapper: React.FC = () => {
       state.progress.weeklyPoints,
       state.progress.lastWeeklyReset
     );
-    dispatch({ type: 'UPDATE_PROGRESS', payload: { points: result.newTotal, weeklyPoints: result.newWeeklyPoints } });
+    dispatch({ 
+      type: 'ADD_POINTS', 
+      payload: { 
+        points: result.pointsAdded, 
+        reason: 'CAREER_ASSESSMENT',
+        weeklyPoints: result.newWeeklyPoints,
+        lastWeeklyReset: result.newLastReset,
+        tier: result.newTier.swahili
+      } 
+    });
 
     confetti({
       particleCount: 150,

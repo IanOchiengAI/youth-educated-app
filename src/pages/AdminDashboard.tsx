@@ -36,8 +36,13 @@ const AdminDashboard: React.FC = () => {
   const [page, setPage] = useState(1);
   const [mentorReports, setMentorReports] = useState<any[]>([]);
   const [rejecting, setRejecting] = useState<string | null>(null);
+  const [updatingRole, setUpdatingRole] = useState<string | null>(null);
   const PAGE_SIZE = 50;
   const { state } = useAppContext();
+
+  useEffect(() => {
+    setPage(1);
+  }, [state.isOffline, state.user?.role]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -46,15 +51,23 @@ const AdminDashboard: React.FC = () => {
         return;
       }
       try {
-        // Fetch profiles with pagination
+        // Fetch profiles with range-based pagination
         const { data: profilesData, error: profilesError } = await supabase
           .from('profiles')
           .select('id, name, role, joined_at, county')
           .order('joined_at', { ascending: false })
-          .limit(page * PAGE_SIZE);
+          .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1);
         
         if (!profilesError && profilesData) {
-          setProfiles(profilesData);
+          setProfiles(prev => {
+            const combined = page === 1 ? profilesData : [...prev, ...profilesData];
+            const seen = new Set();
+            return combined.filter(p => {
+              if (seen.has(p.id)) return false;
+              seen.add(p.id);
+              return true;
+            });
+          });
         }
 
         // Fetch pending mentors
@@ -114,10 +127,77 @@ const AdminDashboard: React.FC = () => {
     if (state.isOffline) return;
     setRejecting(id);
     try {
-      const { error } = await supabase.from('mentor_profiles').update({ is_verified: false }).eq('id', id);
-      if (!error) setPendingMentors(prev => prev.filter(m => m.id !== id));
+      // Demote the user role back to student
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ role: 'student' })
+        .eq('id', id);
+
+      if (profileError) {
+        console.error('Failed to demote user to student:', profileError);
+        return;
+      }
+
+      // Delete their mentor profile
+      const { error: mentorError } = await supabase
+        .from('mentor_profiles')
+        .delete()
+        .eq('id', id);
+
+      if (!mentorError) {
+        setPendingMentors(prev => prev.filter(m => m.id !== id));
+        setProfiles(prev => prev.map(p => p.id === id ? { ...p, role: 'student' } : p));
+      } else {
+        console.error('Failed to delete mentor profile:', mentorError);
+      }
     } finally {
       setRejecting(null);
+    }
+  };
+
+  const handleRoleChange = async (userId: string, newRole: string) => {
+    if (state.isOffline) return;
+    setUpdatingRole(userId);
+    try {
+      // 1. Update the role in profiles
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('id', userId);
+
+      if (profileError) {
+        console.error('Failed to update role:', profileError);
+        return;
+      }
+
+      // 2. If new role is 'mentor', ensure mentor_profile exists and is verified
+      if (newRole === 'mentor') {
+        const { error: mentorError } = await supabase
+          .from('mentor_profiles')
+          .upsert({
+            id: userId,
+            specialization: 'General',
+            bio: 'Mentor profile automatically created by Admin.',
+            expertise: ['General'],
+            is_verified: true,
+          });
+        if (mentorError) {
+          console.error('Failed to create mentor profile:', mentorError);
+        }
+      } else {
+        // If changed away from mentor, delete mentor profile
+        await supabase
+          .from('mentor_profiles')
+          .delete()
+          .eq('id', userId);
+      }
+
+      // Update local state
+      setProfiles(prev => prev.map(p => p.id === userId ? { ...p, role: newRole } : p));
+    } catch (err) {
+      console.error('Role change error:', err);
+    } finally {
+      setUpdatingRole(null);
     }
   };
 
@@ -130,15 +210,21 @@ const AdminDashboard: React.FC = () => {
     if (state.isOffline) return;
     setApproving(id);
     try {
-      const { error } = await supabase
+      const { error: mentorError } = await supabase
         .from('mentor_profiles')
         .update({ is_verified: true })
         .eq('id', id);
       
-      if (!error) {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ role: 'mentor' })
+        .eq('id', id);
+      
+      if (!mentorError && !profileError) {
         setPendingMentors(prev => prev.filter(m => m.id !== id));
+        setProfiles(prev => prev.map(p => p.id === id ? { ...p, role: 'mentor' } : p));
       } else {
-        console.error('Failed to approve mentor:', error);
+        console.error('Failed to approve mentor:', mentorError || profileError);
       }
     } finally {
       setApproving(null);
@@ -358,11 +444,24 @@ const AdminDashboard: React.FC = () => {
                         <p className="text-[10px] font-black text-navy/40 uppercase tracking-widest">{p.role === 'student' ? 'Student' : p.role} • {p.county || 'Unknown'}</p>
                       </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                       <div className="flex items-center gap-1 text-[10px] font-bold text-navy/40 uppercase tracking-wider">
-                         <Clock size={12} />
-                         {new Date(p.joined_at).toLocaleDateString()}
-                       </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex flex-col items-end gap-1">
+                         <div className="flex items-center gap-1 text-[10px] font-bold text-navy/40 uppercase tracking-wider">
+                           <Clock size={12} />
+                           {new Date(p.joined_at).toLocaleDateString()}
+                         </div>
+                      </div>
+                      <select
+                        value={p.role}
+                        disabled={updatingRole === p.id || state.isOffline}
+                        onChange={(e) => handleRoleChange(p.id, e.target.value)}
+                        className="bg-off-white text-navy font-bold text-xs rounded-xl px-2 py-1 outline-none border border-navy/10 focus:border-yellow disabled:opacity-50"
+                      >
+                        <option value="student">Student</option>
+                        <option value="mentor">Mentor</option>
+                        <option value="admin">Admin</option>
+                        <option value="dsl">DSL</option>
+                      </select>
                     </div>
                   </div>
                 ))}

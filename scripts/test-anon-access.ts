@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+dotenv.config({ path: resolve(__dirname, '../.env') });
 dotenv.config({ path: resolve(__dirname, '../.env.local') });
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
@@ -27,7 +28,14 @@ async function applyFixes() {
     .eq('is_verified', true);
     
   console.log('Anon fetch result:', data?.length || 0, 'records');
-  if (error) console.error('Error:', error);
+  if (error) {
+    console.error('Error:', error);
+    process.exit(1);
+  }
+  if (!data || data.length === 0) {
+    console.error('No verified mentor profiles were returned for anon access.');
+    process.exit(1);
+  }
 }
 
 applyFixes().catch(console.error);

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
+import { t, type Language } from '../lib/i18n';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { requestMentorMatch } from '../lib/mentoring';
 import AIAvatar from '../components/AIAvatar';
@@ -71,6 +72,7 @@ interface MentorProfile {
   bio: string;
   icon: string;
   county: string | null;
+  isFallback?: boolean;
 }
 
 interface FeaturedMentorData {
@@ -86,6 +88,7 @@ interface FeaturedMentorData {
 interface MatchData {
   id: string;
   mentor: MentorProfile;
+  status: 'pending' | 'active';
 }
 
 const quizVariants = {
@@ -102,6 +105,7 @@ const quizVariantsResults = {
 
 const Mentor: React.FC = () => {
   const { state } = useAppContext();
+  const lang = (state.user?.language ?? 'English') as Language;
   const navigate = useNavigate();
   const [isMatched, setIsMatched] = useState(false);
   const [mentors, setMentors] = useState<MentorProfile[]>([]);
@@ -127,6 +131,7 @@ const Mentor: React.FC = () => {
           ...m,
           field: m.expertise[0] || 'General',
           icon: m.avatarUrl || m.icon,
+          isFallback: true,
         })));
         setFeaturedMentor(null);
         setLoading(false);
@@ -166,6 +171,7 @@ const Mentor: React.FC = () => {
             ...m,
             field: m.expertise[0] || 'General',
             icon: m.avatarUrl || m.icon,
+            isFallback: true,
           })));
         }
 
@@ -207,6 +213,7 @@ const Mentor: React.FC = () => {
             .from('mentor_matches')
             .select(`
               id,
+              status,
               mentor_id,
               profiles!mentor_matches_mentor_id_fkey (
                 name
@@ -218,12 +225,14 @@ const Mentor: React.FC = () => {
               )
             `)
             .eq('student_id', state.user.id)
-            .eq('status', 'active')
+            .in('status', ['pending', 'active'])
+            .limit(1)
             .maybeSingle();
 
           if (!matchError && matchData && matchData.profiles) {
             setMyMatch({
               id: matchData.id,
+              status: matchData.status as 'pending' | 'active',
               mentor: {
                 id: matchData.mentor_id,
                 name: (matchData.profiles as any)?.name || 'Mentor',
@@ -234,7 +243,7 @@ const Mentor: React.FC = () => {
                 county: null,
               }
             });
-            setIsMatched(true);
+            setIsMatched(matchData.status === 'active');
           }
         }
       } catch (err) {
@@ -342,16 +351,30 @@ const Mentor: React.FC = () => {
 
   // Check if a mentor is the current match
   const isCurrentMatch = (mentorId: string) => myMatch?.mentor.id === mentorId;
+  const isPendingMatch = (mentorId: string) => isCurrentMatch(mentorId) && myMatch?.status === 'pending';
+  const isActiveMatch = (mentorId: string) => isCurrentMatch(mentorId) && myMatch?.status === 'active';
+
+  const getConnectLabel = (mentor: MentorProfile) => {
+    if (mentor.isFallback) return t('mentor_browse.preview_only', lang);
+    if (state.isOffline) return t('mentor_browse.offline_short', lang);
+    if (connectingId === mentor.id) return t('mentor_browse.connecting', lang);
+    if (isPendingMatch(mentor.id)) return t('mentor_browse.pending', lang);
+    if (isActiveMatch(mentor.id)) return t('mentor_browse.connected', lang);
+    return t('mentor_browse.connect', lang);
+  };
 
   // Handle connect
   const handleConnect = async (mentor: MentorProfile) => {
-    if (!state.user?.id || connectingId) return;
+    if (!state.user?.id || connectingId || mentor.isFallback || state.isOffline) return;
     setConnectingId(mentor.id);
     const result = await requestMentorMatch(state.user.id, mentor.id);
     setConnectingId(null);
     if (result) {
-      setMyMatch({ id: result.id, mentor });
-      setIsMatched(true);
+      const matchedMentor = result.mentorId === mentor.id
+        ? mentor
+        : mentors.find(m => m.id === result.mentorId) || mentor;
+      setMyMatch({ id: result.id, mentor: matchedMentor, status: result.status });
+      setIsMatched(result.status === 'active');
     }
   };
 
@@ -368,8 +391,8 @@ const Mentor: React.FC = () => {
               <ChevronLeft size={20} />
             </button>
             <div>
-              <h1 className="text-3xl font-bold">Talk to a Mentor</h1>
-              <p className="text-white/40 text-xs font-bold uppercase tracking-widest mt-1">Your guide. Your pace.</p>
+              <h1 className="text-3xl font-bold">{t('mentor_browse.title', lang)}</h1>
+              <p className="text-white/40 text-xs font-bold uppercase tracking-widest mt-1">{t('mentor_browse.tagline', lang)}</p>
             </div>
           </div>
           <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center border border-white/10">
@@ -383,13 +406,13 @@ const Mentor: React.FC = () => {
               onClick={() => setIsMatched(false)}
               className={`flex-1 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${!isMatched ? 'bg-yellow text-navy' : 'text-white/40'}`}
             >
-              Browse Mentors
+              {t('mentor_browse.tab_browse', lang)}
             </button>
             <button 
               onClick={() => setIsMatched(true)}
               className={`flex-1 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${isMatched ? 'bg-yellow text-navy' : 'text-white/40'}`}
             >
-              My Mentor
+              {t('mentor_browse.tab_my', lang)}
             </button>
           </div>
         )}
@@ -398,7 +421,7 @@ const Mentor: React.FC = () => {
       {state.isOffline && (
         <div className="mx-6 -mt-4 mb-2 relative z-30 bg-yellow/90 px-4 py-2.5 rounded-2xl flex items-center justify-center gap-2 text-navy text-[11px] font-bold uppercase tracking-widest shadow-sm">
           <WifiOff size={14} />
-          Offline — Displaying cached data
+          {t('mentor_match.offline_cached', lang)}
         </div>
       )}
 
@@ -415,7 +438,7 @@ const Mentor: React.FC = () => {
               {/* Safeguarding Badge */}
               <p className="text-center text-navy/40 text-xs font-medium py-2 flex items-center justify-center gap-1.5">
                 <ShieldCheck size={14} className="text-green-600" />
-                All mentors are vetted and safeguarding-trained
+                {t('mentor_browse.vetted_hint', lang)}
               </p>
 
               {matchStep === 0 ? (
@@ -427,9 +450,9 @@ const Mentor: React.FC = () => {
                   >
                     <AIAvatar persona={state.user?.aiPersona ?? 'amara'} size={48} pulse />
                     <div className="text-left">
-                      <h3 className="font-bold text-lg">Help me find the right mentor</h3>
+                      <h3 className="font-bold text-lg">{t('mentor_browse.find_btn', lang)}</h3>
                       <p className="text-white/60 text-sm mt-0.5 font-nunito">
-                        {state.user?.aiPersona === 'jabari' ? 'Jabari' : 'Amara'} will guide you to your best match
+                        {t('mentor_browse.guide_hint', lang).replace('{persona}', state.user?.aiPersona === 'jabari' ? 'Jabari' : 'Amara')}
                       </p>
                     </div>
                   </button>
@@ -450,7 +473,7 @@ const Mentor: React.FC = () => {
                       <span className="text-[32px] leading-none block mb-2">{f.emoji}</span>
                       <span className="text-sm font-bold text-navy block">{f.label}</span>
                       <span className="text-[11px] text-navy/40 font-medium block mt-0.5">
-                        {count === 0 ? 'Coming soon' : `${count} mentor${count !== 1 ? 's' : ''}`}
+                        {count === 0 ? t('mentor_browse.coming_soon', lang) : (lang === 'English' ? `${count} mentor${count !== 1 ? 's' : ''}` : (count === 1 ? 'mshauri 1' : `washauri ${count}`))}
                       </span>
                     </button>
                   );
@@ -466,9 +489,9 @@ const Mentor: React.FC = () => {
                 >
                   {/* Featured badge */}
                   <div className="flex items-center justify-between mb-5">
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">Featured This Week</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">{t('mentor_browse.featured_week', lang)}</span>
                     <span className="bg-yellow text-navy px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                      Featured
+                      {t('mentor_browse.featured', lang)}
                     </span>
                   </div>
 
@@ -498,7 +521,7 @@ const Mentor: React.FC = () => {
                   {/* Featured Quote */}
                   {featuredMentor.featured_quote && (
                     <div className="border-t border-white/10 pt-4 mb-4">
-                      <p className="text-[11px] text-white/30 font-medium mb-1">One thing I wish I knew at your age…</p>
+                      <p className="text-[11px] text-white/30 font-medium mb-1">{t('mentor_browse.wish_knew', lang)}</p>
                       <p className="text-sm text-white/80 italic font-nunito leading-relaxed">"{featuredMentor.featured_quote}"</p>
                     </div>
                   )}
@@ -506,7 +529,7 @@ const Mentor: React.FC = () => {
                   {/* Connect Button */}
                   {isCurrentMatch(featuredMentor.id) ? (
                     <div className="w-full py-3.5 bg-white/10 text-white/60 rounded-2xl font-bold text-sm text-center">
-                      Your Mentor ✓
+                      {t('mentor_browse.tab_my', lang)} ✓
                     </div>
                   ) : (
                     <button
@@ -522,7 +545,7 @@ const Mentor: React.FC = () => {
                       })}
                       className="w-full py-3.5 bg-yellow text-navy rounded-2xl font-bold text-sm active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      {state.isOffline ? 'Offline' : connectingId === featuredMentor.id ? 'Sending…' : 'Connect with this mentor'}
+                      {state.isOffline ? t('mentor_browse.offline_short', lang) : connectingId === featuredMentor.id ? t('mentor_browse.connecting', lang) : t('mentor_browse.connect_with', lang)}
                     </button>
                   )}
                 </motion.div>
@@ -534,15 +557,15 @@ const Mentor: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-bold text-navy">
                     {selectedField
-                      ? `${MENTOR_FIELDS.find(f => f.id === selectedField)?.label || ''} Mentors`
-                      : 'All Mentors'}
+                      ? t('mentor_browse.field_mentors', lang).replace('{field}', MENTOR_FIELDS.find(f => f.id === selectedField)?.label || '')
+                      : t('mentor_browse.all_mentors', lang)}
                   </h2>
                   {selectedField && (
                     <button
                       onClick={() => setSelectedField(null)}
                       className="px-3 py-1.5 bg-navy/5 text-navy/50 rounded-full text-[11px] font-bold uppercase tracking-widest hover:bg-navy/10 transition-colors"
                     >
-                      All Fields
+                      {t('mentor_browse.all_fields', lang)}
                     </button>
                   )}
                 </div>
@@ -553,7 +576,7 @@ const Mentor: React.FC = () => {
                   </div>
                 ) : filteredMentors.length === 0 ? (
                   <div className="bg-white p-8 rounded-[32px] border border-navy/5 text-center shadow-sm">
-                    <p className="text-sm font-medium text-navy/40">No mentors available in this category yet.</p>
+                    <p className="text-sm font-medium text-navy/40">{t('mentor_browse.empty', lang)}</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -563,8 +586,10 @@ const Mentor: React.FC = () => {
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.06, duration: 0.3 }}
-                        onClick={() => navigate(`/mentor/${m.id}`)}
-                        className="bg-white p-5 rounded-[28px] border border-navy/5 shadow-sm cursor-pointer active:scale-[0.98] hover:border-navy/10 transition-all"
+                        onClick={() => {
+                          if (!m.isFallback) navigate(`/mentor/${m.id}`);
+                        }}
+                        className={`bg-white p-5 rounded-[28px] border border-navy/5 shadow-sm active:scale-[0.98] hover:border-navy/10 transition-all ${m.isFallback ? 'cursor-default' : 'cursor-pointer'}`}
                       >
                         <div className="flex items-start gap-4">
                           {/* Avatar */}
@@ -591,9 +616,15 @@ const Mentor: React.FC = () => {
 
                         {/* Connect Button */}
                         <div className="flex justify-end mt-3">
-                          {isCurrentMatch(m.id) ? (
-                            <span className="px-5 py-2.5 bg-navy/5 text-navy/40 rounded-full font-bold text-xs">
-                              Connected ✓
+                          {isCurrentMatch(m.id) || m.isFallback ? (
+                            <span className={`px-5 py-2.5 rounded-full font-bold text-xs ${
+                              isActiveMatch(m.id)
+                                ? 'bg-green-500/10 text-green-700'
+                                : isPendingMatch(m.id)
+                                  ? 'bg-yellow/20 text-navy'
+                                  : 'bg-navy/5 text-navy/40'
+                            }`}>
+                              {getConnectLabel(m)}
                             </span>
                           ) : (
                             <button
@@ -601,7 +632,7 @@ const Mentor: React.FC = () => {
                               onClick={(e) => { e.stopPropagation(); handleConnect(m); }}
                               className="px-5 py-2.5 bg-navy text-white rounded-full font-bold text-xs active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              {state.isOffline ? 'Offline' : connectingId === m.id ? 'Sending…' : 'Connect'}
+                              {getConnectLabel(m)}
                             </button>
                           )}
                         </div>
@@ -617,8 +648,8 @@ const Mentor: React.FC = () => {
                     <ShieldCheck size={32} />
                  </div>
                  <div className="flex-1">
-                    <h4 className="text-green-900 font-bold">Safe & Verified</h4>
-                    <p className="text-green-700/60 text-xs font-medium leading-relaxed">All mentors undergo strict vetting and safeguarding training.</p>
+                    <h4 className="text-green-900 font-bold">{t('mentor_browse.safe_title', lang)}</h4>
+                    <p className="text-green-700/60 text-xs font-medium leading-relaxed">{t('mentor_browse.safe_desc', lang)}</p>
                  </div>
               </div>
                 </div>
@@ -629,7 +660,7 @@ const Mentor: React.FC = () => {
                     onClick={() => setMatchStep(0)}
                     className="text-navy/50 font-bold text-sm w-full text-center hover:text-navy transition-colors flex items-center justify-center gap-2"
                   >
-                    I know what I'm looking for &rarr; Browse all mentors
+                    {t('mentor_match.browse_all', lang)}
                   </button>
                   
                   {/* Quiz Screens */}
@@ -638,7 +669,7 @@ const Mentor: React.FC = () => {
                         <div key="step1">
                           <div className="flex items-center gap-3 mb-6">
                              <AIAvatar persona={state.user?.aiPersona ?? 'amara'} size={36} pulse />
-                             <h3 className="text-xl font-bold text-navy leading-tight">What's the one thing you most want to change in the next 3 months?</h3>
+                             <h3 className="text-xl font-bold text-navy leading-tight">{t('mentor_match.goal_q', lang)}</h3>
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                              {QUIZ_GOALS.map(g => (
@@ -651,7 +682,7 @@ const Mentor: React.FC = () => {
                                   className="p-4 bg-off-white border border-navy/5 rounded-2xl text-left active:scale-95 transition-transform"
                                >
                                  <span className="text-2xl block mb-2">{g.emoji}</span>
-                                 <span className="font-bold text-navy text-[13px] leading-tight">{g.label}</span>
+                                 <span className="font-bold text-navy text-[13px] leading-tight">{t(`mentor_match.goal.${g.id}`, lang)}</span>
                                </button>
                              ))}
                           </div>
@@ -662,7 +693,7 @@ const Mentor: React.FC = () => {
                         <div key="step2">
                           <div className="flex items-center gap-3 mb-6">
                              <AIAvatar persona={state.user?.aiPersona ?? 'amara'} size={36} pulse />
-                             <h3 className="text-xl font-bold text-navy leading-tight">How do you prefer to get guidance?</h3>
+                             <h3 className="text-xl font-bold text-navy leading-tight">{t('mentor_match.style_q', lang)}</h3>
                           </div>
                           <div className="flex flex-col gap-3">
                              {QUIZ_STYLES.map(s => (
@@ -675,7 +706,7 @@ const Mentor: React.FC = () => {
                                   className="p-4 bg-off-white border border-navy/5 rounded-2xl text-left active:scale-95 transition-transform flex items-center gap-4"
                                >
                                  <span className="text-2xl">{s.emoji}</span>
-                                 <span className="font-bold text-navy text-sm">{s.label}</span>
+                                 <span className="font-bold text-navy text-sm">{t(`mentor_match.style.${s.id}`, lang)}</span>
                                </button>
                              ))}
                           </div>
@@ -686,7 +717,7 @@ const Mentor: React.FC = () => {
                         <div key="step3">
                           <div className="flex items-center gap-3 mb-6">
                              <AIAvatar persona={state.user?.aiPersona ?? 'amara'} size={36} pulse />
-                             <h3 className="text-xl font-bold text-navy leading-tight">How often can you commit to meeting?</h3>
+                             <h3 className="text-xl font-bold text-navy leading-tight">{t('mentor_match.avail_q', lang)}</h3>
                           </div>
                           <div className="flex flex-col gap-3">
                              {QUIZ_AVAILABILITY.map(a => (
@@ -700,7 +731,7 @@ const Mentor: React.FC = () => {
                                   className="p-4 bg-off-white border border-navy/5 rounded-2xl text-left active:scale-95 transition-transform flex items-center gap-4"
                                >
                                  <span className="text-2xl">{a.emoji}</span>
-                                 <span className="font-bold text-navy text-sm">{a.label}</span>
+                                 <span className="font-bold text-navy text-sm">{t(`mentor_match.avail.${a.id}`, lang)}</span>
                                </button>
                              ))}
                           </div>
@@ -712,7 +743,7 @@ const Mentor: React.FC = () => {
                           {loadingMatches ? (
                             <div className="flex flex-col items-center justify-center py-12 text-center space-y-5">
                               <div className="text-5xl animate-bounce">🤖</div>
-                              <div className="font-bold text-navy text-lg">Jabari is finding your matches...</div>
+                              <div className="font-bold text-navy text-lg">{t('mentor_match.searching', lang).replace('{persona}', state.user?.aiPersona === 'jabari' ? 'Jabari' : 'Amara')}</div>
                               <div className="flex gap-1.5 mt-2 justify-center">
                                 <div className="w-2.5 h-2.5 bg-yellow rounded-full animate-pulse"></div>
                                 <div className="w-2.5 h-2.5 bg-yellow rounded-full animate-pulse delay-150"></div>
@@ -723,14 +754,14 @@ const Mentor: React.FC = () => {
                             <div className="space-y-6">
                               <div className="flex items-center gap-3 mb-2">
                                  <Sparkles size={24} className="text-yellow" />
-                                 <h3 className="text-xl font-bold text-navy">Your Top Matches</h3>
+                                 <h3 className="text-xl font-bold text-navy">{t('mentor_match.results_title', lang)}</h3>
                               </div>
                               {topMatches.length === 0 ? (
-                                <p className="text-center text-navy/50 py-8 text-sm font-medium">No matches found right now. Try browsing all mentors!</p>
+                                <p className="text-center text-navy/50 py-8 text-sm font-medium">{t('mentor_match.no_matches', lang)}</p>
                               ) : (
                                 topMatches.map((m, idx) => (
                                   <div key={m.id} className="bg-off-white p-5 rounded-3xl border border-navy/5 relative overflow-hidden">
-                                    {idx === 0 && <div className="absolute top-0 right-0 bg-yellow text-navy text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-xl z-10">Top Match</div>}
+                                    {idx === 0 && <div className="absolute top-0 right-0 bg-yellow text-navy text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-bl-xl z-10">{t('mentor_match.top_match_badge', lang)}</div>}
                                     
                                     <div className="flex gap-4">
                                       <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-2xl shadow-sm flex-shrink-0 overflow-hidden">
@@ -751,22 +782,36 @@ const Mentor: React.FC = () => {
                                     <div className="mt-4 p-4 bg-white rounded-2xl border border-navy/5 relative">
                                       <div className="absolute -top-2 -left-2 text-2xl bg-white rounded-full leading-none shadow-sm p-0.5">🤖</div>
                                       <p className="text-xs text-navy/70 font-medium leading-relaxed pl-4">
-                                         <span className="font-bold text-navy">{m.name}</span> specialises in <span className="font-bold text-navy">{m.expertise[0] || 'general mentoring'}</span> and has helped students <span className="font-bold text-navy">{goalReasonMap[matchAnswers.goal] || 'achieve their goals'}</span>.
+                                         {lang === 'English' ? (
+                                           <>
+                                             <span className="font-bold text-navy">{m.name}</span> specialises in <span className="font-bold text-navy">{m.expertise[0] || 'general mentoring'}</span> and has helped students <span className="font-bold text-navy">{goalReasonMap[matchAnswers.goal] || 'achieve their goals'}</span>.
+                                           </>
+                                         ) : (
+                                           <>
+                                             <span className="font-bold text-navy">{m.name}</span> amebobea katika <span className="font-bold text-navy">{m.expertise[0] || 'ushauri wa jumla'}</span> na amesaidia wanafunzi <span className="font-bold text-navy">{t(`mentor_match.reason.${matchAnswers.goal}`, lang) || 'kufikia malengo yao'}</span>.
+                                           </>
+                                         )}
                                       </p>
                                     </div>
                                     
                                     <div className="mt-4">
-                                      {isCurrentMatch(m.id) ? (
-                                        <div className="w-full py-3.5 bg-navy/5 text-navy/40 rounded-xl font-bold text-sm text-center">
-                                          Connected ✓
+                                      {isCurrentMatch(m.id) || m.isFallback ? (
+                                        <div className={`w-full py-3.5 rounded-xl font-bold text-sm text-center ${
+                                          isActiveMatch(m.id)
+                                            ? 'bg-green-500/10 text-green-700'
+                                            : isPendingMatch(m.id)
+                                              ? 'bg-yellow/20 text-navy'
+                                              : 'bg-navy/5 text-navy/40'
+                                        }`}>
+                                          {getConnectLabel(m)}
                                         </div>
                                       ) : (
                                         <button
-                                          disabled={connectingId === m.id}
+                                          disabled={connectingId === m.id || state.isOffline}
                                           onClick={(e) => { e.stopPropagation(); handleConnect(m); }}
                                           className="w-full py-3.5 bg-navy text-white rounded-xl font-bold text-sm active:scale-95 transition-transform disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
-                                          {connectingId === m.id ? 'Sending Request…' : 'Connect'}
+                                          {getConnectLabel(m)}
                                         </button>
                                       )}
                                     </div>
@@ -792,16 +837,16 @@ const Mentor: React.FC = () => {
               {/* My Mentor Hero Card */}
               {showRematch && (
                 <div className="bg-red-50 rounded-[32px] p-6 border border-red-100 shadow-sm relative z-10 mb-6">
-                  <h4 className="text-red-900 font-bold mb-2">Finding the right fit</h4>
+                  <h4 className="text-red-900 font-bold mb-2">{t('mentor_match.fit_title', lang)}</h4>
                   <p className="text-red-700/80 text-sm mb-4">
-                    Sometimes it takes a few tries to find the right mentor. Would you like to explore other mentors?
+                    {t('mentor_match.fit_desc', lang)}
                   </p>
                   <div className="flex gap-3">
                     <button onClick={handleRematch} className="bg-red-100 text-red-800 px-4 py-2 rounded-xl text-xs font-bold active:scale-95 transition-transform">
-                      Browse Again
+                      {t('mentor_match.browse_again', lang)}
                     </button>
                     <button onClick={() => setShowRematch(false)} className="bg-white text-navy/60 px-4 py-2 rounded-xl text-xs font-bold active:scale-95 transition-transform border border-navy/10">
-                      Stay with {myMatch?.mentor.name}
+                      {t('mentor_match.stay_with', lang).replace('{name}', myMatch?.mentor.name || '')}
                     </button>
                   </div>
                 </div>
@@ -810,7 +855,7 @@ const Mentor: React.FC = () => {
                 <div className="bg-white rounded-[40px] overflow-hidden border border-navy/5 shadow-xl shadow-navy/5 group">
                    <div className="bg-navy p-8 text-white flex justify-between items-start">
                       <div className="space-y-1">
-                         <span className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-600">Your Mentor</span>
+                         <span className="text-[10px] font-black uppercase tracking-[0.3em] text-yellow-600">{t('mentor_browse.tab_my', lang)}</span>
                          <h3 className="text-2xl font-bold">{myMatch.mentor.name}</h3>
                          <p className="text-white/40 text-xs font-bold uppercase tracking-widest">{myMatch.mentor.field}</p>
                       </div>
@@ -821,12 +866,12 @@ const Mentor: React.FC = () => {
                    <div className="p-8 space-y-6">
                       <div className="grid grid-cols-2 gap-4">
                          <div className="bg-off-white p-4 rounded-3xl text-center space-y-1">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-navy/30">Sessions</p>
-                            <p className="text-lg font-bold text-navy">Active</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-navy/30">{t('my_mentor.sessions', lang)}</p>
+                            <p className="text-lg font-bold text-navy">{t('my_mentor.active', lang)}</p>
                          </div>
                          <div className="bg-off-white p-4 rounded-3xl text-center space-y-1">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-navy/30">Next Sync</p>
-                            <p className="text-lg font-bold text-navy">Scheduled</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-navy/30">{t('my_mentor.next_sync', lang)}</p>
+                            <p className="text-lg font-bold text-navy">{t('my_mentor.scheduled', lang)}</p>
                          </div>
                       </div>
                       
@@ -836,7 +881,7 @@ const Mentor: React.FC = () => {
                            className="flex-1 py-4 bg-navy text-white rounded-2xl font-bold flex items-center justify-center gap-2 shadow-lg shadow-navy/20"
                          >
                             <MessageCircle size={20} />
-                            Message
+                            {t('my_mentor.message', lang)}
                          </button>
                          <button onClick={() => navigate('/calendar')} className="w-14 h-14 bg-off-white border border-navy/5 rounded-2xl flex items-center justify-center text-navy hover:bg-navy hover:text-white transition-all">
                             <Calendar size={20} />
@@ -850,10 +895,12 @@ const Mentor: React.FC = () => {
               <div className="bg-yellow rounded-[40px] p-8 text-navy space-y-4 shadow-xl shadow-yellow/20">
                  <div className="flex items-center gap-2 text-navy/40">
                     <Sparkles size={16} />
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">Mentor's Wisdom</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">{t('mentor_browse.wisdom_title', lang)}</span>
                  </div>
                  <p className="text-lg font-bold leading-tight italic">
-                    "Success is not about how fast you go, but how far you've come from where you started."
+                    {lang === 'English' 
+                      ? '"Success is not about how fast you go, but how far you\'ve come from where you started."' 
+                      : '"Mafanikio si kuhusu jinsi unavyoenda haraka, bali ni jinsi ulivyotoka mbali tangu ulipoanza."'}
                  </p>
               </div>
             </motion.div>

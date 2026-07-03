@@ -6,6 +6,9 @@ import RoleRoute from './components/RoleRoute';
 import PinLock from './components/PinLock';
 import { AnimatePresence, motion } from 'motion/react';
 import { initPushNotifications, setAppStatusBar } from './lib/notifications';
+import { DeviceCapability } from './lib/androidCapabilities';
+import { setDeviceCapabilities } from './lib/capabilityStore';
+import { supabase } from './lib/supabase';
 
 // Eagerly load auth-critical pages
 import SignIn from './pages/SignIn';
@@ -31,6 +34,9 @@ const MentorDashboard = lazy(() => import('./pages/MentorDashboard'));
 const ArticleDetail   = lazy(() => import('./pages/ArticleDetail'));
 const PrivacyPolicy   = lazy(() => import('./pages/PrivacyPolicy'));
 const MentorProfile   = lazy(() => import('./pages/MentorProfile'));
+const Proposal        = lazy(() => import('./pages/Proposal'));
+const OfflineAI       = lazy(() => import('./pages/OfflineAI'));
+
 
 const PageLoader: React.FC = () => (
   <div className="flex items-center justify-center w-full h-full min-h-screen bg-off-white">
@@ -60,12 +66,32 @@ const PostLoginRedirect: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!state.user) { navigate('/signin', { replace: true }); return; }
-    if (state.user.role === 'mentor') navigate('/mentor-dashboard', { replace: true });
-    else if (state.user.role === 'admin')  navigate('/admin',            { replace: true });
-    else if (state.user.role === 'dsl')    navigate('/dsl',              { replace: true });
-    else                                   navigate('/dashboard',         { replace: true });
-  }, [state.user?.role]);
+    if (state.isHydrating) return;
+
+    if (state.user) {
+      if (!state.user.onboardingCompleted) navigate('/onboarding', { replace: true });
+      else if (state.user.role === 'mentor') navigate('/mentor-dashboard', { replace: true });
+      else if (state.user.role === 'admin')  navigate('/admin',            { replace: true });
+      else if (state.user.role === 'dsl')    navigate('/dsl',              { replace: true });
+      else                                   navigate('/dashboard',         { replace: true });
+      return;
+    }
+
+    let cancelled = false;
+    const waitForSession = async () => {
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        const { data, error } = await supabase.auth.getSession();
+        if (cancelled) return;
+        if (!error && data.session) return;
+        await new Promise(resolve => setTimeout(resolve, 250));
+      }
+      if (!cancelled) navigate('/signin', { replace: true });
+    };
+
+    waitForSession();
+
+    return () => { cancelled = true; };
+  }, [state.user, state.isHydrating, navigate]);
 
   return <PageLoader />;
 };
@@ -73,6 +99,12 @@ const PostLoginRedirect: React.FC = () => {
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { state } = useAppContext();
   const location = useLocation();
+
+  // Wait for localStorage hydration before making auth decisions
+  if (state.isHydrating) {
+    return <PageLoader />;
+  }
+
   if (!state.user && location.pathname !== '/onboarding' && location.pathname !== '/signin') {
     return <Navigate to="/signin" replace />;
   }
@@ -113,6 +145,7 @@ const AnimatedRoutes = () => {
             <Route path="/mentor/:mentorId" element={<ProtectedRoute><PageWrapper><MentorProfile /></PageWrapper></ProtectedRoute>} />
             <Route path="/goals"           element={<ProtectedRoute><PageWrapper><Goals /></PageWrapper></ProtectedRoute>} />
             <Route path="/profile"         element={<ProtectedRoute><PageWrapper><Profile /></PageWrapper></ProtectedRoute>} />
+            <Route path="/offline-ai"      element={<ProtectedRoute><PageWrapper><OfflineAI /></PageWrapper></ProtectedRoute>} />
             <Route path="/calendar"        element={<ProtectedRoute><PageWrapper><SessionCalendar /></PageWrapper></ProtectedRoute>} />
 
             <Route path="/mentor-dashboard" element={<RoleRoute allowedRoles={['mentor']}><PageWrapper><MentorDashboard /></PageWrapper></RoleRoute>} />
@@ -120,7 +153,9 @@ const AnimatedRoutes = () => {
             <Route path="/dsl"              element={<RoleRoute allowedRoles={['admin', 'dsl']}><PageWrapper><DSLDashboard /></PageWrapper></RoleRoute>} />
 
             <Route path="/privacy" element={<PageWrapper><PrivacyPolicy /></PageWrapper>} />
+            <Route path="/proposal" element={<PageWrapper><Proposal /></PageWrapper>} />
             <Route path="*"        element={<NotFound />} />
+
           </Routes>
         </Suspense>
       </div>
@@ -132,6 +167,13 @@ export default function App() {
   React.useEffect(() => {
     setAppStatusBar();
     initPushNotifications().catch(() => {});
+    DeviceCapability.getCapabilities()
+      .then(info => {
+        setDeviceCapabilities(info);
+      })
+      .catch((e) => {
+        console.warn('Failed to fetch capabilities:', e);
+      });
   }, []);
 
   return (

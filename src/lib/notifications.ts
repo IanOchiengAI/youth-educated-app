@@ -1,49 +1,10 @@
-import { PushNotifications } from '@capacitor/push-notifications';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { supabase } from './supabase'; // Assuming this exists based on previous conversations
 
 export async function initPushNotifications() {
-  // Request permissions
-  let permStatus = await PushNotifications.checkPermissions();
-
-  if (permStatus.receive === 'prompt') {
-    permStatus = await PushNotifications.requestPermissions();
-  }
-
-  if (permStatus.receive !== 'granted') {
-    console.warn('User denied push notification permissions');
-    return;
-  }
-
-  // Register with Apple / Google
-  await PushNotifications.register();
-
-  // On success, we should be able to receive notifications
-  PushNotifications.addListener('registration', async (token) => {
-    
-    // Get current user and upsert token to profile
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase
-        .from('profiles')
-        .update({ push_token: token.value })
-        .eq('id', user.id);
-    }
-  });
-
-  PushNotifications.addListener('registrationError', (error) => {
-    console.error('Error on registration: ' + JSON.stringify(error));
-  });
-
-  PushNotifications.addListener('pushNotificationReceived', (_notification) => {
-    // Notification received while app is in foreground — handled by system tray
-  });
-
-  PushNotifications.addListener('pushNotificationActionPerformed', (_notification) => {
-    // User tapped notification — could route to relevant screen in future
-  });
+  console.log('Push notifications are disabled (Firebase unconfigured)');
 }
 
 export async function scheduleStreakReminder(userName: string, streakCount: number) {
@@ -83,9 +44,25 @@ export async function triggerHaptic() {
 
 export async function setAppStatusBar() {
   try {
-    await StatusBar.setStyle({ style: Style.Dark });
-    await StatusBar.setBackgroundColor({ color: '#1C1C6E' });
+    await StatusBar.setOverlaysWebView({ overlay: false });
+    await StatusBar.setStyle({ style: Style.Light });
+    await StatusBar.setBackgroundColor({ color: '#F5F5F5' });
   } catch (e) {
     console.warn('StatusBar not available on web', e);
   }
 }
+
+export async function sendGuardianSMS(to: string, message: string) {
+  console.log(`%c[SIMULATED SMS to ${to}]: "${message}"`, 'background: #222; color: #bada55; font-size: 12px; padding: 4px; border-radius: 4px;');
+  try {
+    const { error } = await supabase.functions.invoke('notify-guardian', {
+      body: { to, message }
+    });
+    if (error) {
+      console.warn('Supabase notify-guardian Edge Function failed (expected in dev):', error);
+    }
+  } catch (err) {
+    // Fail silently in development/offline
+  }
+}
+

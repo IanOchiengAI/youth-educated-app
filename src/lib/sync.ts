@@ -1,5 +1,7 @@
 import { db, type SyncQueueItem } from './db'
 import { supabase } from './supabase'
+import { shouldResetWeeklyPoints } from './gamification'
+import { REDACTED_SAFEGUARDING_MESSAGE } from './safeguarding'
 
 export const queueOfflineAction = async (
   userId: string,
@@ -72,6 +74,23 @@ export const processOfflineQueue = async (userId: string) => {
             }).eq('id', item.payload.id));
           }
           break
+        case 'GOAL_DELETE':
+          if (item.payload.remote_id) {
+            ({ error } = await supabase.from('goals').delete().eq('id', item.payload.remote_id));
+          } else if (item.payload.title) {
+            let query = supabase
+              .from('goals')
+              .delete()
+              .eq('user_id', item.userId)
+              .eq('title', item.payload.title);
+
+            if (item.payload.week_number !== undefined) {
+              query = query.eq('week_number', item.payload.week_number);
+            }
+
+            ({ error } = await query);
+          }
+          break
         case 'AI_MESSAGE':
           ({ error } = await supabase.from('ai_conversations').upsert({
             user_id: item.userId,
@@ -79,10 +98,40 @@ export const processOfflineQueue = async (userId: string) => {
             updated_at: new Date().toISOString(),
           }, { onConflict: 'user_id' }))
           break
-        case 'POINT_TRANSACTION':
-          ({ error } = await supabase.from('point_transactions').insert({
+        case 'POINT_TRANSACTION': {
+          const { error: txError } = await supabase.from('point_transactions').insert({
             user_id: item.userId,
             ...item.payload,
+          })
+          if (txError) {
+            error = txError;
+            break;
+          }
+          const { data: profile } = await supabase.from('profiles').select('points, weekly_points, weekly_points_reset_at').eq('id', item.userId).single();
+          if (profile) {
+            let newWeekly = profile.weekly_points || 0;
+            let newReset = profile.weekly_points_reset_at || new Date().toISOString();
+            if (shouldResetWeeklyPoints(newReset)) {
+              newWeekly = item.payload.points;
+              newReset = new Date().toISOString();
+            } else {
+              newWeekly += item.payload.points;
+            }
+            ({ error } = await supabase.from('profiles').update({
+              points: (profile.points || 0) + item.payload.points,
+              weekly_points: newWeekly,
+              weekly_points_reset_at: newReset
+            }).eq('id', item.userId));
+          }
+          break
+        }
+        case 'SAFEGUARDING_FLAG':
+          ({ error } = await supabase.from('safeguarding_flags').insert({
+            user_id: item.userId,
+            category: item.payload.category,
+            message: REDACTED_SAFEGUARDING_MESSAGE,
+            source: item.payload.source,
+            status: item.payload.status ?? 'pending',
           }))
           break
       }

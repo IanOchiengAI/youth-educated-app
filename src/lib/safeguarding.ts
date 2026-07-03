@@ -120,6 +120,7 @@ function matchesKeywords(text: string, keywords: string[]): boolean {
 }
 
 import { supabase } from './supabase';
+import { sendGuardianSMS } from './notifications';
 
 export async function reportSafeguardingFlag(userId: string, category: SafeguardingCategory, message: string, source: string) {
   if (!category) return;
@@ -133,6 +134,29 @@ export async function reportSafeguardingFlag(userId: string, category: Safeguard
   });
 
   if (error) console.error("Failed to log safeguarding flag:", error);
+
+  // Send critical alert SMS to parent/guardian of minor under 16 for Category A/B flags
+  if (category === 'A' || category === 'B') {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('guardian_phone, age_bracket, name, language')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (profile) {
+        const isUnder16 = profile.age_bracket === '10-12' || profile.age_bracket === '13-15';
+        if (isUnder16 && profile.guardian_phone) {
+          const smsMessage = profile.language === 'Kiswahili'
+            ? `Ujumbe muhimu: Tahadhari ya usalama imetolewa kwa mtoto wako ${profile.name} kwenye Youth Educated. Timu yetu inakagua tukio hili mara moja.`
+            : `IMPORTANT: A safeguarding alert was raised for your child ${profile.name} on Youth Educated. Our team is reviewing this event immediately.`;
+          sendGuardianSMS(profile.guardian_phone, smsMessage);
+        }
+      }
+    } catch (fetchErr) {
+      console.error("Failed to check guardian for safeguarding SMS:", fetchErr);
+    }
+  }
 }
 
 export function checkSafeguarding(text: string, ageBracket: string, userId?: string, source?: string): SafeguardingResult {

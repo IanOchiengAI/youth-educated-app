@@ -15,7 +15,8 @@ import {
 import confetti from 'canvas-confetti';
 import { useAppContext } from '../AppContext';
 import { addPoints } from '../lib/gamification';
-import { checkSafeguarding } from '../lib/safeguarding';
+import { runAIPreflight } from '../lib/aiPreflight';
+import { REDACTED_SAFEGUARDING_MESSAGE } from '../lib/safeguarding';
 import { supabase } from '../lib/supabase';
 import { queueOfflineAction } from '../lib/sync';
 import { db } from '../lib/db';
@@ -26,6 +27,19 @@ interface MoodLog {
   emoji: string;
   note?: string;
 }
+
+const withTimeout = async <T,>(promise: PromiseLike<T>, timeoutMs: number, label: string): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(`${label} timed out`)), timeoutMs);
+  });
+
+  try {
+    return await Promise.race<T>([promise, timeout]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+};
 
 const MOODS = [
   { score: 1, emoji: '😢', label: 'Sad', color: 'bg-blue-100 text-blue-600', active: 'bg-blue-500 text-white' },
@@ -40,13 +54,15 @@ const MoodTracker: React.FC<{ onComplete?: () => void }> = ({ onComplete }) => {
   const [selectedMood, setSelectedMood] = useState<number | null>(null);
   const [note, setNote] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [jabariResponse, setJabariResponse] = useState('');
 
   const handleSubmit = async () => {
-    if (selectedMood === null) return;
+    if (selectedMood === null || isSubmitting) return;
+    setIsSubmitting(true);
 
     // 1. Safeguarding on note
-    const safeguard = checkSafeguarding(note, state.user?.ageBracket || '16-18', state.user?.id, 'mood');
+    const preflight = await runAIPreflight(note, state.user, 'mood', state.isOffline);
     
     // 2. Points
     const result = addPoints(
@@ -68,11 +84,20 @@ const MoodTracker: React.FC<{ onComplete?: () => void }> = ({ onComplete }) => {
 
     if (state.user) {
       if (!state.isOffline) {
-        const { error } = await supabase.from('mood_logs').insert({
-          user_id: state.user.id,
-          ...payload
-        });
-        if (error) {
+        try {
+          const { error } = await withTimeout(
+            supabase.from('mood_logs').insert({
+              user_id: state.user.id,
+              ...payload
+            }),
+            8000,
+            'Mood log save'
+          );
+          if (error) {
+            await queueOfflineAction(state.user.id, 'MOOD_LOG', payload);
+          }
+        } catch (error) {
+          console.error('[MoodTracker] mood log save failed:', error);
           await queueOfflineAction(state.user.id, 'MOOD_LOG', payload);
         }
       } else {
@@ -95,7 +120,7 @@ const MoodTracker: React.FC<{ onComplete?: () => void }> = ({ onComplete }) => {
       date: new Date().toISOString(),
       score: selectedMood,
       emoji: MOODS.find(m => m.score === selectedMood)!.emoji,
-      note: note.trim() || undefined
+      note: preflight.safeguarding.triggered ? REDACTED_SAFEGUARDING_MESSAGE : note.trim() || undefined
     };
     const logs = JSON.parse(localStorage.getItem('youth_educated_moods') || '[]');
     logs.push(moodLog);
@@ -103,19 +128,10 @@ const MoodTracker: React.FC<{ onComplete?: () => void }> = ({ onComplete }) => {
 
     // 4. Jabari Response
     let resp = "";
-    if (safeguard.triggered && safeguard.escalationText) {
-      resp = safeguard.escalationText!;
-      // Special sync for safeguarding flag
-      if (state.user && !state.isOffline) {
-        await supabase.from('ai_conversations').upsert({
-          user_id: state.user.id,
-          message_history: [{ role: 'user', content: note }, { role: 'assistant', content: resp }],
-          safeguarding_flagged: true,
-          updated_at: new Date().toISOString()
-        });
-      }
-    } else if (safeguard.guidancePrefix) {
-      resp = safeguard.guidancePrefix;
+    if (preflight.blocked) {
+      resp = preflight.responseText!;
+    } else if (preflight.safeguarding.guidancePrefix) {
+      resp = preflight.safeguarding.guidancePrefix;
     } else if (selectedMood <= 2) {
       resp = "Pole sana. I'm sorry you're feeling this way. Remember, I'm here if you want to talk about it. 💙 You are not alone.";
     } else if (selectedMood === 3) {
@@ -126,6 +142,7 @@ const MoodTracker: React.FC<{ onComplete?: () => void }> = ({ onComplete }) => {
     
     setJabariResponse(resp);
     setIsSubmitted(true);
+    setIsSubmitting(false);
     
     if (selectedMood >= 4) {
       confetti({ particleCount: 100, spread: 50, origin: { y: 0.8 }, colors: ['#FFD700', '#1C1C6E'] });
@@ -182,15 +199,15 @@ const MoodTracker: React.FC<{ onComplete?: () => void }> = ({ onComplete }) => {
             </div>
 
             <button
-              disabled={selectedMood === null}
+              disabled={selectedMood === null || isSubmitting}
               onClick={handleSubmit}
               className={`w-full py-5 rounded-full font-bold text-lg transition-all shadow-xl ${
-                selectedMood !== null 
+                selectedMood !== null && !isSubmitting
                   ? 'bg-navy text-white shadow-navy/20 scale-100' 
                   : 'bg-grey/10 text-grey cursor-not-allowed scale-95'
               }`}
             >
-              Check In (+10 Pts)
+              {isSubmitting ? 'Checking In...' : 'Check In (+10 Pts)'}
             </button>
           </motion.div>
         ) : (

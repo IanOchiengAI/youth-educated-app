@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Youth Educated: Project Brief</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --navy: #0B3D91;
+            --navy-light: #1a5bc4;
+            --gold: #FFD700;
+            --gold-soft: #FFF3B0;
+            --off-white: #F7FAFC;
+            --text-dark: #1F2933;
+            --text-muted: #52606D;
+            --text-light: #7B8794;
+            --border: #E4E7EB;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text-dark);
+            background: white;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            background: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* ---- HEADER ---- */
+        .header {
+            background: var(--navy);
+            padding: 28px 40px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--gold);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 18px;
+        }
+
+        .logo-img {
+            width: 64px;
+            height: 64px;
+            object-fit: contain;
+            border-radius: 12px;
+        }
+
+        .header-title {
+            color: white;
+        }
+
+        .header-title h1 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            line-height: 1.2;
+        }
+
+        .header-title .tagline {
+            font-size: 11px;
+            color: var(--gold);
+            font-weight: 500;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+
+        .header-badge {
+            background: rgba(255, 215, 0, 0.15);
+            border: 1px solid rgba(255, 215, 0, 0.4);
+            color: var(--gold);
+            font-size: 10px;
+            font-weight: 600;
+            padding: 6px 14px;
+            border-radius: 20px;
+            letter-spacing: 0.5px;
+            text-align: center;
+            line-height: 1.4;
+        }
+
+        /* ---- BODY ---- */
+        .content {
+            padding: 28px 40px 20px;
+        }
+
+        .subtitle-bar {
+            font-family: 'Poppins', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--navy);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            padding-bottom: 10px;
+            margin-bottom: 18px;
+            border-bottom: 2px solid var(--gold);
+        }
+
+        /* ---- SECTIONS ---- */
+        .section {
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-family: 'Poppins', sans-serif;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--navy);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title .icon {
+            width: 20px;
+            height: 20px;
+            background: var(--navy);
+            color: white;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            flex-shrink: 0;
+        }
+
+        .section p {
+            font-size: 11.5px;
+            line-height: 1.7;
+            color: var(--text-muted);
+        }
+
+        /* ---- TWO COLUMN LAYOUT ---- */
+        .two-col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        /* ---- STATS ROW ---- */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: var(--off-white);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 12px;
+            text-align: center;
+        }
+
+        .stat-card .number {
+            font-family: 'Poppins', sans-serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--navy);
+            line-height: 1;
+        }
+
+        .stat-card .number.gold {
+            color: #B8960C;
+        }
+
+        .stat-card .label {
+            font-size: 9.5px;
+            color: var(--text-light);
+            margin-top: 4px;
+            line-height: 1.3;
+            font-weight: 500;
+        }
+
+        /* ---- DIFFERENTIATORS ---- */
+        .diff-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .diff-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 11.5px;
+            line-height: 1.6;
+            color: var(--text-muted);
+        }
+
+        .diff-list .diff-icon {
+            width: 22px;
+            height: 22px;
+            background: linear-gradient(135deg, var(--navy), var(--navy-light));
+            color: white;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .diff-list strong {
+            color: var(--text-dark);
+            font-weight: 600;
+        }
+
+        /* ---- ALIGNMENT BOX ---- */
+        .alignment-box {
+            background: linear-gradient(135deg, #f0f4ff, #fefce8);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--gold);
+            border-radius: 0 10px 10px 0;
+            padding: 16px 18px;
+        }
+
+        .alignment-box p {
+            font-size: 11.5px;
+            line-height: 1.7;
+            color: var(--text-muted);
+        }
+
+        .alignment-box strong {
+            color: var(--navy);
+        }
+
+        /* ---- TEAM TABLE ---- */
+        .team-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            font-size: 11px;
+        }
+
+        .team-table thead th {
+            background: var(--navy);
+            color: white;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 600;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 10px 14px;
+            text-align: left;
+        }
+
+        .team-table tbody td {
+            padding: 9px 14px;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .team-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .team-table tbody tr:nth-child(even) {
+            background: var(--off-white);
+        }
+
+        .team-table .name {
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        /* ---- FOOTER ---- */
+        .footer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--navy);
+            padding: 14px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .footer-left {
+            color: rgba(255,255,255,0.6);
+            font-size: 9.5px;
+            font-weight: 400;
+        }
+
+        .footer-right {
+            color: var(--gold);
+            font-family: 'Poppins', sans-serif;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+
+        /* ---- SEEKING BOX ---- */
+        .seeking-box {
+            background: var(--off-white);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 18px;
+        }
+
+        .seeking-box p {
+            font-size: 11.5px;
+            line-height: 1.7;
+            color: var(--text-muted);
+        }
+
+        .seeking-box strong {
+            color: var(--navy);
+        }
+
+        /* Print styles */
+        @media print {
+            body {
+                background: white;
+            }
+            .page {
+                width: 100%;
+                min-height: auto;
+                page-break-after: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <!-- HEADER -->
+        <div class="header">
+            <div class="header-left">
+                <img src="logo-ye.png" alt="Youth Educated" class="logo-img">
+                <div class="header-title">
+                    <h1>Youth Educated</h1>
+                    <div class="tagline">Conversation · Choice · Change</div>
+                </div>
+            </div>
+            <div class="header-badge">
+                🏆 CHAI AI Hackathon<br>Winners 2025
+            </div>
+        </div>
+
+        <!-- CONTENT -->
+        <div class="content">
+            <div class="subtitle-bar">Project Brief: Prepared for Gate Real Estate Innovation, Società Benefit</div>
+
+            <!-- STATS ROW -->
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="number">11.6M</div>
+                    <div class="label">Kenyan Youth<br>(Ages 10–19)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number gold">1,000</div>
+                    <div class="label">Pilot Students<br>(10 Schools)</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number">52</div>
+                    <div class="label">Life-Skills Lessons<br>CBC-Aligned</div>
+                </div>
+                <div class="stat-card">
+                    <div class="number">100%</div>
+                    <div class="label">Offline-Capable<br>On-Device AI</div>
+                </div>
+            </div>
+
+            <!-- WHAT WE DO + PROBLEM -->
+            <div class="two-col" style="margin-bottom: 20px;">
+                <div class="section">
+                    <div class="section-title">
+                        <span class="icon">◆</span> What We Do
+                    </div>
+                    <p>
+                        Youth Educated is a <strong>life-skills and mentorship platform</strong> for Kenyan youth. It combines an AI mentor named <em>Amara</em>, a human mentorship network, and 52 curriculum-aligned lessons. We built the platform to work offline because nearly half of Kenyans don't have reliable internet access.
+                    </p>
+                </div>
+                <div class="section">
+                    <div class="section-title">
+                        <span class="icon">!</span> The Problem We Solve
+                    </div>
+                    <p>
+                        Kenya spends a large portion of its national budget on education, but there are no standardized school counselors. The new curriculum requires schools to teach life skills, but most teachers don't have the tools or training to do so. With youth unemployment at <strong>67%</strong>, over 11.6 million young Kenyans are navigating adulthood without structured guidance or mental health support.
+                    </p>
+                </div>
+            </div>
+
+            <!-- WHAT MAKES US DIFFERENT -->
+            <div class="section">
+                <div class="section-title">
+                    <span class="icon">★</span> What Makes Us Different
+                </div>
+                <ul class="diff-list">
+                    <li>
+                        <span class="diff-icon">🛡</span>
+                        <span><strong>Safeguarding System:</strong> We built a 4-tier child protection framework mapped to the Kenya Children Act. If a student uses crisis keywords, the system bypasses the AI and routes them to emergency contacts. It works even when offline. We named our AI mentor <em>Amara</em>, which means 'grace' in Swahili, to make sure the platform empowers girls as much as boys.</span>
+                    </li>
+                    <li>
+                        <span class="diff-icon">📱</span>
+                        <span><strong>On-Device AI (Phase 2):</strong> The AI runs directly on the student's phone. This means they don't need an internet connection to use it. It works on the budget smartphones students already own, like the Tecno Spark or Samsung A-series. We are building this phase for under $6,000.</span>
+                    </li>
+                    <li>
+                        <span class="diff-icon">🤝</span>
+                        <span><strong>Hybrid Mentorship:</strong> The AI handles routine daily guidance. This frees up our human mentors to focus on crisis intervention, career planning, and deep emotional support.</span>
+                    </li>
+                    <li>
+                        <span class="diff-icon">💼</span>
+                        <span><strong>Hybrid Social Enterprise:</strong> Revenue from private academies and corporate ESG sponsors subsidizes free access for public schools. Our $15,150 pilot for 1,000 students is projected to generate $19,500 in Year 1 revenue — reaching self-sustainability within 12 months.</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- ALIGNMENT -->
+            <div class="section">
+                <div class="section-title">
+                    <span class="icon">🇮🇹</span> Alignment with Società Benefit & Piano Mattei
+                </div>
+                <div class="alignment-box">
+                    <p>
+                        Youth Educated is built to develop human capital in a measurable way. We track our impact using <strong>IRIS+ standards</strong>, which provides the verifiable data needed for Società Benefit annual reporting. We see our work as a natural fit for the <strong>Piano Mattei education pillar</strong>. It is an African-built AI solution to an African challenge, measured to European standards. We are looking for strategic partners and ecosystem integration, rather than just capital.
+                    </p>
+                </div>
+            </div>
+
+            <!-- TEAM TABLE -->
+            <div class="section">
+                <div class="section-title">
+                    <span class="icon">👥</span> Participants
+                </div>
+                <table class="team-table">
+                    <thead>
+                        <tr>
+                            <th style="width:22%">Name</th>
+                            <th style="width:28%">Role</th>
+                            <th>Focus Area</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="name">Wambui</td>
+                            <td>CEO, Youth Educated</td>
+                            <td>Organizational leadership, vision & strategy, stakeholder relations</td>
+                        </tr>
+                        <tr>
+                            <td class="name">Blixen</td>
+                            <td>Business & Partnerships</td>
+                            <td>Business development, partnerships, go-to-market strategy</td>
+                        </tr>
+                        <tr>
+                            <td class="name">Sheila</td>
+                            <td>Developer</td>
+                            <td>Software engineering, front-end development, UX implementation</td>
+                        </tr>
+                        <tr>
+                            <td class="name">Dylan</td>
+                            <td>Developer</td>
+                            <td>Software engineering, platform development, testing</td>
+                        </tr>
+                        <tr>
+                            <td class="name">Ian Ochieng</td>
+                            <td>Tech Lead & Product</td>
+                            <td>Full-stack development, AI integration, system architecture</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer">
+            <div class="footer-left">
+                Youth Educated · Nairobi, Kenya · CHAI AI Hackathon Winners 2025
+            </div>
+            <div class="footer-right">
+                Conversation · Choice · Change
+            </div>
+        </div>
+    </div>
+</body>
+</html>

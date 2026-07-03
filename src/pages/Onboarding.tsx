@@ -20,8 +20,23 @@ import { COUNTIES, GOAL_OPTIONS } from '../data/modules';
 import { addPoints } from '../lib/gamification';
 import { supabase } from '../lib/supabase';
 import { t, type Language } from '../lib/i18n';
+import { sendGuardianSMS } from '../lib/notifications';
 
 const ONBOARDING_STEPS = 6;
+const ONBOARDING_SAVE_TIMEOUT_MS = 8000;
+
+const withTimeout = async <T,>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(`${label} timed out`)), timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeout]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+};
 
 const Onboarding: React.FC = () => {
   const { state, dispatch } = useAppContext();
@@ -40,6 +55,8 @@ const Onboarding: React.FC = () => {
   const [guardianConsent, setGuardianConsent] = useState(false);
   const [guardianPhone, setGuardianPhone] = useState('');
   const [isVerifyingSession, setIsVerifyingSession] = useState(true);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [completionError, setCompletionError] = useState<string | null>(null);
   const lang: Language = language;
 
   // Speech Recognition for self-introduction
@@ -117,6 +134,7 @@ const Onboarding: React.FC = () => {
   }, [navigate]);
 
   const nextStep = () => {
+    if (isCompleting || !isStepValid()) return;
     if (step < ONBOARDING_STEPS) setStep(step + 1);
     else handleComplete();
   };
@@ -134,101 +152,132 @@ const Onboarding: React.FC = () => {
   };
 
   const handleComplete = async () => {
-    // 1. Get the current authenticated user's ID
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session?.user?.id) {
-      console.error("No active session found during onboarding");
-      return;
+    if (isCompleting) return;
+
+    setIsCompleting(true);
+    setCompletionError(null);
+
+    try {
+      const { data: { session } } = await withTimeout(
+        supabase.auth.getSession(),
+        5000,
+        'Session check'
+      );
+
+      if (!session?.user?.id) {
+        setCompletionError('Your session expired. Please sign in again.');
+        navigate('/signin', { replace: true });
+        return;
+      }
+
+      const userId = session.user.id;
+      const isUnder16 = ageBracket === '10-12' || ageBracket === '13-15';
+      const guardianPhoneValue = isUnder16 ? guardianPhone.trim() : undefined;
+      const now = new Date().toISOString();
+      const profileData = {
+        id: userId,
+        name: name.trim(),
+        language,
+        age_bracket: ageBracket,
+        county,
+        gender: gender as any,
+        goals: selectedGoals,
+        guardian_consent: isUnder16 ? guardianConsent : true,
+        guardian_consent_at: now,
+        guardian_phone: guardianPhoneValue || undefined,
+        onboarding_completed: true,
+        role: state.user?.role || ('student' as const),
+      };
+
+      const newUser = {
+        id: userId,
+        name: profileData.name,
+        language,
+        ageBracket,
+        county,
+        gender: gender as any,
+        goals: selectedGoals,
+        schoolId: state.user?.schoolId,
+        guardianConsent: profileData.guardian_consent,
+        guardianConsentAt: profileData.guardian_consent_at,
+        guardianPhone: profileData.guardian_phone,
+        onboardingCompleted: true,
+        joinedAt: state.user?.joinedAt || now,
+        role: profileData.role,
+        jabariVoice: state.user?.jabariVoice || 'default_female',
+        aiPersona: state.user?.aiPersona || 'amara' as const,
+        isPremium: state.user?.isPremium ?? false,
+        mentorPairId: state.user?.mentorPairId ?? null,
+      };
+
+      dispatch({ type: 'SET_USER', payload: newUser });
+
+      const result = addPoints(
+        'ONBOARDING_COMPLETE',
+        state.progress.points,
+        state.progress.weeklyPoints,
+        state.progress.lastWeeklyReset
+      );
+
+      dispatch({
+        type: 'ADD_POINTS',
+        payload: {
+          points: result.pointsAdded,
+          reason: 'ONBOARDING_COMPLETE',
+          weeklyPoints: result.newWeeklyPoints,
+          lastWeeklyReset: result.newLastReset,
+          tier: result.newTier.swahili
+        }
+      });
+
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#1C1C6E', '#FFD700', '#FFFFFF']
+      });
+
+      navigate('/dashboard', { replace: true });
+
+      if (isUnder16 && guardianPhoneValue) {
+        const smsMessage = language === 'Kiswahili'
+          ? `Hujambo, mtoto wako ${profileData.name} amejisajili kwenye Youth Educated. Tuko hapa kusaidia ukuaji wake kwa usalama.`
+          : `Hello, your child ${profileData.name} has registered on Youth Educated. We are here to support their growth safely.`;
+        sendGuardianSMS(guardianPhoneValue, smsMessage);
+      }
+
+      void withTimeout(
+        Promise.resolve(supabase.from('profiles').upsert(profileData, { onConflict: 'id' })),
+        ONBOARDING_SAVE_TIMEOUT_MS,
+        'Profile save'
+      ).then(({ error: upsertError }) => {
+        if (upsertError) {
+          console.error('Error saving profile:', upsertError.message);
+        }
+      }).catch((error) => {
+        console.error('Onboarding profile sync failed:', error);
+      });
+    } catch (error) {
+      console.error('Onboarding completion failed:', error);
+      setCompletionError('We could not finish setup. Check your connection and try again.');
+      setIsCompleting(false);
     }
-
-    const userId = session.user.id;
-
-    // 2. Prepare the profile data to match the database schema
-    const profileData = {
-      id: userId,
-      name,
-      language,
-      age_bracket: ageBracket,
-      county,
-      gender: gender as any,
-      goals: selectedGoals,
-      guardian_consent: ageBracket === '10-12' || ageBracket === '13-15' ? guardianConsent : true,
-      guardian_consent_at: new Date().toISOString(),
-      guardian_phone: guardianPhone || undefined,
-      onboarding_completed: true,
-      role: 'student' as const,
-    };
-
-    // 3. Save to Supabase
-    const { error: upsertError } = await supabase
-      .from('profiles')
-      .upsert(profileData);
-      
-    if (upsertError) {
-      console.error("Error saving profile:", upsertError);
-      // Wait, we probably want to show an error state to the user here
-      // But for MVP we will just let it proceed with local state
-    }
-
-    // 4. Update Local State (AppContext)
-    const newUser = {
-      id: userId,
-      name,
-      language,
-      ageBracket,
-      county,
-      gender: gender as any,
-      goals: selectedGoals,
-      schoolId: undefined, // Add this to match the User interface
-      guardianConsent: profileData.guardian_consent,
-      guardianConsentAt: profileData.guardian_consent_at,
-      guardianPhone: profileData.guardian_phone,
-      onboardingCompleted: true,
-      joinedAt: new Date().toISOString(),
-      role: 'student' as const,
-      jabariVoice: 'default_male',
-      aiPersona: 'amara' as const,
-      isPremium: false,
-      mentorPairId: null,
-    };
-
-    dispatch({ type: 'SET_USER', payload: newUser });
-    
-    // Award points
-    const result = addPoints(
-      'ONBOARDING_COMPLETE',
-      state.progress.points,
-      state.progress.weeklyPoints,
-      state.progress.lastWeeklyReset
-    );
-    
-    dispatch({ type: 'UPDATE_PROGRESS', payload: {
-      points: result.newTotal,
-      weeklyPoints: result.newWeeklyPoints,
-    }});
-
-    // Celebrate!
-    confetti({
-      particleCount: 150,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: ['#1C1C6E', '#FFD700', '#FFFFFF']
-    });
-
-    setTimeout(() => navigate('/dashboard'), 2000);
   };
 
   const isStepValid = () => {
     switch(step) {
-      case 1: return name.length >= 2;
-      case 2: return ageBracket !== '';
+      case 1: return name.trim().length >= 2;
+      case 2:
+        if (ageBracket === '23+') {
+          return state.user?.role === 'mentor' || state.user?.role === 'admin' || state.user?.role === 'dsl';
+        }
+        return ageBracket !== '';
       case 3: return county !== '';
       case 4: return gender !== '';
       case 5: return selectedGoals.length > 0;
       case 6: 
         if (ageBracket === '10-12' || ageBracket === '13-15') {
-          return guardianConsent && guardianPhone.length >= 9;
+          return guardianConsent && guardianPhone.replace(/\D/g, '').length >= 9;
         }
         return true;
       default: return false;
@@ -351,7 +400,7 @@ const Onboarding: React.FC = () => {
                 <h1 className="text-4xl font-bold leading-tight">{t('onboarding.how_old', lang)}</h1>
                 <p className="text-white/60">{t('onboarding.age_hint', lang)}</p>
                 <div className="grid grid-cols-1 gap-3">
-                  {['10-12', '13-15', '16-18', '19-22'].map((bracket) => (
+                  {['10-12', '13-15', '16-18', '19-22', '23+'].map((bracket) => (
                     <button
                       key={bracket}
                       onClick={() => setAgeBracket(bracket)}
@@ -361,11 +410,18 @@ const Onboarding: React.FC = () => {
                           : 'bg-white/5 border-white/5 text-white'
                       }`}
                     >
-                      <span className="text-lg font-bold">{bracket} {t('onboarding.years_old', lang)}</span>
+                      <span className="text-lg font-bold">
+                        {bracket === '23+' ? '23+ Years Old (Adult / Mentor)' : `${bracket} ${t('onboarding.years_old', lang)}`}
+                      </span>
                       {ageBracket === bracket && <Check size={20} />}
                     </button>
                   ))}
                 </div>
+                {ageBracket === '23+' && !(state.user?.role === 'mentor' || state.user?.role === 'admin' || state.user?.role === 'dsl') && (
+                  <div className="bg-red-500/20 border border-red-500/40 rounded-2xl p-4 text-sm text-red-200">
+                    ⚠️ {t('onboarding.age_warning', lang)}
+                  </div>
+                )}
               </div>
             )}
 
@@ -499,16 +555,21 @@ const Onboarding: React.FC = () => {
         </AnimatePresence>
 
         <div className="mt-12">
+          {completionError && (
+            <p className="mb-4 rounded-2xl bg-red-500/15 px-4 py-3 text-sm font-semibold text-red-100">
+              {completionError}
+            </p>
+          )}
           <button
-            disabled={!isStepValid()}
+            disabled={isCompleting || !isStepValid()}
             onClick={nextStep}
             className={`w-full py-5 rounded-full font-bold text-lg flex items-center justify-center gap-2 transition-all shadow-xl shadow-navy/50 ${
-              isStepValid() 
+              !isCompleting && isStepValid()
                 ? 'bg-yellow text-navy scale-100' 
                 : 'bg-white/10 text-white/30 scale-95 cursor-not-allowed border-none'
             }`}
           >
-            {step === ONBOARDING_STEPS ? t('onboarding.complete', lang) : t('btn.continue', lang)}
+            {isCompleting ? t('onboarding.completing', lang) : step === ONBOARDING_STEPS ? t('onboarding.complete', lang) : t('btn.continue', lang)}
             <ChevronRight size={22} />
           </button>
         </div>

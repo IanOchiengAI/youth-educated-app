@@ -4,6 +4,7 @@ import { useAppContext } from '../AppContext';
 import { motion } from 'motion/react';
 import { Trophy, TrendingUp, Users, WifiOff } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { t, type Language } from '../lib/i18n';
 
 interface LeaderboardEntry {
   name: string;
@@ -14,6 +15,7 @@ interface LeaderboardEntry {
 const Leaderboard: React.FC = () => {
   const { state } = useAppContext();
   const { user, progress } = state;
+  const lang = (user?.language ?? 'English') as Language;
   const [members, setMembers] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOffline, setIsOffline] = useState(false);
@@ -28,9 +30,9 @@ const Leaderboard: React.FC = () => {
 
         const { data, error } = await supabase
           .from('profiles')
-          .select('id, name, points')
+          .select('id, name, weekly_points')
           .eq('county', user?.county || 'Nairobi')
-          .order('points', { ascending: false })
+          .order('weekly_points', { ascending: false })
           .limit(10);
 
         if (error) throw error;
@@ -38,7 +40,7 @@ const Leaderboard: React.FC = () => {
         if (data && data.length > 0) {
           const entries: LeaderboardEntry[] = data.map(p => ({
             name: p.name || 'Scholar',
-            points: p.points || 0,
+            points: p.weekly_points || 0,
             isUser: p.id === user?.id,
           }));
 
@@ -95,12 +97,12 @@ const Leaderboard: React.FC = () => {
           <div className="w-8 h-8 bg-yellow/20 rounded-lg flex items-center justify-center text-yellow">
             <Trophy size={18} />
           </div>
-          <h2 className="font-poppins font-bold text-navy">Cohort Leaders</h2>
+          <h2 className="font-poppins font-bold text-navy">{t('leaderboard.title', lang)}</h2>
         </div>
         <div className="bg-pale-yellow px-3 py-1 rounded-full flex items-center gap-1.5">
           <Users size={12} className="text-navy/60" />
           <span className="text-[10px] font-bold text-navy/60 uppercase tracking-wider">
-            {user?.county || 'Nairobi'} Cohort
+            {t('leaderboard.cohort', lang).replace('{county}', user?.county || 'Nairobi')}
           </span>
         </div>
       </div>
@@ -108,7 +110,7 @@ const Leaderboard: React.FC = () => {
       {isOffline && (
         <div className="bg-navy/5 rounded-2xl p-3 mb-4 flex items-center gap-2">
           <WifiOff size={14} className="text-navy/40" />
-          <span className="text-[10px] font-bold text-navy/40 uppercase tracking-widest">Leaderboard unavailable offline</span>
+          <span className="text-[10px] font-bold text-navy/40 uppercase tracking-widest">{t('leaderboard.offline', lang)}</span>
         </div>
       )}
 
@@ -137,7 +139,7 @@ const Leaderboard: React.FC = () => {
             </div>
             <div className="flex items-center gap-1">
               <span className="font-bold text-navy">{member.points}</span>
-              <span className="text-[10px] font-bold text-navy/40 uppercase">pts</span>
+              <span className="text-[10px] font-bold text-navy/40 uppercase">{t('leaderboard.pts_abbr', lang)}</span>
             </div>
           </motion.div>
         ))}
@@ -150,17 +152,17 @@ const Leaderboard: React.FC = () => {
           </div>
           <div>
             <p className="text-navy font-bold text-sm">
-              {isInTopHalf ? "You're in the top half!" : "Keep pushing, you're getting there!"}
+              {isInTopHalf ? t('leaderboard.top_half', lang) : t('leaderboard.keep_pushing', lang)}
             </p>
             <p className="text-navy/60 text-[11px] font-medium">
-              Only {top5[4].points - progress.weeklyPoints} pts away from the top 5
+              {t('leaderboard.pts_away', lang).replace('{points}', String(top5[4].points - progress.weeklyPoints))}
             </p>
           </div>
         </div>
       )}
 
       <p className="text-center text-[10px] font-bold text-navy/30 uppercase tracking-[2px] mt-6">
-        Resets every Monday at 00:00 EAT
+        {t('leaderboard.resets', lang)}
       </p>
     </div>
   );

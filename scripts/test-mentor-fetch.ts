@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import * as dotenv from 'dotenv';
-dotenv.config({ path: '.env.local' });
+dotenv.config({ path: '.env' });
+dotenv.config({ path: '.env.local', override: true });
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY;
@@ -21,9 +22,14 @@ async function test() {
     
   if (error) {
     console.error('Error fetching mentors:', error);
+    process.exit(1);
   } else {
     console.log('Mentors fetched:', data?.length);
     console.log(JSON.stringify(data, null, 2));
+    if (!data || data.length === 0) {
+      console.error('No verified mentors were returned.');
+      process.exit(1);
+    }
   }
 }
 

@@ -14,8 +14,8 @@ import {
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
+import { routeAIRequest } from '../api/aiProvider';
 import { 
-  sendToJabari, 
   fetchAIConversations, 
   updateAIConversations, 
   generateCheckinSummary,
@@ -23,7 +23,8 @@ import {
   RoleplayScenario,
   ROLEPLAY_SCENARIOS 
 } from '../api/jabari';
-import { checkSafeguarding } from '../lib/safeguarding';
+import { runAIPreflight } from '../lib/aiPreflight';
+import { REDACTED_SAFEGUARDING_MESSAGE } from '../lib/safeguarding';
 import { addPoints } from '../lib/gamification';
 import { supabase } from '../lib/supabase';
 import { t, type Language } from '../lib/i18n';
@@ -101,8 +102,40 @@ const Chat: React.FC = () => {
 
   // ── Load history or show goal-aware greeting ──
   useEffect(() => {
+    const buildGreeting = () => {
+      const goals = state.jabariGoals.length > 0 ? state.jabariGoals : (state.user?.goals || []);
+      const goalsText = goals.join(', ');
+      const hasMentorGoals = state.user?.mentorPairId && state.jabariGoals.length > 0;
+      const aiName = state.user?.aiPersona === 'jabari' ? 'Jabari' : 'Amara';
+
+      if (language === 'Kiswahili') {
+        return `Jambo ${state.user?.name}! Mimi ni ${aiName}. Niko hapa kukusaidia. Unafikiria nini leo?`;
+      }
+      if (hasMentorGoals && goalsText) {
+        return `Habari ${state.user?.name}! I see your mentor wants us to focus on: ${goalsText}. How are things going?`;
+      }
+      if (goalsText) {
+        return `Jambo ${state.user?.name}! I know you're working on: ${goalsText}. What's on your mind today?`;
+      }
+      return `Jambo ${state.user?.name}! I'm ${aiName}. I'm here to support you. What's on your mind?`;
+    };
+
     const loadHistory = async () => {
-      if (!state.user?.id || state.isOffline) return;
+      if (!state.user?.id) return;
+
+      if (state.isOffline) {
+        setMessages([{
+          id: '1',
+          role: 'model',
+          text: buildGreeting(),
+          timestamp: new Date().toISOString()
+        }]);
+
+        if (location.state?.articleContext) {
+          setInputText(location.state.articleContext);
+        }
+        return;
+      }
       
       const history = await fetchAIConversations(state.user.id);
       if (history && history.length > 0) {
@@ -114,27 +147,10 @@ const Chat: React.FC = () => {
         }));
         setMessages(formattedMessages);
       } else {
-        // Build goal-aware greeting
-        const goals = state.jabariGoals.length > 0 ? state.jabariGoals : (state.user?.goals || []);
-        const goalsText = goals.join(', ');
-        const hasMentorGoals = state.user?.mentorPairId && state.jabariGoals.length > 0;
-
-        const aiName = state.user?.aiPersona === 'jabari' ? 'Jabari' : 'Amara';
-        let greeting: string;
-        if (language === 'Kiswahili') {
-          greeting = `Jambo ${state.user?.name}! Mimi ni ${aiName}. Niko hapa kukusaidia. Unafikiria nini leo?`;
-        } else if (hasMentorGoals && goalsText) {
-          greeting = `Habari ${state.user?.name}! I see your mentor wants us to focus on: ${goalsText}. How are things going?`;
-        } else if (goalsText) {
-          greeting = `Jambo ${state.user?.name}! I know you're working on: ${goalsText}. What's on your mind today?`;
-        } else {
-          greeting = `Jambo ${state.user?.name}! I'm ${aiName}. I'm here to support you. What's on your mind?`;
-        }
-        
         setMessages([{
           id: '1',
           role: 'model',
-          text: greeting,
+          text: buildGreeting(),
           timestamp: new Date().toISOString()
         }]);
       }
@@ -146,7 +162,7 @@ const Chat: React.FC = () => {
     };
 
     loadHistory();
-  }, [state.user?.id, state.jabariGoals, state.user?.mentorPairId]);
+  }, [state.user?.id, state.jabariGoals, state.user?.mentorPairId, state.isOffline, language, location.state]);
 
   // ── Check-in logging on unmount ──
   const performCheckin = useCallback(async () => {
@@ -211,21 +227,21 @@ const Chat: React.FC = () => {
     setInputText('');
     setIsTyping(true);
 
-    // 1. Safeguarding Check
-    const safeguard = checkSafeguarding(userMessage.text, state.user?.ageBracket || '16-18', state.user?.id);
+    // 1. Safeguarding Check (Preflight)
+    const preflight = await runAIPreflight(userMessage.text, state.user, 'chat', state.isOffline);
     
-    if (safeguard.triggered && safeguard.escalationText) {
+    if (preflight.blocked) {
       safeguardingTriggeredRef.current = true;
       setTimeout(() => {
         setIsTyping(false);
         setMessages(prev => [...prev, {
           id: (Date.now() + 1).toString(),
           role: 'model',
-          text: safeguard.escalationText!,
+          text: preflight.responseText || 'Please speak to a trusted adult. Childline Kenya: 116',
           timestamp: new Date().toISOString(),
           isEscalation: true
         }]);
-        if (safeguard.category === 'A') {
+        if (preflight.safeguarding.category === 'A') {
           setIsLocked(true);
         }
       }, 1000);
@@ -252,17 +268,30 @@ const Chat: React.FC = () => {
         ]
       : baseHistory;
 
-    const responseText = await sendToJabari(
-      userMessage.text,
+    const aiResponse = await routeAIRequest({
+      message: userMessage.text,
       history,
-      state.user,
-      state.isOffline,
-      activeMode,
-      activeScenario || undefined,
-      state.user?.aiPersona ?? 'amara'
-    );
-    const finalResponseText = safeguard.guidancePrefix
-      ? `${safeguard.guidancePrefix}\n\n${responseText}`
+      user: state.user,
+      mode: activeMode,
+      persona: state.user?.aiPersona ?? 'amara',
+      scenario: activeScenario || undefined,
+      isOffline: state.isOffline,
+    });
+
+    if (aiResponse.queued && state.user?.id && !preflight.safeguarding.triggered) {
+      const { db } = await import('../lib/db');
+      await db.offlineAIQueries.add({
+        userId: state.user.id,
+        message: userMessage.text,
+        history,
+        persona: state.user.aiPersona ?? 'amara',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const responseText = aiResponse.text;
+    const finalResponseText = preflight.safeguarding.guidancePrefix
+      ? `${preflight.safeguarding.guidancePrefix}\n\n${responseText}`
       : responseText;
     
     setIsTyping(false);
@@ -279,7 +308,11 @@ const Chat: React.FC = () => {
       if (state.user?.id && !state.isOffline) {
         const geminiHistory = updated.map(m => ({
           role: m.role,
-          parts: [{ text: m.text }]
+          parts: [{
+            text: preflight.safeguarding.triggered && m.id === userMessage.id
+              ? REDACTED_SAFEGUARDING_MESSAGE
+              : m.text
+          }]
         }));
         updateAIConversations(state.user.id, geminiHistory);
       }
@@ -293,7 +326,16 @@ const Chat: React.FC = () => {
       state.progress.weeklyPoints,
       state.progress.lastWeeklyReset
     );
-    dispatch({ type: 'UPDATE_PROGRESS', payload: { points: result.newTotal, weeklyPoints: result.newWeeklyPoints } });
+    dispatch({ 
+      type: 'ADD_POINTS', 
+      payload: { 
+        points: result.pointsAdded, 
+        reason: 'AI_INTERACTION',
+        weeklyPoints: result.newWeeklyPoints,
+        lastWeeklyReset: result.newLastReset,
+        tier: result.newTier.swahili
+      } 
+    });
   };
 
   return (

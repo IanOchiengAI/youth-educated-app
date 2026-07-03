@@ -7,8 +7,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { t, type Language } from '../lib/i18n';
 import FloatingAssistant from './FloatingAssistant';
 import MoreDrawer from './MoreDrawer';
+import { useOfflineAIQueue } from '../hooks/useOfflineAIQueue';
+import { Capacitor } from '@capacitor/core';
 
 const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  useOfflineAIQueue();
   const { state, dispatch } = useAppContext();
   const { checkAndUpdateStreak } = useGamification();
   const location = useLocation();
@@ -55,11 +58,22 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // "More" is highlighted when current route is one of the secondary pages
   const moreRoutes = ['/circles', '/goals', '/calendar', '/profile'];
   const moreIsActive = moreRoutes.some(r => location.pathname.startsWith(r));
+  const safeAreaTop = Capacitor.isNativePlatform() ? 'max(env(safe-area-inset-top), 32px)' : 'env(safe-area-inset-top)';
+  const mainPaddingTop = !shouldHideNav
+    ? state.isOffline
+      ? `calc(${safeAreaTop} + 84px)`
+      : `calc(${safeAreaTop} + 48px)`
+    : state.isOffline
+      ? `calc(${safeAreaTop} + 36px)`
+      : undefined;
 
   return (
     <div className="min-h-screen flex flex-col max-w-md mx-auto bg-off-white relative overflow-x-hidden shadow-2xl">
       {/* Fixed Header/Banner Area — pinned to viewport top, always visible */}
-      <div className="fixed top-0 left-0 right-0 z-[9999]" style={{ pointerEvents: 'none' }}>
+      <div
+        className="fixed top-0 left-0 right-0 z-[9999] bg-off-white/95 backdrop-blur-lg"
+        style={{ pointerEvents: 'none', paddingTop: safeAreaTop }}
+      >
         <div className="max-w-md mx-auto" style={{ pointerEvents: 'auto' }}>
           <AnimatePresence>
             {state.isOffline && (
@@ -98,7 +112,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         </div>
       </div>
 
-      <main className={`flex-1 pb-20 ${!shouldHideNav ? 'pt-[48px]' : ''} ${state.isOffline && !shouldHideNav ? 'pt-[84px]' : state.isOffline ? 'pt-9' : ''}`}>
+      <main className="flex-1 pb-20" style={{ paddingTop: mainPaddingTop }}>
         {children}
       </main>
 

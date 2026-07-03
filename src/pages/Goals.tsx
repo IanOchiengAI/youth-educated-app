@@ -65,8 +65,9 @@ const Goals: React.FC = () => {
       }).select('id').single();
       
       if (!error && data) {
-        await db.goals.update(id, { remote_id: data.id });
+        await db.goals.update(id, { remote_id: data.id, synced: true });
       } else {
+        await db.goals.update(id, { synced: false });
         await queueOfflineAction(state.user.id, 'GOAL_CREATE', payload);
       }
     } else {
@@ -104,7 +105,53 @@ const Goals: React.FC = () => {
   };
 
   const deleteGoal = async (id: number) => {
+    if (!state.user) return;
+    const goal = await db.goals.get(id);
+    if (!goal) return;
+
     await db.goals.delete(id);
+
+    const queuedCreates = await db.syncQueue
+      .where('userId')
+      .equals(state.user.id)
+      .and(item =>
+        !item.synced &&
+        item.actionType === 'GOAL_CREATE' &&
+        item.payload.title === goal.title &&
+        item.payload.week_number === goal.weekNumber
+      )
+      .toArray();
+
+    for (const item of queuedCreates) {
+      if (item.id !== undefined) {
+        await db.syncQueue.delete(item.id);
+      }
+    }
+
+    if (queuedCreates.length > 0 && !goal.remote_id) return;
+
+    const deletePayload = {
+      remote_id: goal.remote_id,
+      title: goal.title,
+      week_number: goal.weekNumber,
+    };
+
+    if (!state.isOffline) {
+      const { error } = goal.remote_id
+        ? await supabase.from('goals').delete().eq('id', goal.remote_id)
+        : await supabase
+            .from('goals')
+            .delete()
+            .eq('user_id', state.user.id)
+            .eq('title', goal.title)
+            .eq('week_number', goal.weekNumber);
+
+      if (error) {
+        await queueOfflineAction(state.user.id, 'GOAL_DELETE', deletePayload);
+      }
+    } else {
+      await queueOfflineAction(state.user.id, 'GOAL_DELETE', deletePayload);
+    }
   };
 
   const handleReflectionSubmit = () => {

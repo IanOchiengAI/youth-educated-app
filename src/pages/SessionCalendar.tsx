@@ -35,7 +35,7 @@ function isSameDay(a: Date, b: Date) {
 }
 
 const SessionCalendar: React.FC = () => {
-  const { state } = useAppContext();
+  const { state, dispatch } = useAppContext();
   const isMentor = state.user?.role === 'mentor';
 
   const today = new Date();
@@ -57,7 +57,8 @@ const SessionCalendar: React.FC = () => {
     mentee_id: '',
   });
 
-  const [students, setStudents] = useState<{ id: string; name: string }[]>([]);
+  const [students, setStudents] = useState<{ id: string; name: string; matchId: string }[]>([]);
+  const [activeMatch, setActiveMatch] = useState<{ id: string; mentorId: string; mentorName: string } | null>(null);
   const [canDeepDive, setCanDeepDive] = useState(false);
 
   const fetchSessions = useCallback(async () => {
@@ -120,16 +121,44 @@ const SessionCalendar: React.FC = () => {
   }, [fetchSessions, state.user?.id]);
 
   useEffect(() => {
-    if (isMentor && state.user) {
+    if (!state.user) return;
+    if (isMentor) {
       supabase
-        .from('mentor_pairs')
-        .select('mentee_id, profiles!mentee_id(id, name)')
+        .from('mentor_matches')
+        .select('id, student_id, profiles!mentor_matches_student_id_fkey(id, name)')
         .eq('mentor_id', state.user.id)
+        .eq('status', 'active')
         .then(({ data }) => {
-          if (data) setStudents(data.map((p: any) => ({ id: p.profiles?.id, name: p.profiles?.name })).filter(Boolean));
+          if (data) {
+            setStudents(
+              data
+                .map((p: any) => p.profiles ? { id: p.profiles.id, name: p.profiles.name, matchId: p.id } : null)
+                .filter(Boolean) as { id: string; name: string; matchId: string }[]
+            );
+          }
+        });
+    } else {
+      supabase
+        .from('mentor_matches')
+        .select('id, mentor_id, profiles!mentor_matches_mentor_id_fkey(id, name)')
+        .eq('student_id', state.user.id)
+        .eq('status', 'active')
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) {
+            const mentorName = Array.isArray(data.profiles)
+              ? data.profiles[0]?.name
+              : (data.profiles as any)?.name;
+            setActiveMatch({
+              id: data.id,
+              mentorId: data.mentor_id,
+              mentorName: mentorName || 'Mentor'
+            });
+            dispatch({ type: 'SET_MENTOR_PAIR', payload: data.id });
+          }
         });
     }
-  }, [isMentor, state.user]);
+  }, [isMentor, state.user, dispatch]);
 
   useEffect(() => {
     const checkDeepDiveEligibility = async () => {
@@ -187,16 +216,20 @@ const SessionCalendar: React.FC = () => {
     if (!state.user) return;
     if (!form.title.trim()) { setFormError('Session title is required.'); return; }
     if (isMentor && !form.mentee_id) { setFormError('Select a student for this session.'); return; }
-    if (!isMentor && !state.user.mentorPairId) { setFormError('You don\'t have a mentor assigned yet. Ask your coordinator to pair you.'); return; }
+    if (!isMentor && !activeMatch) { setFormError('You don\'t have an active mentor assigned yet. Ask your coordinator to pair you.'); return; }
 
     setSaving(true);
     setFormError(null);
 
     const scheduled_at = new Date(`${form.date}T${form.time}:00`).toISOString();
+    const match_id = isMentor
+      ? students.find(s => s.id === form.mentee_id)?.matchId
+      : activeMatch?.id;
 
     const { error } = await supabase.from('mentor_sessions').insert({
-      mentor_id: isMentor ? state.user.id : state.user.mentorPairId,
+      mentor_id: isMentor ? state.user.id : (activeMatch?.mentorId || null),
       mentee_id: isMentor ? form.mentee_id : state.user.id,
+      match_id: match_id || null,
       title: form.title,
       scheduled_at,
       duration_minutes: form.duration,

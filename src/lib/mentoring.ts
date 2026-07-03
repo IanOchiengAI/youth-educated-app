@@ -112,18 +112,27 @@ export async function fetchAvailableMentors(): Promise<AvailableMentor[]> {
 export async function requestMentorMatch(
   studentId: string,
   mentorId: string
-): Promise<{ id: string } | null> {
-  // Idempotency guard — prevent duplicate pending/active matches
-  const { data: existing } = await supabase
+): Promise<{ id: string; status: 'pending' | 'active'; mentorId: string } | null> {
+  // Idempotency guard: a student should not create duplicate open requests.
+  const { data: existing, error: existingError } = await supabase
     .from('mentor_matches')
-    .select('id, status')
+    .select('id, status, mentor_id')
     .eq('student_id', studentId)
-    .eq('mentor_id', mentorId)
     .in('status', ['pending', 'active'])
+    .limit(1)
     .maybeSingle();
 
+  if (existingError) {
+    console.error('[mentoring] requestMentorMatch existing check:', existingError.message);
+    return null;
+  }
+
   if (existing) {
-    return { id: existing.id };
+    return {
+      id: existing.id,
+      status: existing.status as 'pending' | 'active',
+      mentorId: existing.mentor_id,
+    };
   }
 
   const { data, error } = await supabase
@@ -141,5 +150,5 @@ export async function requestMentorMatch(
     return null;
   }
 
-  return { id: data.id };
+  return { id: data.id, status: 'pending', mentorId };
 }

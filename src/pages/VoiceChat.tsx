@@ -12,8 +12,10 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
-import { sendToJabari, fetchAIConversations, updateAIConversations, generateCheckinSummary } from '../api/jabari';
-import { checkSafeguarding } from '../lib/safeguarding';
+import { fetchAIConversations, updateAIConversations, generateCheckinSummary } from '../api/jabari';
+import { routeAIRequest } from '../api/aiProvider';
+import { runAIPreflight } from '../lib/aiPreflight';
+import { REDACTED_SAFEGUARDING_MESSAGE } from '../lib/safeguarding';
 import { supabase } from '../lib/supabase';
 import { tts } from '../lib/tts';
 import { t, type Language } from '../lib/i18n';
@@ -201,13 +203,14 @@ const VoiceChat: React.FC = () => {
   };
 
   const handleProcessVoice = async (text: string) => {
-    // 1. Safeguarding Check
-    const safeguard = checkSafeguarding(text, state.user?.ageBracket || '16-18', state.user?.id, 'voice');
-    if (safeguard.triggered && safeguard.escalationText) {
+    // 1. Safeguarding Check (Preflight)
+    const preflight = await runAIPreflight(text, state.user, 'voice_chat', state.isOffline);
+    if (preflight.blocked) {
       safeguardingTriggeredRef.current = true;
-      setResponse(safeguard.escalationText);
+      const respText = preflight.responseText || 'Please speak to a trusted adult. Childline Kenya: 116';
+      setResponse(respText);
       setIsEscalation(true);
-      speak(safeguard.escalationText);
+      speak(respText);
       return;
     }
 
@@ -232,20 +235,28 @@ const VoiceChat: React.FC = () => {
         setTimeout(() => reject(new Error('Timeout')), 15000)
       );
       const resp = await Promise.race([
-        sendToJabari(text, historyWithContext, state.user, state.isOffline),
+        routeAIRequest({
+          message: text,
+          history: historyWithContext,
+          user: state.user,
+          mode: 'default',
+          persona: state.user?.aiPersona ?? 'amara',
+          isOffline: state.isOffline
+        }).then(res => res.text),
         timeoutPromise
       ]) as string;
-      const finalResp = safeguard.guidancePrefix
-        ? `${safeguard.guidancePrefix}\n\n${resp}`
+      const finalResp = preflight.safeguarding.guidancePrefix
+        ? `${preflight.safeguarding.guidancePrefix}\n\n${resp}`
         : resp;
       
       setResponse(finalResp);
       speak(finalResp);
 
       // Sync and update history (without injected goal context turns)
+      const userTextForStorage = preflight.safeguarding.triggered ? REDACTED_SAFEGUARDING_MESSAGE : text;
       const updatedMessages: Message[] = [
         ...messages,
-        { role: 'user', parts: [{ text }] },
+        { role: 'user', parts: [{ text: userTextForStorage }] },
         { role: 'model', parts: [{ text: finalResp }] }
       ];
       setMessages(updatedMessages);

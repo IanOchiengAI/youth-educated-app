@@ -40,14 +40,17 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+    implementation 'com.google.ai.edge.litertlm:litertlm-android:0.13.1'
 }
 
 apply from: 'capacitor.build.gradle'
 
 try {
     def servicesJSON = file('google-services.json')
-    if (servicesJSON.text) {
+    if (servicesJSON.exists() && servicesJSON.text.contains('"current_key"')) {
         apply plugin: 'com.google.gms.google-services'
+    } else {
+        logger.info("google-services.json missing Firebase api_key/current_key, google-services plugin not applied. Push Notifications won't work")
     }
 } catch(Exception e) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")

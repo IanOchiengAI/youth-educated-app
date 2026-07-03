@@ -15,6 +15,7 @@ import {
   Send,
   RefreshCw,
   BrainCircuit,
+  Mic,
 } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAppContext } from '../AppContext';
@@ -22,7 +23,7 @@ import Leaderboard from '../components/Leaderboard';
 import MoodTracker from '../components/MoodTracker';
 import { getCurrentTier, getProgressToNextTier } from '../utils/gamification';
 import { db } from '../lib/db';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { checkSafeguarding } from '../lib/safeguarding';
 import SafeguardingCard from '../components/SafeguardingCard';
@@ -54,7 +55,7 @@ const Dashboard: React.FC = () => {
   const [escalationMsg, setEscalationMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!state.user?.id) return;
+    if (!state.user?.id || state.isOffline || !isSupabaseConfigured) return;
 
     const fetchUpcomingSession = async () => {
       const startOfToday = new Date();
@@ -63,18 +64,18 @@ const Dashboard: React.FC = () => {
       endOfToday.setHours(23, 59, 59, 999);
 
       const { data, error } = await supabase
-        .from('mentor_sessions')
-        .select(`
+          .from('mentor_sessions')
+          .select(`
           id, scheduled_at, title, student_commitment, mentor_id,
           profiles!mentor_sessions_mentor_id_fkey(name)
         `)
-        .eq('mentee_id', state.user.id)
-        .eq('status', 'confirmed')
-        .gte('scheduled_at', startOfToday.toISOString())
-        .lte('scheduled_at', endOfToday.toISOString())
-        .order('scheduled_at', { ascending: true })
-        .limit(1)
-        .single();
+          .eq('mentee_id', state.user.id)
+          .eq('status', 'confirmed')
+          .gte('scheduled_at', startOfToday.toISOString())
+          .lte('scheduled_at', endOfToday.toISOString())
+          .order('scheduled_at', { ascending: true })
+          .limit(1)
+          .maybeSingle();
       
       if (data && !data.student_commitment && !error) {
         setUpcomingSession(data);
@@ -82,25 +83,8 @@ const Dashboard: React.FC = () => {
         setUpcomingSession(null);
       }
     };
-    
-    fetchUpcomingSession();
 
-    const channel = supabase
-      .channel('dashboard_sessions')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'mentor_sessions' }, () => {
-        fetchUpcomingSession();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [state.user?.id]);
-
-  useEffect(() => {
     const fetchUnratedSession = async () => {
-      if (!state.user?.id) return;
-      
       const { data: recentCompleted } = await supabase
         .from('mentor_sessions')
         .select('id, title, mentor_id, profiles!mentor_sessions_mentor_id_fkey(name)')
@@ -124,15 +108,32 @@ const Dashboard: React.FC = () => {
         }
       }
     };
+
+    fetchUpcomingSession();
     fetchUnratedSession();
-  }, [state.user?.id]);
+
+    // Single Realtime channel for all session events — halves connection slots per user
+    const sessionChannel = supabase
+      .channel('dashboard_sessions')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'mentor_sessions' }, () => {
+        fetchUpcomingSession();
+        fetchUnratedSession();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(sessionChannel);
+    };
+  }, [state.user?.id, state.isOffline]);
 
   const handleSaveCommitment = async () => {
     if (!upcomingSession || !commitmentText.trim()) return;
     
     const safeCheck = checkSafeguarding(commitmentText, state.user?.ageBracket || '', state.user?.id, 'session_commitment');
-    if (safeCheck.triggered && safeCheck.escalationText) {
-      setEscalationMsg(safeCheck.escalationText);
+    const safetyMessage = safeCheck.escalationText ?? safeCheck.guidancePrefix;
+    if (safeCheck.triggered && safetyMessage) {
+      setEscalationMsg(safetyMessage);
+      return;
     }
 
     setSavingCommitment(true);
@@ -162,7 +163,7 @@ const Dashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!state.user?.id) return;
+    if (!state.user?.id || state.isOffline || !isSupabaseConfigured) return;
 
     const fetchUnreadNudge = async () => {
       const { data, error } = await supabase
@@ -188,20 +189,17 @@ const Dashboard: React.FC = () => {
 
     fetchUnreadNudge();
 
-    const channel = supabase
+    // Merged INSERT + UPDATE into one channel subscription
+    const nudgeChannel = supabase
       .channel('dashboard_nudges')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mentor_nudges' }, () => {
-        fetchUnreadNudge();
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'mentor_nudges' }, () => {
-        fetchUnreadNudge();
-      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mentor_nudges' }, fetchUnreadNudge)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'mentor_nudges' }, fetchUnreadNudge)
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(nudgeChannel);
     };
-  }, [state.user?.id]);
+  }, [state.user?.id, state.isOffline]);
 
   const handleGotIt = async () => {
     if (!unreadNudge) return;
@@ -216,8 +214,10 @@ const Dashboard: React.FC = () => {
     if (!unreadNudge || !replyText.trim()) return;
     
     const safeCheck = checkSafeguarding(replyText, state.user?.ageBracket || '', state.user?.id, 'nudge_reply');
-    if (safeCheck.triggered && safeCheck.escalationText) {
-      setEscalationMsg(safeCheck.escalationText);
+    const safetyMessage = safeCheck.escalationText ?? safeCheck.guidancePrefix;
+    if (safeCheck.triggered && safetyMessage) {
+      setEscalationMsg(safetyMessage);
+      return;
     }
 
     setReplyStatus('sending');
@@ -240,8 +240,8 @@ const Dashboard: React.FC = () => {
   const [isWisdomExpanded, setIsWisdomExpanded] = useState(false);
 
   useEffect(() => {
+    if (!state.user?.id || state.isOffline || !isSupabaseConfigured) return;
     const fetchMentorWisdom = async () => {
-      if (!state.user?.id) return;
       
       const { data, error } = await supabase
         .from('mentor_matches')
@@ -275,7 +275,7 @@ const Dashboard: React.FC = () => {
     };
     
     fetchMentorWisdom();
-  }, [state.user?.id]);
+  }, [state.user?.id, state.isOffline]);
 
   const currentTier = getCurrentTier(state.progress.points);
   const progressToNext = getProgressToNextTier(state.progress.points);
@@ -284,14 +284,15 @@ const Dashboard: React.FC = () => {
     () => db.circleResponses.orderBy('id').reverse().limit(3).toArray()
   ) || [];
 
-  const inProgressId = state.modules.inProgress[state.modules.inProgress.length - 1];
+  const inProgressId = state.modules?.inProgress?.[(state.modules?.inProgress?.length || 1) - 1];
   const nextModule = MODULES.find(m => m.id === inProgressId)
-    ?? MODULES.find(m => !state.modules.completed.includes(m.id))
+    ?? MODULES.find(m => !state.modules?.completed?.includes(m.id))
     ?? MODULES[0];
   const moduleIndex = MODULES.findIndex(m => m.id === nextModule.id) + 1;
-  const moduleProgress = state.modules.moduleProgress[nextModule.id];
-  const progressPercent = moduleProgress && nextModule.content.length > 0
-    ? Math.round((moduleProgress.completedLessons.length / nextModule.content.length) * 100)
+  const moduleProgress = state.modules?.moduleProgress?.[nextModule.id];
+  const totalLessons = nextModule.lessons || nextModule.content?.length || 1;
+  const progressPercent = moduleProgress
+    ? Math.round(((moduleProgress.completedLessons?.length || 0) / totalLessons) * 100)
     : 0;
 
   const featuredArticles = LIFEKIT_ARTICLES.slice(0, 3);
@@ -405,6 +406,24 @@ const Dashboard: React.FC = () => {
           <div className="w-14 h-14 bg-navy text-white rounded-full flex items-center justify-center shadow-lg">
             <Heart size={28} className="fill-current" />
           </div>
+        </section>
+
+        {/* Voice Chat with Jabari banner */}
+        <section 
+          onClick={() => navigate('/chat/voice')}
+          className="bg-navy rounded-[40px] p-6 text-white flex items-center justify-between shadow-xl shadow-navy/20 cursor-pointer active:scale-[0.98] transition-all relative overflow-hidden"
+        >
+          <div className="absolute top-[-10px] right-[-10px] w-24 h-24 bg-yellow/20 rounded-full blur-xl opacity-40 pointer-events-none" />
+          <div className="flex items-center gap-4 relative z-10">
+            <div className="w-12 h-12 bg-yellow text-navy rounded-2xl flex items-center justify-center shadow-lg">
+              <Mic size={24} className="animate-pulse" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold leading-tight">{lang === 'Kiswahili' ? 'Ongea na Jabari' : `Voice Chat with ${aiName}`}</h3>
+              <p className="text-white/60 text-xs font-medium">{lang === 'Kiswahili' ? 'Bofya hapa kuanza mazungumzo ya sauti' : 'Tap to start a voice conversation'}</p>
+            </div>
+          </div>
+          <ChevronRight size={20} className="text-white/40" />
         </section>
 
         {/* Mentor Daily Nudge Card */}

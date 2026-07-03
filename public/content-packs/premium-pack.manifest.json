@@ -1,0 +1,15 @@
+{
+  "packId": "ye-premium-modules",
+  "version": "1.0.0",
+  "contentVersion": "2026-06-21",
+  "sizeBytes": 43189,
+  "sha256": "06d3014bb23192e1a17ae4994d4f0adcb04c764edbaaf9e25a8573c179a83689",
+  "moduleIds": [
+    "finance",
+    "career",
+    "srh",
+    "healthy-choices",
+    "adulting-101"
+  ],
+  "downloadUrl": ""
+}
