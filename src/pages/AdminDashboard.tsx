@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Users, Shield, GraduationCap, Clock, CheckCircle, Star, Flag, XCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Users, Shield, GraduationCap, Clock, CheckCircle, Star, Flag, XCircle, Search } from 'lucide-react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAppContext } from '../AppContext';
 
@@ -39,6 +39,16 @@ const AdminDashboard: React.FC = () => {
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
   const PAGE_SIZE = 50;
   const { state } = useAppContext();
+  const [searchQuery, setSearchQuery] = useState('');
+  const recentSignupsRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const handleManageRolesClick = () => {
+    recentSignupsRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setTimeout(() => {
+      searchInputRef.current?.focus();
+    }, 400);
+  };
 
   useEffect(() => {
     setPage(1);
@@ -297,7 +307,10 @@ const AdminDashboard: React.FC = () => {
                 <p className="text-[10px] font-black uppercase tracking-widest text-navy/40">{stats.dsls} DSLs</p>
               </div>
             </div>
-            <button className="px-4 py-2 bg-off-white text-navy font-bold text-xs rounded-xl hover:bg-navy/5 transition-colors">
+            <button 
+              onClick={handleManageRolesClick}
+              className="px-4 py-2 bg-off-white text-navy font-bold text-xs rounded-xl hover:bg-navy/5 active:scale-95 transition-all"
+            >
               Manage Roles
             </button>
           </div>
@@ -422,8 +435,23 @@ const AdminDashboard: React.FC = () => {
         )}
 
         {/* Recent Users with Pagination */}
-        <div className="bg-white rounded-[32px] p-6 shadow-sm border border-navy/5">
+        <div ref={recentSignupsRef} className="bg-white rounded-[32px] p-6 shadow-sm border border-navy/5">
           <h2 className="text-lg font-bold text-navy mb-4">Recent Signups</h2>
+          
+          <div className="relative mb-4">
+            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-navy/40 pointer-events-none">
+              <Search size={16} />
+            </div>
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder="Search users by name..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full bg-off-white border border-navy/10 rounded-2xl pl-10 pr-4 py-3 text-sm font-medium text-navy outline-none focus:border-yellow focus:bg-white transition-all"
+            />
+          </div>
+
           {loading && page === 1 ? (
              <div className="flex justify-center p-8">
                <div className="w-8 h-8 border-4 border-yellow border-t-transparent rounded-full animate-spin"></div>
@@ -431,51 +459,57 @@ const AdminDashboard: React.FC = () => {
           ) : profiles.length === 0 ? (
              <p className="text-center text-sm text-navy/40 py-4 font-medium italic">No recent users or offline.</p>
           ) : (
-            <>
-              <div className="space-y-4">
-                {profiles.map(p => (
-                  <div key={p.id} className="flex items-center justify-between border-b border-navy/5 pb-3 last:border-0 last:pb-0">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center text-navy font-bold text-lg shadow-inner">
-                        {p.name ? p.name.charAt(0).toUpperCase() : '?'}
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-navy">{p.name || 'Anonymous'}</p>
-                        <p className="text-[10px] font-black text-navy/40 uppercase tracking-widest">{p.role === 'student' ? 'Student' : p.role} • {p.county || 'Unknown'}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex flex-col items-end gap-1">
-                         <div className="flex items-center gap-1 text-[10px] font-bold text-navy/40 uppercase tracking-wider">
-                           <Clock size={12} />
-                           {new Date(p.joined_at).toLocaleDateString()}
+             <>
+               <div className="space-y-4">
+                 {profiles.filter(p => p.name?.toLowerCase().includes(searchQuery.toLowerCase())).length === 0 ? (
+                   <p className="text-center text-sm text-navy/40 py-4 font-medium italic">No matching users found.</p>
+                 ) : (
+                   profiles
+                     .filter(p => p.name?.toLowerCase().includes(searchQuery.toLowerCase()))
+                     .map(p => (
+                       <div key={p.id} className="flex items-center justify-between border-b border-navy/5 pb-3 last:border-0 last:pb-0">
+                         <div className="flex items-center gap-3">
+                           <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-blue-50 rounded-full flex items-center justify-center text-navy font-bold text-lg shadow-inner">
+                             {p.name ? p.name.charAt(0).toUpperCase() : '?'}
+                           </div>
+                           <div>
+                             <p className="text-sm font-bold text-navy">{p.name || 'Anonymous'}</p>
+                             <p className="text-[10px] font-black text-navy/40 uppercase tracking-widest">{p.role === 'student' ? 'Student' : p.role} • {p.county || 'Unknown'}</p>
+                           </div>
                          </div>
-                      </div>
-                      <select
-                        value={p.role}
-                        disabled={updatingRole === p.id || state.isOffline}
-                        onChange={(e) => handleRoleChange(p.id, e.target.value)}
-                        className="bg-off-white text-navy font-bold text-xs rounded-xl px-2 py-1 outline-none border border-navy/10 focus:border-yellow disabled:opacity-50"
-                      >
-                        <option value="student">Student</option>
-                        <option value="mentor">Mentor</option>
-                        <option value="admin">Admin</option>
-                        <option value="dsl">DSL</option>
-                      </select>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              {!state.isOffline && profiles.length >= page * PAGE_SIZE && (
-                <button 
-                  onClick={() => setPage(p => p + 1)}
-                  className="w-full mt-6 py-3 bg-off-white text-navy font-bold text-xs rounded-xl hover:bg-navy/5 transition-colors"
-                >
-                  Load More
-                </button>
-              )}
-            </>
+                         <div className="flex items-center gap-3">
+                           <div className="flex flex-col items-end gap-1">
+                              <div className="flex items-center gap-1 text-[10px] font-bold text-navy/40 uppercase tracking-wider">
+                                <Clock size={12} />
+                                {new Date(p.joined_at).toLocaleDateString()}
+                              </div>
+                           </div>
+                           <select
+                             value={p.role}
+                             disabled={updatingRole === p.id || state.isOffline}
+                             onChange={(e) => handleRoleChange(p.id, e.target.value)}
+                             className="bg-off-white text-navy font-bold text-xs rounded-xl px-2 py-1 outline-none border border-navy/10 focus:border-yellow disabled:opacity-50"
+                           >
+                             <option value="student">Student</option>
+                             <option value="mentor">Mentor</option>
+                             <option value="admin">Admin</option>
+                             <option value="dsl">DSL</option>
+                           </select>
+                         </div>
+                       </div>
+                     ))
+                 )}
+               </div>
+               
+               {!state.isOffline && profiles.length >= page * PAGE_SIZE && searchQuery === '' && (
+                 <button 
+                   onClick={() => setPage(p => p + 1)}
+                   className="w-full mt-6 py-3 bg-off-white text-navy font-bold text-xs rounded-xl hover:bg-navy/5 transition-colors"
+                 >
+                   Load More
+                 </button>
+               )}
+             </>
           )}
         </div>
       </main>
