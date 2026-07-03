@@ -605,6 +605,7 @@ const SignIn: React.FC = () => {
                       placeholder="712345678"
                       disabled={isLoading}
                       autoFocus
+                      autoComplete="off"
                     />
                   </div>
                 </div>
