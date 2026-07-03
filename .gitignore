@@ -8,3 +8,24 @@ coverage/
 !.env.example
 .vercel
 .env*.local
+
+# Compiled mobile bundles and packages
+*.apk
+*.aar
+*.ipa
+*.zip
+*.tar.gz
+
+# Development agent artifacts and logs
+artifacts/
+scratch/
+backups/
+walkthrough.md
+tmp/
+
+# CLI & SDK temporary directories
+.temp/
+supabase/.temp/
+.gradle/
+captmp/
+
