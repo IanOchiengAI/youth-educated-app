@@ -1,5 +1,26 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { checkSafeguarding } from './safeguarding';
+
+vi.mock('./db', () => {
+  let items: any[] = [];
+  const syncQueueMock = {
+    add: vi.fn().mockImplementation(async (item) => {
+      items.push(item);
+      return items.length;
+    }),
+    clear: vi.fn().mockImplementation(async () => {
+      items = [];
+    }),
+    toArray: vi.fn().mockImplementation(async () => {
+      return [...items];
+    }),
+  };
+  return {
+    db: {
+      syncQueue: syncQueueMock,
+    },
+  };
+});
 
 describe('checkSafeguarding', () => {
   describe('Category A — immediate risk', () => {
@@ -97,5 +118,93 @@ describe('checkSafeguarding', () => {
       const result = checkSafeguarding('I want to hurt myself and being forced to', '16-18');
       expect(result.category).toBe('A');
     });
+  });
+
+  describe('Sheng variations and boundaries', () => {
+    it('triggers on Sheng/Swahili self-harm variations', () => {
+      const result1 = checkSafeguarding('nataka kujidhuru', '16-18');
+      expect(result1.triggered).toBe(true);
+      expect(result1.category).toBe('A');
+
+      const result2 = checkSafeguarding('siku moja nitajiua', '16-18');
+      expect(result2.triggered).toBe(true);
+      expect(result2.category).toBe('A');
+    });
+
+    it('does NOT trigger on general complaints without keyword matches', () => {
+      const result1 = checkSafeguarding('vitu ni ngumu sana leo', '16-18');
+      expect(result1.triggered).toBe(false);
+
+      const result2 = checkSafeguarding('sijui nifanye nini na hali hii', '16-18');
+      expect(result2.triggered).toBe(false);
+    });
+
+    it('successfully triggers on spaced out or leetspeak bypass attempts', () => {
+      const result1 = checkSafeguarding('want to k i l l myself', '16-18');
+      expect(result1.triggered).toBe(true);
+      expect(result1.category).toBe('A');
+
+      const result2 = checkSafeguarding('w4nt t0 k1ll mys3lf', '16-18');
+      expect(result2.triggered).toBe(true);
+      expect(result2.category).toBe('A');
+
+      const result3 = checkSafeguarding('n i t a j i u a', '16-18');
+      expect(result3.triggered).toBe(true);
+      expect(result3.category).toBe('A');
+    });
+
+    it('verifies that unrelated normal words do not trigger false positives', () => {
+      const result = checkSafeguarding('want 2 kill some time today', '16-18');
+      expect(result.triggered).toBe(false);
+    });
+  });
+});
+
+import { runAIPreflight } from './aiPreflight';
+import { db } from './db';
+
+describe('runAIPreflight integration', () => {
+  it('blocks Category A/B messages and queues offline safeguarding flags when offline', async () => {
+    // Clear sync queue first
+    await db.syncQueue.clear();
+
+    const mockUser = { id: 'test-user-id-123', ageBracket: '16-18' };
+    const preflight = await runAIPreflight('I want to kill myself', mockUser, 'chat_test', true);
+
+    expect(preflight.blocked).toBe(true);
+    expect(preflight.safeguarding.category).toBe('A');
+    expect(preflight.responseText).toContain('116');
+
+    // Verify it is queued in Dexie syncQueue
+    const queued = await db.syncQueue.toArray();
+    expect(queued).toHaveLength(1);
+    expect(queued[0].userId).toBe('test-user-id-123');
+    expect(queued[0].actionType).toBe('SAFEGUARDING_FLAG');
+    expect(queued[0].payload.category).toBe('A');
+    expect(queued[0].payload.message).toBe('[REDACTED SAFEGUARDING DISCLOSURE]');
+    expect(queued[0].payload.source).toBe('chat_test');
+    expect(queued[0].payload.status).toBe('pending');
+  });
+
+  it('allows safe messages through and does not queue anything', async () => {
+    await db.syncQueue.clear();
+
+    const mockUser = { id: 'test-user-id-123', ageBracket: '16-18' };
+    const preflight = await runAIPreflight('Habari, mambo vipi?', mockUser, 'chat_test', true);
+
+    expect(preflight.blocked).toBe(false);
+    expect(preflight.safeguarding.triggered).toBe(false);
+
+    const queued = await db.syncQueue.toArray();
+    expect(queued).toHaveLength(0);
+  });
+
+  it('allows Category D messages with a guidance prefix for under-16 users', async () => {
+    const mockUser = { id: 'test-user-id-123', ageBracket: '13-15' };
+    const preflight = await runAIPreflight('I think I might be pregnant', mockUser, 'chat_test', false);
+
+    expect(preflight.blocked).toBe(false);
+    expect(preflight.safeguarding.category).toBe('D');
+    expect(preflight.safeguarding.guidancePrefix).toContain('trusted adult');
   });
 });

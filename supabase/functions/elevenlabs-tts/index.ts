@@ -61,6 +61,21 @@ serve(async (req) => {
     });
   }
 
+  // Increment and validate TTS characters daily quota limit
+  const charCount = text.length;
+  const { error: rpcError } = await supabase.rpc("increment_tts_usage", {
+    char_count: charCount,
+  });
+
+  if (rpcError) {
+    console.error("[elevenlabs-tts] Quota check failed:", rpcError.message);
+    const status = rpcError.message.includes("quota exceeded") ? 429 : 500;
+    return new Response(JSON.stringify({ error: rpcError.message }), {
+      status,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   if (typeof voiceId !== "string" || !ALLOWED_VOICE_IDS.has(voiceId)) {
     return new Response(JSON.stringify({ error: "Invalid voice" }), {
       status: 400,

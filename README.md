@@ -95,6 +95,31 @@ npm install
 ```
 (We recently removed some unused native dependencies like `better-sqlite3` to fix installation issues on Windows/Linux environments without build tools.)
 
+## 🔒 Security Hardening (Production)
+
+To ensure child safety and protect your project from credential extraction and billing abuse:
+
+### 1. SMS OTP Brute Force Protection
+* **Vulnerability:** Standard 6-digit OTP codes can be brute-forced without proper rates.
+* **Fix:** In your **Supabase Dashboard**, navigate to **Project Settings -> Auth**. Under **Security and Rate Limits**, configure:
+  - **Max Verification Attempts**: Set to `3` (locks/invalidates the OTP after 3 failed verification codes).
+  - **OTP Expiry**: Set to `120` seconds.
+
+### 2. Environment Secrets
+Never put private keys in `.env` (which compiles to client-side public assets). Use the Supabase CLI to upload function secrets securely:
+```bash
+npx supabase secrets set GEMINI_API_KEY=your_gemini_key
+npx supabase secrets set ELEVENLABS_API_KEY=your_elevenlabs_key
+npx supabase secrets set SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+npx supabase secrets set SMS_HOOK_SECRET=your_long_random_secret
+```
+
+### 3. PWA IndexedDB Encryption
+* **How it works:** Local IndexedDB tables (mood logs, chat messages, weekly goals) are automatically encrypted transparently using a salted RC4 cipher (salted key derived from the user's PIN using PBKDF2).
+* **Activation:** Once a user configures a screen-lock PIN in their Profile settings, the app transparently shifts storage from plaintext to ciphertext.
+
+---
+
 ## 🏗️ Deployment
 
 - **Web:** Deploy to Vercel, Netlify, or Firebase Hosting.

@@ -13,6 +13,8 @@ const CATEGORY_A_KEYWORDS = [
   'want to hurt myself',
   'want to kill myself',
   'kujiua',
+  'nitajiua',
+  'kujidhuru',
   'dont want to be alive',
   "don't want to be alive",
   'nobody would miss me',
@@ -69,27 +71,63 @@ export const ESCALATION_TEXT = {
   D: "I want to be helpful, but I am not equipped to provide advice on this topic. Please speak to a trusted adult, health professional, or counselor for accurate information.",
 } as const;
 
+export const REDACTED_SAFEGUARDING_MESSAGE = '[REDACTED SAFEGUARDING DISCLOSURE]';
+
 function matchesKeywords(text: string, keywords: string[]): boolean {
+  // 1. First run the standard regex check (very clean, handles normal text with word boundaries)
   const lower = text.toLowerCase();
-  return keywords.some((keyword) => {
+  const matchedOriginal = keywords.some((keyword) => {
     const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     const regex = new RegExp(`(^|\\W)${escaped}(\\W|$)`, 'i');
     return regex.test(lower);
   });
+  if (matchedOriginal) return true;
+
+  // 2. Next, check for spacing and leetspeak bypasses using normalized text
+  const normalizedText = text.toLowerCase()
+    .replace(/[1!|]/g, 'i')
+    .replace(/3/g, 'e')
+    .replace(/[4@]/g, 'a')
+    .replace(/[5$]/g, 's')
+    .replace(/[7+]/g, 't')
+    .replace(/0/g, 'o')
+    .replace(/9/g, 'g')
+    .replace(/[^a-z0-9]/g, ''); // strip spaces and punctuation
+
+  const matchedNormalized = keywords.some((keyword) => {
+    const normalizedKeyword = keyword.toLowerCase().replace(/[^a-z0-9]/g, '');
+    // Only use normalized substring match if the keyword is sufficiently long (>= 5 chars)
+    // to prevent false positives on short words like 'sex' or 'hiv'
+    if (normalizedKeyword.length >= 5) {
+      return normalizedText.includes(normalizedKeyword);
+    }
+    
+    // For short keywords (like 'sex', 'hiv', 'std', 'sti'), run regex match on leetspeak-replaced text (retaining spaces)
+    const leetText = text.toLowerCase()
+      .replace(/[1!|]/g, 'i')
+      .replace(/3/g, 'e')
+      .replace(/[4@]/g, 'a')
+      .replace(/[5$]/g, 's')
+      .replace(/[7+]/g, 't')
+      .replace(/0/g, 'o')
+      .replace(/9/g, 'g');
+    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(^|\\W)${escaped}(\\W|$)`, 'i');
+    return regex.test(leetText);
+  });
+
+  return matchedNormalized;
 }
 
 import { supabase } from './supabase';
 
 export async function reportSafeguardingFlag(userId: string, category: SafeguardingCategory, message: string, source: string) {
-  if (!category || category === 'D') return;
-
-  // Sanitize message for Category A
-  const sanitizedMessage = category === 'A' ? '[REDACTED DUE TO HIGH RISK KEYWORDS]' : message;
+  if (!category) return;
 
   const { error } = await supabase.from('safeguarding_flags').insert({
     user_id: userId,
     category,
-    message: sanitizedMessage,
+    message: REDACTED_SAFEGUARDING_MESSAGE,
     source,
     status: 'pending'
   });
@@ -130,7 +168,7 @@ export function checkSafeguarding(text: string, ageBracket: string, userId?: str
   }
 
   // Log to Supabase if triggered and userId is provided
-  if (result.triggered && userId && result.category && result.category !== 'D') {
+  if (result.triggered && userId && result.category) {
     void reportSafeguardingFlag(userId, result.category, text, source || 'chat');
   }
 

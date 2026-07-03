@@ -79,7 +79,7 @@ const Profile: React.FC = () => {
       const { data } = await supabase
         .from('mentor_profiles')
         .select('id, is_available')
-        .eq('user_id', state.user.id)
+        .eq('id', state.user.id)
         .maybeSingle();
 
       // Only show switch if the row exists — no row means not vetted
@@ -594,6 +594,21 @@ const Profile: React.FC = () => {
                         <div>
                           <p className="font-bold text-sm text-navy">App Language</p>
                           <p className="text-[10px] text-navy/40 font-bold uppercase">{state.user?.language}</p>
+                        </div>
+                      </div>
+                      <ChevronRight size={18} className="text-navy/20" />
+                    </button>
+                    <button
+                      onClick={() => navigate('/offline-ai')}
+                      className="w-full flex items-center justify-between p-6 hover:bg-off-white transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="p-2.5 bg-yellow/10 text-yellow-600 rounded-xl">
+                          <Sparkles size={18} />
+                        </div>
+                        <div>
+                          <p className="font-bold text-sm text-navy">Smart Jabari (Offline AI)</p>
+                          <p className="text-[10px] text-navy/40 font-bold uppercase">Configure local on-device AI model packs</p>
                         </div>
                       </div>
                       <ChevronRight size={18} className="text-navy/20" />
