@@ -106,19 +106,17 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 >
                   {lang === 'English' ? 'KSW' : 'ENG'}
                 </button>
-                {state.user?.role !== 'student' && (
-                  <button
-                    onClick={async () => {
-                      const { signOut } = await import('../lib/auth');
-                      await signOut();
-                    }}
-                    className="p-1 text-navy/50 hover:text-red-600 transition-colors rounded-lg border border-navy/15 hover:border-red-600/20 hover:bg-red-50 flex items-center justify-center"
-                    aria-label="Sign out"
-                    title="Sign out"
-                  >
-                    <LogOut size={13} />
-                  </button>
-                )}
+                <button
+                  onClick={async () => {
+                    const { signOut } = await import('../lib/auth');
+                    await signOut();
+                  }}
+                  className="p-1 text-navy/50 hover:text-red-600 transition-colors rounded-lg border border-navy/15 hover:border-red-600/20 hover:bg-red-50 flex items-center justify-center"
+                  aria-label="Sign out"
+                  title="Sign out"
+                >
+                  <LogOut size={13} />
+                </button>
               </div>
             </div>
           )}
