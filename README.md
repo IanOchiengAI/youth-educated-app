@@ -2,6 +2,8 @@
 
 **Youth Educated** is a safe, AI-powered life-skills application designed specifically for young people in Kenya aged 10–22. It combines modern technology with human mentorship to help the next generation learn, grow, and navigate the transition to adulthood.
 
+### 🌐 Live App → [youth-educated-app.vercel.app](https://youth-educated-app.vercel.app)
+
 ---
 
 ## ✨ Key Features
