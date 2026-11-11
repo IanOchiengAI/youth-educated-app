@@ -53,7 +53,7 @@ For developers taking over the project or mentors looking for guides, please see
    ```
 
 3. **Configure Environment:**
-   Copy the example environment file (it comes pre-filled with the shared keys):
+   Copy the example environment file and fill in your project credentials:
    ```bash
    cp .env.example .env
    ```
@@ -67,7 +67,7 @@ For developers taking over the project or mentors looking for guides, please see
 
 ---
 
-## 🛠️ Troubleshooting & Common Issues
+## 🔧 Troubleshooting & Common Issues
 
 If you're having trouble running the app, check the following:
 
